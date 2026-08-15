@@ -98,3 +98,36 @@ The second command must remain available if venue connectivity disappears. The
 weather context is deliberately non-evidentiary: it never changes seeded risk
 scores or backtest replay inputs. `npm run seed` drops these snapshots along with
 the other demo tables, so refresh again after a destructive reset.
+
+
+
+## Public demo deployment
+
+The public watch room runs on Netlify; the agent runs as `bothy-agent` on the
+VPS, where Coolify's existing Traefik proxy terminates TLS for
+`https://api.bothy.trustfall.xyz`. The agent is attached to the proxy's external
+`coolify` Docker network and has no host-published port. Traefik is the only
+public path to it.
+
+The agent container reaches the existing PostGIS container through the private
+`bothy-internal` Docker network using the `bothy-db` hostname. Do not expose
+Postgres publicly or replace the existing Coolify proxy with another listener.
+
+### Deploy or update the agent
+
+```bash
+# On the VPS, from the checked-out repository root:
+cp deploy/.env.production.example deploy/.env.production
+# Set DATABASE_URL to the real password and WEB_ORIGIN to the final Netlify URL.
+docker compose -f deploy/docker-compose.vps.yml up -d --build
+curl https://api.bothy.trustfall.xyz/api/health
+```
+
+`deploy/.env.production` is ignored by Git. For the Netlify build, set the
+server-only `AGENT_URL=https://api.bothy.trustfall.xyz` environment variable;
+the existing Next rewrite then proxies browser `/api/*` requests to the agent.
+After the agent is healthy, refresh an operator snapshot before rehearsal:
+
+```bash
+curl -X POST https://api.bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
+```
