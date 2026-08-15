@@ -43,25 +43,51 @@ export default function Timeline({
   const y = (s: number) => H - 8 - s * (H - 24);
   const past = endMs > horizonMs;
   const revealed = revealMs != null && t >= revealMs;
-  const pct = ((t - startMs) / (endMs - startMs)) * 100;
+  const span = endMs - startMs || 1;
+  const pct = ((t - startMs) / span) * 100;
+  const latest = [...snaps].filter((s) => s.t <= t).sort((a, b) => a.t - b.t).at(-1);
+  const tags = layoutTags([
+    ...(past ? [{ key: "horizon", ms: horizonMs, label: "beyond agent's view", tone: "mute" as const }] : []),
+    ...(latest
+      ? [{ key: `beat-${latest.t}`, ms: latest.t, label: `${latest.label} ${latest.delta >= 0 ? "+" : ""}${latest.delta.toFixed(2)}`, tone: "signal" as const }]
+      : []),
+    ...(inevitableMs != null && t >= inevitableMs
+      ? [{ key: "inevitable", ms: inevitableMs, label: "inevitable", tone: "alert" as const }]
+      : []),
+    ...(revealed && revealText
+      ? [{ key: "outcome", ms: revealMs ?? endMs, label: revealText, tone: "alert" as const }]
+      : []),
+  ], startMs, span);
 
   return (
     <div className="rounded-lg border p-3" style={{ background: "var(--panel)", borderColor: "var(--rule)" }}>
       <div className="relative">
+        {/* tags sit in their own track so they don't fight the risk curves */}
+        <div className="relative mb-1 h-[52px]">
+          {tags.map((tag) => (
+            <span
+              key={tag.key}
+              className="mono pointer-events-none absolute max-w-[min(240px,70%)] truncate rounded border px-1.5 py-0.5 text-[11px] leading-tight"
+              style={{
+                left: `clamp(8px, ${tag.pct}%, calc(100% - 8px))`,
+                top: tag.row * 24,
+                transform: "translateX(-8px)",
+                background: "var(--panel)",
+                borderColor: tag.tone === "alert" ? "oklch(64% 0.21 25)" : "var(--rule)",
+                color: tag.tone === "alert" ? "oklch(80% 0.08 25)" : "var(--text-strong)",
+              }}
+            >
+              {tag.label}
+            </span>
+          ))}
+        </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Risk over time">
           <defs>
             <pattern id={`${uid}-hatch`} width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
               <line x1="0" y1="0" x2="0" y2="6" stroke="var(--rule)" strokeWidth="2" />
             </pattern>
           </defs>
-          {/* beyond-horizon hatched band — the agent's view ends here */}
           {past && <rect x={x(horizonMs)} y="0" width={W - x(horizonMs)} height={H} fill={`url(#${uid}-hatch)`} opacity="0.5" />}
-          {past && x(horizonMs) < W && (
-            <text x={x(horizonMs) + 6} y={12} fontSize="11" fill="var(--text-faint)">
-              beyond agent&apos;s view
-            </text>
-          )}
-          {/* series */}
           {series.map((sr) => (
             <polyline
               key={sr.id}
@@ -72,23 +98,15 @@ export default function Timeline({
               style={{ stroke: sr.color, transition: "stroke 240ms var(--ease-base)" }}
             />
           ))}
-          {/* signal pins — only the turning points, annotated with their delta */}
           {snaps.map((s, i) => {
             const landed = s.t <= t;
             return (
               <g key={i} className={landed ? "pin-in" : ""} opacity={landed ? 1 : 0.25}>
                 <line x1={x(s.t)} y1={8} x2={x(s.t)} y2={H - 8} stroke="var(--rule)" strokeWidth="1" strokeDasharray="2 3" />
                 <circle cx={x(s.t)} cy={12} r="3" fill="var(--cursor)" />
-                {landed && (
-                  <text x={Math.min(x(s.t) + 5, W - 110)} y={26} fontSize="10.5" fill="var(--text-body)" className="mono">
-                    {s.label} {s.delta >= 0 ? "+" : ""}
-                    {s.delta.toFixed(2)}
-                  </text>
-                )}
               </g>
             );
           })}
-          {/* the point it became inevitable — the story's climax, annotated once the cursor reaches it */}
           {inevitableMs != null && (
             <g className={t >= inevitableMs ? "pin-in" : ""} opacity={t >= inevitableMs ? 1 : 0.35}>
               <line x1={x(inevitableMs)} y1={8} x2={x(inevitableMs)} y2={H - 8} strokeWidth="1" style={{ stroke: "oklch(64% 0.21 25)" }} />
@@ -100,25 +118,13 @@ export default function Timeline({
                 transform={`rotate(45 ${Math.min(x(inevitableMs), W)} ${H - 19})`}
                 style={{ fill: "oklch(64% 0.21 25)" }}
               />
-              {t >= inevitableMs && (
-                <text x={Math.min(x(inevitableMs) + 6, W - 80)} y={H - 15} fontSize="10.5" className="mono" style={{ fill: "oklch(64% 0.21 25)" }}>
-                  inevitable
-                </text>
-              )}
             </g>
           )}
-          {/* outcome reveal — ghosted until the cursor crosses it, then beacon */}
           {revealMs != null && (
             <g className={revealed ? "beacon" : ""} opacity={revealed ? 1 : 0.35}>
               <circle cx={x(revealMs)} cy={12} r="4" strokeWidth="1.5" style={{ fill: revealed ? "oklch(64% 0.21 25)" : "none", stroke: "oklch(64% 0.21 25)" }} />
-              {revealed && (
-                <text x={Math.min(x(revealMs) + 7, W - 150)} y={15} fontSize="11" className="mono" style={{ fill: "oklch(64% 0.21 25)" }}>
-                  {revealText}
-                </text>
-              )}
             </g>
           )}
-          {/* cursor — the pointer is the cursor, 1:1 */}
           <line x1={x(t)} y1={8} x2={x(t)} y2={H - 8} stroke="var(--cursor)" strokeWidth="1.5" />
         </svg>
 
@@ -188,7 +194,7 @@ export default function Timeline({
           </div>
         </div>
         {/* axis + affordance hint — the scrubber explains itself once, quietly */}
-        <div className="mono mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-faint)" }}>
+        <div className="mono mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-body)" }}>
           <span>{fmt(startMs)}</span>
           <span aria-hidden="true">drag to rewind · ← → jumps between signals</span>
           <span>{fmt(endMs)}</span>
@@ -202,3 +208,17 @@ const fmt = (ms: number) => {
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
+
+type TagTone = "mute" | "signal" | "alert";
+type Tag = { key: string; ms: number; label: string; tone: TagTone };
+
+function layoutTags(tags: Tag[], startMs: number, span: number) {
+  const placed: Array<Tag & { pct: number; row: number }> = [];
+  for (const tag of [...tags].sort((a, b) => a.ms - b.ms)) {
+    const pct = ((tag.ms - startMs) / span) * 100;
+    let row = 0;
+    while (placed.some((p) => p.row === row && Math.abs(p.pct - pct) < 26)) row += 1;
+    placed.push({ ...tag, pct, row: Math.min(row, 1) });
+  }
+  return placed;
+}

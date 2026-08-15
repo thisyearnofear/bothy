@@ -62,7 +62,7 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
           <p className="mono mt-4 text-xs uppercase tracking-[0.22em] sm:text-sm" style={{ color: "var(--cursor)" }}>
             Accountable winter access decisions
           </p>
-          <p className="mono mt-6 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+          <p className="mono mt-6 text-sm tracking-[0.14em]" style={{ color: "var(--text-body)" }}>
             both·y &nbsp;/ˈbɒθi/&nbsp; n. Scottish, from Gaelic <em>bothan</em>, “hut”
           </p>
           <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--text-body)" }}>

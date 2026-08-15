@@ -40,7 +40,10 @@ export default function Landing() {
               Accountable winter access decisions
             </p>
           </div>
-          <p className="mono fade-up mt-7 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)", animationDelay: "180ms" }}>
+          <p
+            className="mono fade-up mt-7 text-sm tracking-[0.18em]"
+            style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "180ms" }}
+          >
             both·y &nbsp;/ˈbɒθi/&nbsp; n. Scottish
           </p>
           <h2 className="fade-up mt-4 text-3xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--text-strong)", animationDelay: "280ms" }}>
@@ -64,7 +67,7 @@ export default function Landing() {
               watch the day happen in 20s
             </button>
           </div>
-          <p className="mono fade-up mt-16 text-xs" style={{ color: "var(--text-faint)", animationDelay: "480ms" }}>
+          <p className="mono fade-up mt-16 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "480ms" }}>
             ↓ the story
           </p>
         </section>
@@ -80,7 +83,7 @@ export default function Landing() {
             <br />
             someone gets a callout.
           </h2>
-          <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--text-faint)" }}>
+          <p className="mono mt-8 max-w-xl text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
             five systems · no one had to look together
           </p>
         </section>
@@ -99,7 +102,7 @@ export default function Landing() {
           <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--cursor)" }}>
             every number cited · a human signs
           </p>
-          <p className="mono mt-16 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+          <p className="mono mt-16 text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
             floods · fires · convoys — same shelter, different hill
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -121,7 +124,7 @@ export default function Landing() {
         </section>
       </div>
 
-      <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-xs" style={{ color: "var(--text-faint)" }}>
+      <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
         <Link href="/watch?demo=1" className="underline">
           demo mode (skip intro)
         </Link>
