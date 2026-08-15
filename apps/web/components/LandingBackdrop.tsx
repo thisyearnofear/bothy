@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { OSM_STYLE } from "./MapView";
+import { ambientMapStyle } from "./MapView";
 
 type CamKey = {
   id: string;
@@ -124,7 +124,7 @@ export default function LandingBackdrop() {
       if (!alive || !container.current) return;
       map = new ml.Map({
         container: container.current,
-        style: darkStyle(),
+        style: ambientMapStyle(),
         center: HERO.center,
         zoom: HERO.zoom,
         pitch: HERO.pitch,
@@ -167,16 +167,4 @@ export default function LandingBackdrop() {
       <div className="absolute inset-0" style={{ background: "color-mix(in oklch, var(--page) 32%, transparent)" }} />
     </div>
   );
-}
-
-/** The watch-room basemap, pushed further into the dark — but the fells must
- *  still read as terrain, not void. */
-function darkStyle() {
-  const style = JSON.parse(JSON.stringify(OSM_STYLE));
-  style.layers[0].paint = {
-    "raster-brightness-max": 0.82,
-    "raster-saturation": -0.45,
-    "raster-contrast": 0.12,
-  };
-  return style;
 }

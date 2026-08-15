@@ -35,11 +35,22 @@ export const OSM_STYLE = {
       id: "osm",
       type: "raster" as const,
       source: "osm",
-      // pull the bright raster basemap into the situation-room palette
-      paint: { "raster-brightness-max": 0.55, "raster-saturation": -0.6, "raster-contrast": 0.1 },
+      // same hill as the landing, a step darker so routes and pins stay the instrument
+      paint: { "raster-brightness-max": 0.7, "raster-saturation": -0.5, "raster-contrast": 0.12 },
     },
   ],
 };
+
+/** Landing / watch-room gutter atmosphere — brighter than the operational window. */
+export function ambientMapStyle() {
+  const style = JSON.parse(JSON.stringify(OSM_STYLE));
+  style.layers[0].paint = {
+    "raster-brightness-max": 0.82,
+    "raster-saturation": -0.45,
+    "raster-contrast": 0.12,
+  };
+  return style;
+}
 
 const centroid = (coords: [number, number][]) => {
   let x = 0;

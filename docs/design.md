@@ -143,6 +143,11 @@ This is an on-thesis visual, not a generic dark background.
 - On storytelling surfaces the drift yields to scroll keyframes (above): the
   ambient patrol is what the camera does while the reader is still; section
   changes are what it does when they move.
+- On the watch room the same hill sits in the gutters behind solid panels, with
+  a heavier scrim (product ≈ 0.3). It does not drive time, does not use
+  `map-morph` (that name stays on the evidence window), and eases once when the
+  case changes. The operational map is a step brighter than the old void so the
+  window is the same terrain, now with routes and pins.
 - The map uses the same MapLibre language as the watch room, so the visual
   transition into the decision workspace feels earned.
 - Dimming compounds: effective luminance = raster brightness × scrim
@@ -158,7 +163,7 @@ scroll mechanics:
 
 | primitive | Bothy adaptation |
 |---|---|
-| map establishes place | a dim ambient background on the framing page; the watch room map remains interactive and evidence-led |
+| map establishes place | landing: full-bleed hill; watch room: the same hill in the gutters (heavier scrim); the boxed map is the evidence window |
 | camera follows a mark | the timeline cursor moves a route marker and gently follows the selected corridor |
 | path draws itself | selected route ink reveals to the cursor; risk controls its colour and weight |
 | signal arrives | a timestamped pin lands with its citation as the replay crosses the beat |
@@ -182,8 +187,9 @@ scroll mechanics:
 `loading` (first paint, skeleton in the shape of the room) · `empty` (no
 scenario) · `error` (agent down / DB) · `reasoning` (agent trace streaming, the
 room spotlights the trace) · `scrubbing` (time cursor) · `awaiting-approval` →
-`approved`/`rejected` · `backtest` (hatched "agent's view ends here"; outcome
-desaturated until the cursor crosses it).
+`approved`/`rejected` · `tape-end` (next doors: rewind · sign · other hill) ·
+`signed` (receipt plus next corridor or the other hill) · `backtest` (hatched
+"agent's view ends here"; outcome desaturated until the cursor crosses it).
 
 ## Motion budget
 

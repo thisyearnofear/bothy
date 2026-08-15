@@ -8,6 +8,8 @@ import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
+import NextDoors from "../../components/NextDoors";
+import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
@@ -393,9 +395,19 @@ export default function Watch() {
   // than animating an unchanged workspace before its new evidence is available.
   const compact = tape && !deskOpen;
   const revealed = range.outcome != null && t >= range.outcome;
+  const signed = selectedAssessment != null && selectedAssessment.status !== "pending";
+  const tapeEnded = tape && !playing && range.end > 0 && t >= range.end;
+  const nextBeat: "tape-end" | "signed" | null = signed ? "signed" : tapeEnded ? "tape-end" : null;
+  const pendingOther = rows.find((r) => {
+    if (r.routeId === selectedId || !scenario) return false;
+    const a = assessments[`${scenario.id}:${r.routeId}`];
+    return !a || a.status === "pending";
+  });
 
   return (
-    <main className={`mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5${running ? " reasoning-spotlight" : ""}`}>
+    <>
+      <WatchBackdrop caseId={scenario?.id ?? (tape ? "backtest" : "live")} />
+      <main className={`relative z-10 mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-6 xl:p-8${running ? " reasoning-spotlight" : ""}`}>
       <header
         className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border px-4 py-3"
         style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
@@ -508,6 +520,36 @@ export default function Watch() {
             />
           )}
           <IntakeLegend caseId={scenario?.id ?? null} compact={compact} />
+          {nextBeat && (
+            <NextDoors
+              beat={nextBeat}
+              compact={compact}
+              otherHill={scenario?.id === "live" ? "Rewind the A66" : "Sit the Lake District desk"}
+              pendingName={nextBeat === "signed" ? pendingOther?.name : undefined}
+              onRewind={() => {
+                setPlaying(false);
+                setT(range.start);
+              }}
+              onSign={
+                nextBeat === "tape-end"
+                  ? () => {
+                      setDeskOpen(true);
+                      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                      requestAnimationFrame(() => {
+                        document.getElementById("decision-case")?.scrollIntoView({
+                          block: "nearest",
+                          behavior: reduced ? "auto" : "smooth",
+                        });
+                      });
+                    }
+                  : undefined
+              }
+              onOtherHill={() => {
+                void load(scenario?.id === "live" ? "backtest" : "live", { tape: scenario?.id === "live" });
+              }}
+              onNextCorridor={pendingOther ? () => setSelectedId(pendingOther.routeId) : undefined}
+            />
+          )}
           {!compact && headline && selHorizon && (
             <section
               className="stage-in mb-4 rounded-lg border px-4 py-3"
@@ -679,7 +721,7 @@ export default function Watch() {
               className="stage-in order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
               style={{ ["--stage" as string]: 3 }}
             >
-              <section className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+              <section id="decision-case" className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
                 <Detail
                   route={selected}
                   horizon={selHorizon}
@@ -709,10 +751,19 @@ export default function Watch() {
                 : "illustrative replay · modeled signals · map © OpenStreetMap"}
               {!compact && (llm.length ? ` · ${llm.map((p) => p.id).join(", ")}` : " · scripted")}
             </span>
+            <button
+              type="button"
+              onClick={() => void load(scenario?.id === "live" ? "backtest" : "live", { tape: scenario?.id === "live" })}
+              className="underline"
+              style={{ color: "var(--cursor)" }}
+            >
+              {scenario?.id === "live" ? "Rewind the A66" : "Sit the Lake District desk"}
+            </button>
           </footer>
         </>
       )}
     </main>
+    </>
   );
 }
 
