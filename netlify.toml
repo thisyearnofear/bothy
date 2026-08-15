@@ -3,6 +3,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  NPM_CONFIG_REGISTRY = "https://registry.npmjs.org/"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
