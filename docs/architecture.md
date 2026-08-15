@@ -94,10 +94,12 @@ the front-end **confidence timeline** (risk as a story over time, not a number).
 | id | horizon | note |
 |----|---------|------|
 | `live` | today 14:30 | synthetic winter day, real signal shapes |
-| `backtest` | 14 Jan 2018 · 17:30 | demo reconstruction; real outcome (19:45) is hidden from the agent |
+| `backtest` | 12-13 Feb 2026 · 21:30 | illustrative replay based on a reported A66 closure; the post-horizon marker is hidden from the agent |
 
-Backtest assesses only pre-outcome data → flags B5311 HIGH *before* the 19:45
-stranding (retrospective validation).
+The backtest applies modeled pre-closure signals, then reveals a sourced A66
+snow closure beyond the horizon. Its timestamps, inputs, and computed lead time
+are illustrative demo data—not retrospective model validation. See the source
+and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary).
 
 ## API
 

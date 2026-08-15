@@ -41,6 +41,10 @@ npm run seed
 npm run dev
 ```
 
+> `npm run seed` is a destructive demo reset: it drops and recreates the
+> application tables before loading the bundled scenarios. Do not run it against
+> a database containing data you need to retain.
+
 ## Security checklist
 
 - **`.env` is never committed.** It's in `.gitignore`, and the pre-commit hook

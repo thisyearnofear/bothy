@@ -17,7 +17,7 @@ intervention* problem (floods, wildfire evacuation, humanitarian logistics).
 npm install
 cp .env.example .env     # DATABASE_URL defaults to the tunneled remote DB (:5433)
 scripts/db-tunnel.sh     # SSH tunnel: remote Postgres (Docker + PostGIS) -> localhost:5433
-npm run seed             # load live + backtest demo scenarios
+npm run seed             # reset the demo DB and load live + backtest scenarios
 npm run dev              # agent API :8787 · web :3000
 ```
 
@@ -47,6 +47,8 @@ docs/           architecture, engineering decisions, hackathon alignment
 Full details live in [`docs/`](docs/):
 
 - [architecture.md](docs/architecture.md) — agent loop, tools, data model, risk engine
+- [dashboard.md](docs/dashboard.md) — the Decision-Replay concept & demo storyboard
+- [design.md](docs/design.md) — UI language, tokens, micro‑interactions & motion spec
 - [ops.md](docs/ops.md) — hosting, DB topology/credentials, security & production
 - [decisions.md](docs/decisions.md) — why hand-rolled loop, PostGIS vs pgvector, scripted brain
 - [alignment.md](docs/alignment.md) — how this fits the hackathon challenges
@@ -59,7 +61,8 @@ Full details live in [`docs/`](docs/):
 
 ## Status
 
-Agent backend + seed + API done and verified; web dashboard (map, risk cards,
-timeline scrubber, approve flow) in progress.
+Agent backend, seed data, API, and the interactive decision-replay dashboard are
+implemented and locally verified. The supplied scenarios are demo data; the A66
+backtest distinguishes its sourced closure from illustrative model inputs.
 
 _See [`docs/architecture.md`](docs/architecture.md) for the deep dive._
