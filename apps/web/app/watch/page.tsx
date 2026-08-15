@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import MapView, { type MapBeat, type RouteOnMap } from "../../components/MapView";
 import Timeline, { type Series } from "../../components/Timeline";
 import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import Intro, { INTRO_KEY } from "../../components/Intro";
+import WatchLoading from "../../components/WatchLoading";
 import { api, isAbortError } from "../../lib/api";
 import { inflections, leadTimeLabel, ms, pointAt, riskColor, snapshotAt } from "../../lib/derive";
 import type {
@@ -138,8 +140,21 @@ export default function Watch() {
         routes.forEach((r: RouteInfo, i: number) => (snap[r.id] = tls[i]));
         const horizon = ms(scenario.now);
         const end = scenario.outcomeAt ? ms(scenario.fullEnd) : horizon;
-        setScenario(scenario);
-        setRoutes(routes);
+        const top = [...routes].sort(
+          (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
+        )[0];
+        const replay = new URLSearchParams(window.location.search).get("replay") === "1";
+        startTransition(() => {
+          setScenario(scenario);
+          setRoutes(routes);
+          if (id !== "live") setLiveWeather(null);
+          setSnapshots(snap);
+          setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
+          setT(replay ? ms(scenario.start) : horizon);
+          setSelectedId(top?.id ?? null);
+          setPlaying(replay);
+          setLoading(false);
+        });
         if (id === "live") {
           api
             .liveWeather(ac.signal)
@@ -150,23 +165,9 @@ export default function Watch() {
               if (isAbortError(e) || ac.signal.aborted) return;
               setLiveWeather(null);
             });
-        } else {
-          setLiveWeather(null);
         }
-        setSnapshots(snap);
-        setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
-        setT(horizon);
-        const top = [...routes].sort(
-          (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
-        )[0];
-        setSelectedId(top?.id ?? null);
         if (top) autoAssess(id, top.id);
         refreshAudit(id);
-        // ?replay=1 deep-link: the day plays itself on arrival
-        if (new URLSearchParams(window.location.search).get("replay") === "1") {
-          setT(ms(scenario.start));
-          setPlaying(true);
-        }
       } catch (e) {
         if (isAbortError(e) || ac.signal.aborted) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -397,11 +398,13 @@ export default function Watch() {
       >
         <div className="min-w-0">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-            Bothy
+            <Link href="/" transitionTypes={["nav-back"]} className="hover:underline" style={{ color: "inherit" }}>
+              Bothy
+            </Link>
           </p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
-              {scenario ? (scenario.id === "backtest" ? "A66 Brough–Bowes" : "Lake District") : loading ? "Loading…" : "Bothy"}
+              {scenario ? (scenario.id === "backtest" ? "A66 Brough–Bowes" : "Lake District") : loading ? "Opening…" : "Bothy"}
             </h1>
             {scenario && (
               <span className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
@@ -482,21 +485,8 @@ export default function Watch() {
         </div>
       )}
 
-      {loading && !scenario ? (
-        /* first-paint skeleton in the shape of the room it becomes */
-        <div aria-busy="true" aria-label="Loading scenario" className="space-y-4">
-          <div className="h-16 rounded-lg border" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-            <div className="h-full w-2/3 animate-pulse rounded-lg" style={{ background: "var(--rule)", opacity: 0.35, margin: "0 auto", transform: "scale(0.95, 0.5)" }} />
-          </div>
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]">
-            <div className="order-2 h-72 rounded-lg border xl:order-1" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
-            <div className="order-1 h-[470px] rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)] xl:order-2" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
-            <div className="order-3 h-96 rounded-lg border" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
-          </div>
-          <p className="mono text-center text-xs" style={{ color: "var(--text-faint)" }}>
-            loading scenario…
-          </p>
-        </div>
+      {loading && routes.length === 0 ? (
+        <WatchLoading embedded />
       ) : routes.length === 0 ? (
         <div className="grid h-[60vh] place-items-center">
           <div

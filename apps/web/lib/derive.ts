@@ -1,5 +1,5 @@
 import { riskColor, riskLabel } from "../../../packages/shared/src/lib";
-import type { RiskSnapshot } from "../../../packages/shared/src/types";
+import type { EvidenceCitation, RiskSnapshot } from "../../../packages/shared/src/types";
 
 export const ms = (iso: string) => new Date(iso).getTime();
 
@@ -54,6 +54,33 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
 export function citationClause(text: string, max = 42): string {
   const cut = text.split(/[—,(]/)[0].trim();
   return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
+export type PipelineLine = { phase: string; text: string };
+
+/** Four readable loop lines from the cited snapshot — not a chat, not a tool dump. */
+export function pipelineLines(input: {
+  routeName: string;
+  actor: string;
+  label: string;
+  score: number;
+  at: string;
+  citations: EvidenceCitation[];
+}): PipelineLine[] {
+  const sources = [...new Set(input.citations.map((c) => c.source).filter(Boolean))].slice(0, 3);
+  const top = [...input.citations]
+    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+    .slice(0, 2);
+  const reason =
+    top
+      .map((c) => `${citationClause(c.text, 28)} ${c.contribution >= 0 ? "+" : ""}${c.contribution.toFixed(2)}`)
+      .join(" · ") || "terrain and exposure only";
+  return [
+    { phase: "detect", text: `${input.routeName} is ${input.label} ${input.score.toFixed(2)} at ${input.at}` },
+    { phase: "retrieve", text: sources.length ? sources.join(" · ") : "no cited sources yet" },
+    { phase: "reason", text: reason },
+    { phase: "draft", text: `queued for ${input.actor}` },
+  ];
 }
 
 /** "flagged 2h 15m before" — computed from data, never hardcoded. */

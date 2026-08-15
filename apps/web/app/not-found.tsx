@@ -25,6 +25,7 @@ export default function NotFound() {
         </Link>
         <Link
           href="/watch?demo=1"
+          transitionTypes={["nav-forward"]}
           className="rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
           style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
         >

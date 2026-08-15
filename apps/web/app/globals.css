@@ -47,6 +47,13 @@ body {
 .map-morph {
   view-transition-name: bothy-map;
 }
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-group(bothy-map) {
+  animation-duration: var(--dur-expressive);
+  z-index: 8;
+}
 
 /* Keyboard focus is always visible — walk every state (design.md). */
 :focus-visible {
@@ -219,5 +226,11 @@ button:not(:disabled):hover {
   }
   .stage-in {
     animation: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { Assessment, AuditEntry, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
+import { pipelineLines } from "../lib/derive";
+import AgentBeat from "./AgentBeat";
 
 const t = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
 
@@ -97,6 +99,20 @@ export default function Detail({
         )}
       </div>
 
+      {!running && (
+        <AgentBeat
+          id={`${route.id}:${horizonTime}`}
+          lines={pipelineLines({
+            routeName: route.name,
+            actor: route.actor,
+            label: horizon.label,
+            score: horizon.score,
+            at: horizonTime,
+            citations: horizon.citations,
+          })}
+        />
+      )}
+
       <div>
         <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
           {expanded ? `Causal chain (at ${horizonTime})` : "Why this score"}
@@ -113,6 +129,11 @@ export default function Detail({
                   {t(c.at)}
                 </span>
                 {c.text}
+                {c.source && (
+                  <span className="mt-0.5 block text-xs" style={{ color: "var(--text-faint)" }}>
+                    {c.source}
+                  </span>
+                )}
               </span>
               <span
                 className="mono tnum shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"

@@ -5,20 +5,18 @@ import { useEffect } from "react";
 import LandingBackdrop from "../components/LandingBackdrop";
 import { INTRO_KEY } from "../components/Intro";
 
+const markSeen = () => {
+  try {
+    sessionStorage.setItem(INTRO_KEY, "1");
+  } catch {
+    /* noop */
+  }
+};
+
 // Landing = brand + thesis + the door, on the first paint. The story (the turn,
 // the full definition, the generality close) is opt-in depth below the fold —
 // progressive disclosure for judges with 10 seconds and judges with 10 minutes.
 export default function Landing() {
-  const enter = (replay: boolean) => {
-    // coming from the landing, the framing is already seen — don't cold-open again
-    try {
-      sessionStorage.setItem(INTRO_KEY, "1");
-    } catch {
-      /* noop */
-    }
-    window.location.href = replay ? "/watch?replay=1" : "/watch?demo=1";
-  };
-
   useReveal();
 
   return (
@@ -52,20 +50,26 @@ export default function Landing() {
             The human owns the call.
           </h2>
           <div className="fade-up mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
-            <button
-              onClick={() => enter(false)}
+            <Link
+              href="/watch?demo=1"
+              prefetch
+              transitionTypes={["nav-forward"]}
+              onClick={markSeen}
               className="rounded-lg border-2 px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
             >
               Enter the watch room
-            </button>
-            <button
-              onClick={() => enter(true)}
+            </Link>
+            <Link
+              href="/watch?replay=1"
+              prefetch
+              transitionTypes={["nav-forward"]}
+              onClick={markSeen}
               className="rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)", background: "color-mix(in oklch, var(--page) 60%, transparent)" }}
             >
               watch the day happen in 20s
-            </button>
+            </Link>
           </div>
           <p className="mono fade-up mt-16 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "480ms" }}>
             ↓ the story
@@ -106,26 +110,32 @@ export default function Landing() {
             floods · fires · convoys — same shelter, different hill
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={() => enter(true)}
+            <Link
+              href="/watch?replay=1"
+              prefetch
+              transitionTypes={["nav-forward"]}
+              onClick={markSeen}
               className="rounded-lg border-2 px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
             >
               watch the day happen in 20s
-            </button>
-            <button
-              onClick={() => enter(false)}
+            </Link>
+            <Link
+              href="/watch?demo=1"
+              prefetch
+              transitionTypes={["nav-forward"]}
+              onClick={markSeen}
               className="rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)", background: "color-mix(in oklch, var(--page) 60%, transparent)" }}
             >
               Enter the watch room
-            </button>
+            </Link>
           </div>
         </section>
       </div>
 
       <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-        <Link href="/watch?demo=1" className="underline">
+        <Link href="/watch?demo=1" prefetch transitionTypes={["nav-forward"]} onClick={markSeen} className="underline">
           demo mode (skip intro)
         </Link>
       </footer>
