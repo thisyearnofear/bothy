@@ -26,10 +26,11 @@ npm run dev              # agent API :8787 · web :3000
 > See [`docs/ops.md`](docs/ops.md) for hosting, production, and security.
 
 No API key needed. The agent's **LLM provider chain** is free-first and
-OpenAI-compatible: a public Qwen HF endpoint → optional OpenRouter / any
-OpenAI-compatible URL / local Ollama — each rate-limited, cached, and tried in
-order, falling back to the deterministic **scripted** brain if none respond.
-Configure providers in `.env` (copy `.env.example`); see
+OpenAI-compatible: a public Qwen HF endpoint → optional Venice AI / OpenRouter /
+any OpenAI-compatible URL / local Ollama — each rate-limited, cached, and tried
+in order, falling back to the deterministic **scripted** brain if none respond.
+Configure providers in `.env` (copy `.env.example`); provider keys are
+server-only and must never be committed or exposed to the browser. See
 [`docs/architecture.md`](docs/architecture.md).
 
 ## Repo layout

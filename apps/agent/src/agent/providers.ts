@@ -220,6 +220,22 @@ function builder(e: NodeJS.ProcessEnv): ProviderDef[] {
     temperature: 0.7,
   });
 
+  // Venice AI (optional; requires a dedicated inference key)
+  if (e.VENICE_API_KEY) {
+    put({
+      id: "venice",
+      label: "Venice AI",
+      baseUrl: e.VENICE_BASE_URL ?? "https://api.venice.ai/api/v1",
+      apiKey: e.VENICE_API_KEY,
+      model: e.VENICE_MODEL ?? "venice-uncensored",
+      reqPerMin: num(e.VENICE_RPM, 20),
+      burst: num(e.VENICE_BURST, 6),
+      maxTokens: num(e.BOTHY_LLM_MAX_TOKENS, 1500),
+      timeoutMs: num(e.VENICE_TIMEOUT, 60_000),
+      temperature: 0.7,
+    });
+  }
+
   // OpenRouter free tier (optional; requires OPENROUTER_API_KEY)
   if (e.OPENROUTER_API_KEY) {
     put({
@@ -276,7 +292,7 @@ let cacheInfo: { at: number; defs: ProviderDef[] } | null = null;
 export function getProviders(e = process.env): ProviderDef[] {
   if (cacheInfo && Date.now() - cacheInfo.at < 10_000) return cacheInfo.defs;
   const all = builder(e);
-  const order = (e.BOTHY_LLM_PROVIDERS ?? "qwen-hf,openrouter,openai,ollama").split(",").map((s) => s.trim()).filter(Boolean);
+  const order = (e.BOTHY_LLM_PROVIDERS ?? "qwen-hf,venice,openrouter,openai,ollama").split(",").map((s) => s.trim()).filter(Boolean);
   const byId = new Map(all.map((d) => [d.id, d]));
   const sorted = order.map((id) => byId.get(id)).filter((d): d is ProviderDef => !!d);
   // keep any configured provider not mentioned in order, appended at end

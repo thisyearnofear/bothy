@@ -66,13 +66,15 @@ No open browsing, provider fetch, or autonomous send occurs during assessment.
   label+sources. Zero API key, repeatable demo, and a live-demo failsafe.
 - **llm** — an **OpenAI-compatible provider chain**
   (`apps/agent/src/agent/providers.ts`). Providers are tried in priority order
-  (`BOTHY_LLM_PROVIDERS`): a free public Qwen HF endpoint → optional OpenRouter /
-  any OpenAI-compatible URL / local Ollama. `SYSTEM_PROMPT` pins the 5-phase
-  pipeline + "use ONLY these tools" + "finish with create_human_review".
-  Every provider is **rate-limited** (token bucket), **cached** (short TTL),
-  timed out, and retried once on 429/`Retry-After`; a provider that fails falls
-  through to the next, then to **scripted**. The full chain result (reasoning,
-  causal chain, draft) is written to the audit trail.
+  (`BOTHY_LLM_PROVIDERS`): a free public Qwen HF endpoint → optional Venice AI /
+  OpenRouter / any OpenAI-compatible URL / local Ollama. Venice is a separate,
+  server-only opt-in: its key is read only from `VENICE_API_KEY` in the ignored
+  runtime environment and is never sent to the browser. `SYSTEM_PROMPT` pins the
+  5-phase pipeline + "use ONLY these tools" + "finish with
+  create_human_review". Every provider is **rate-limited** (token bucket),
+  **cached** (short TTL), timed out, and retried once on 429/`Retry-After`; a
+  provider that fails falls through to the next, then to **scripted**. The full
+  chain result (reasoning, causal chain, draft) is written to the audit trail.
 
 ## Risk engine
 
@@ -134,11 +136,14 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 
 | var | default | purpose |
 |-----|---------|---------|
-| `BOTHY_LLM_PROVIDERS` | `qwen-hf,openrouter,openai,ollama` | provider priority order |
+| `BOTHY_LLM_PROVIDERS` | `qwen-hf,venice,openrouter,openai,ollama` | provider priority order |
 | `BOTHY_LLM_MAX_TOKENS` | `1500` | max output tokens |
-| `BOTHY_LLM_TIMEOUT` | `25000` | per-provider request timeout (ms) |
+| `BOTHY_LLM_TIMEOUT` | `25000` | generic per-provider request timeout (ms) |
 | `QWEN_HF_URL` / `QWEN_HF_MODEL` | free HF endpoint / `Qwen/Qwen3.8-27B` | Qwen3.8-27B (no key) |
 | `QWEN_REASONING` | `low` | thinking level `none\|low\|medium\|high\|xhigh` |
+| `VENICE_API_KEY` | — | Venice AI inference key; server-only and never committed |
+| `VENICE_BASE_URL` / `VENICE_MODEL` | `https://api.venice.ai/api/v1` / `venice-uncensored` | optional Venice OpenAI-compatible endpoint |
+| `VENICE_TIMEOUT` / `VENICE_RPM` / `VENICE_BURST` | `60000` / `20` / `6` | optional Venice request budget overrides |
 | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | — | OpenRouter free tier (optional) |
 | `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL` | — | any OpenAI-compatible endpoint (optional) |
 | `OLLAMA_BASE_URL` / `OLLAMA_MODEL` | — | local Ollama (optional) |

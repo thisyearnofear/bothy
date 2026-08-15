@@ -57,9 +57,11 @@ npm run dev
   (`CREATE TABLE`/`DML` on `public` only), not superuser, and rotate it.
 - **SSH keys, not passwords.** Use `~/.ssh/config` + an agent; the tunnel script
   runs non-interactively (`BatchMode=yes`).
-- **LLM keys stay local.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-  `OPENROUTER_API_KEY`, etc. live only in `.env`. The agent's default chain
-  needs zero keys (free Qwen endpoint) and always falls back to scripted.
+- **LLM keys stay server-side.** `VENICE_API_KEY`, `OPENAI_API_KEY`,
+  `OPENROUTER_API_KEY`, etc. live only in ignored `.env` files. Never paste a
+  key into source, a committed template, a Netlify variable, browser code, or a
+  shell command saved in history. The agent's default chain needs zero keys
+  (free Qwen endpoint) and always falls back to scripted.
 - **Audit everything.** Every assessment, tool call, and duty-officer decision is
   written to the audit trail (`/api/scenario/:id/audit`) — use it.
 - **Scan for leaks in CI.** Heavier heuristics via `gitleaks detect --source .`
@@ -134,3 +136,39 @@ After the agent is healthy, refresh an operator snapshot before rehearsal:
 ```bash
 curl -X POST https://api.bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
 ```
+
+
+### Optional Venice AI provider
+
+Venice runs as an external OpenAI-compatible inference provider. The VPS hosts
+only the Bothy agent; it does not host Venice or expose the Venice key. First
+revoke any key that has been pasted into a chat, issue a replacement in Venice,
+and enter the replacement directly into the ignored VPS-local
+`deploy/.env.production` with a protected editor or secret manager. Do not put
+the key in Git, Netlify, shell history, or a command pasted into a shared
+terminal.
+
+Set only these non-browser server variables on the VPS:
+
+```dotenv
+BOTHY_LLM_PROVIDERS=qwen-hf,venice,openrouter,openai,ollama
+VENICE_API_KEY=<newly-rotated-key>
+VENICE_BASE_URL=https://api.venice.ai/api/v1
+VENICE_MODEL=venice-uncensored
+VENICE_TIMEOUT=60000
+```
+
+Then recreate the private agent container and inspect only its configuration
+summary (never the secret itself):
+
+```bash
+cd /home/linuxuser/bothy
+docker compose -f deploy/docker-compose.vps.yml up -d --build
+curl https://api.bothy.trustfall.xyz/api/health
+curl https://api.bothy.trustfall.xyz/api/llm
+```
+
+`/api/llm` should list `venice` after restart. It confirms configuration, not
+provider reachability; provider failures are traced during an LLM assessment
+and fall through to the next provider and then to the deterministic scripted
+brain.
