@@ -94,10 +94,13 @@ curl -X POST http://localhost:8787/api/scenario/live/live-weather/refresh
 curl http://localhost:8787/api/scenario/live/live-weather
 ```
 
-The second command must remain available if venue connectivity disappears. The
-weather context is deliberately non-evidentiary: it never changes seeded risk
-scores or backtest replay inputs. `npm run seed` drops these snapshots along with
-the other demo tables, so refresh again after a destructive reset.
+The second command must remain available if venue connectivity disappears. A full
+provider failure returns `503` and retains the last good snapshot rather than
+replacing it with fallback data. Acquisition mode is preserved on each persisted
+route observation. The weather context is deliberately non-evidentiary: it never
+changes seeded risk scores or backtest replay inputs. `npm run seed` drops these
+snapshots along with the other demo tables, so refresh again after a destructive
+reset.
 
 
 

@@ -90,6 +90,14 @@ app.post("/api/scenario/:scenario/live-weather/refresh", async (req, res) => {
 
   const { saveLiveWeatherSnapshot } = await import("./repo");
   const fetched = await getLiveWeather(await listRoutes(sc));
+  // keep-last-good: if every route fell back (network down), don't overwrite
+  // the newest real observation with a failure.
+  const anyAcquired = fetched.routes.some((r) => r.mode === "live" || r.mode === "cached");
+  if (!anyAcquired) {
+    return res.status(503).json({
+      error: "provider unreachable — no route observations acquired; the last good snapshot is retained",
+    });
+  }
   const snapshot = await saveLiveWeatherSnapshot(fetched);
   await logAudit(
     sc,

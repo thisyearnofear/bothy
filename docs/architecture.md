@@ -112,7 +112,7 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | GET | `/api/scenario/:id/risk?at=` |
 | GET | `/api/scenario/:id/route/:rid/timeline` |
 | GET | `/api/scenario/live/live-weather` — latest persisted Open-Meteo snapshot only; never fetches on read or serves backtests |
-| POST | `/api/scenario/live/live-weather/refresh` — operator-triggered fetch, provenance persistence, and audit entry |
+| POST | `/api/scenario/live/live-weather/refresh` — operator-triggered fetch, provenance persistence, and audit entry; returns `503` and retains the last good snapshot if every provider request falls back |
 | POST | `/api/scenario/:id/assess` |
 | POST | `/api/assessments/:id/decision` |
 | GET | `/api/scenario/:id/assessments` · `/api/scenario/:id/audit` |

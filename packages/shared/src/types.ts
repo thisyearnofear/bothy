@@ -26,8 +26,11 @@ export interface LiveWeatherRoute {
   routeName: string;
   source: string;
   sourceUrl: string;
-  /** Acquisition mode at the time this immutable snapshot was captured. */
+  /** Lifecycle of the row: how it reached this screen (fetched -> persisted). */
   mode: "live" | "cached" | "demo-fallback" | "persisted";
+  /** How the data was originally acquired — survives persistence, so a failed
+   *  fetch can never masquerade as a live observation. */
+  acquisitionMode?: "live" | "cached" | "demo-fallback";
   condition: string;
   observedAt?: string;
   fetchedAt?: string;

@@ -36,6 +36,7 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [llm, setLlm] = useState<{ id: string; label: string; model: string }[]>([]);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherResponse | null>(null);
+  const [refreshingWeather, setRefreshingWeather] = useState(false);
   // cold open: once per session, unless ?demo=1 (pitch mode) or already seen via the landing
   const [showIntro, setShowIntro] = useState(false);
 
@@ -323,16 +324,19 @@ export default function Watch() {
           </button>
           {scenario?.id === "live" && (
             <button
-              onClick={() =>
+              onClick={() => {
+                setRefreshingWeather(true);
                 api
                   .refreshLiveWeather()
                   .then(setLiveWeather)
-                  .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-              }
-              className="rounded-lg border px-3 py-1 text-sm transition-transform active:scale-[0.96]"
+                  .catch((e) => setError(e instanceof Error ? e.message : String(e))) // last good snapshot retained
+                  .finally(() => setRefreshingWeather(false));
+              }}
+              disabled={refreshingWeather}
+              className="rounded-lg border px-3 py-1 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
               style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
             >
-              Refresh live context
+              {refreshingWeather ? "Refreshing…" : "Refresh live context"}
             </button>
           )}
         </div>
@@ -370,10 +374,19 @@ export default function Watch() {
           {scenario?.id === "live" && selectedLiveWeather && (
             <section
               className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
-              style={{ borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }}
+              style={
+                selectedLiveWeather.acquisitionMode === "demo-fallback"
+                  ? { borderColor: "oklch(80% 0.14 85)", background: "var(--panel)", color: "var(--text-body)" }
+                  : { borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }
+              }
             >
               <div>
-                <span className="mono mr-2 uppercase tracking-wider" style={{ color: "var(--cursor)" }}>live weather context</span>
+                <span
+                  className="mono mr-2 uppercase tracking-wider"
+                  style={{ color: selectedLiveWeather.acquisitionMode === "demo-fallback" ? "oklch(80% 0.14 85)" : "var(--cursor)" }}
+                >
+                  {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "live weather context"}
+                </span>
                 <strong>{selectedLiveWeather.condition}</strong>
                 {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
                 {selectedLiveWeather.windGustKph != null && <> · gusts {Math.round(selectedLiveWeather.windGustKph)} km/h</>}
@@ -381,6 +394,7 @@ export default function Watch() {
               </div>
               <a href={selectedLiveWeather.sourceUrl} target="_blank" rel="noreferrer" className="mono underline" style={{ color: "var(--text-faint)" }}>
                 {selectedLiveWeather.source} · {selectedLiveWeather.mode}
+                {selectedLiveWeather.acquisitionMode ? ` · ${selectedLiveWeather.acquisitionMode}` : ""}
               </a>
               <p className="basis-full" style={{ color: "var(--text-faint)" }}>
                 {selectedLiveWeather.note}

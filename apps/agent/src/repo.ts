@@ -292,7 +292,10 @@ export async function saveLiveWeatherSnapshot(response: LiveWeatherSnapshot): Pr
     ingestedAt,
     routes: response.routes.map((route) => ({
       ...route,
-      mode: "persisted",
+      mode: "persisted" as const,
+      // acquisition mode survives persistence — a failed fetch can never
+      // masquerade as a live observation once frozen.
+      acquisitionMode: route.mode === "persisted" ? route.acquisitionMode : route.mode,
       note: `${route.note} Persisted as frozen operator context; score unchanged.`,
     })),
   };
@@ -332,6 +335,10 @@ export async function getLatestLiveWeatherSnapshot(): Promise<LiveWeatherSnapsho
       return {
         ...payload.route,
         mode: "persisted" as const,
+        acquisitionMode:
+          payload.route.mode === "persisted"
+            ? payload.route.acquisitionMode
+            : (payload.route.mode as NonNullable<LiveWeatherRoute["acquisitionMode"]>),
         observedAt: observation.observed_at ? iso(observation.observed_at) : undefined,
         fetchedAt: observation.fetched_at ? iso(observation.fetched_at) : undefined,
         note: `${payload.route.note} Loaded from frozen operator snapshot; score unchanged.`,
