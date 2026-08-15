@@ -181,11 +181,19 @@ export default function Watch() {
     [routes, snapshots, range.horizon]
   );
 
+  // timeline beats: short annotations only ("closure reported +0.30") — the map
+  // popup carries the full citation; turning points stay terse (design.md)
+  const shortSignal = (signal: string) => {
+    const text = signal.split(" · ").slice(1).join(" · ");
+    const cut = text.split(/[,;(]/)[0].trim();
+    return cut.length > 26 ? `${cut.slice(0, 24).trimEnd()}…` : cut;
+  };
+
   const snaps = useMemo(() => {
     const map = new Map<number, { t: number; label: string; delta: number }>();
     routes.forEach((r) =>
       inflections(snapshots[r.id] ?? []).forEach((n) => {
-        if (!map.has(n.atMs)) map.set(n.atMs, { t: n.atMs, label: n.signal, delta: n.delta });
+        if (!map.has(n.atMs)) map.set(n.atMs, { t: n.atMs, label: shortSignal(n.signal), delta: n.delta });
       })
     );
     return [...map.values()].sort((a, b) => a.t - b.t);
@@ -372,12 +380,34 @@ export default function Watch() {
       )}
 
       {loading && !scenario ? (
-        <div className="grid h-[60vh] place-items-center text-sm" style={{ color: "var(--text-faint)" }}>
-          Loading scenario…
+        /* first-paint skeleton in the shape of the room it becomes */
+        <div aria-busy="true" aria-label="Loading scenario" className="space-y-4">
+          <div className="h-16 rounded-lg border" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+            <div className="h-full w-2/3 animate-pulse rounded-lg" style={{ background: "var(--rule)", opacity: 0.35, margin: "0 auto", transform: "scale(0.95, 0.5)" }} />
+          </div>
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]">
+            <div className="order-2 h-72 rounded-lg border xl:order-1" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
+            <div className="order-1 h-[420px] rounded-lg border xl:order-2 sm:h-[52vh]" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
+            <div className="order-3 h-96 rounded-lg border" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
+          </div>
+          <p className="mono text-center text-xs" style={{ color: "var(--text-faint)" }}>
+            loading scenario…
+          </p>
         </div>
       ) : routes.length === 0 ? (
-        <div className="grid h-[60vh] place-items-center text-sm" style={{ color: "var(--text-faint)" }}>
-          No scenario loaded — is the agent running?
+        <div className="grid h-[60vh] place-items-center">
+          <div
+            className="max-w-md rounded-lg border px-6 py-5 text-center"
+            style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
+          >
+            <p className="text-lg font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
+              The watch room is empty.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
+              No scenario answered — is the agent running? Nothing is being watched, and nothing will be decided, until
+              it returns.
+            </p>
+          </div>
         </div>
       ) : (
         <>

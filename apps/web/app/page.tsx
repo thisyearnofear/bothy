@@ -26,8 +26,12 @@ export default function Landing() {
       <LandingBackdrop />
 
       <div className="relative">
-        {/* hero — the whole pitch in ten words, and the door, zero scroll required */}
-        <section className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        {/* hero — the whole pitch in ten words, and the door, zero scroll required.
+            camera keyframes (Bothy-legal scroll cinema): wide over the fells while the reader is still */}
+        <section
+          data-cam='{"id":"hero","center":[-3.1,54.5],"zoom":9,"pitch":35,"bearing":-18}'
+          className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+        >
           <div className="fade-up" style={{ animationDelay: "80ms" }}>
             <h1 className="text-[clamp(5rem,17vw,10rem)] font-semibold leading-[0.8] tracking-[-0.075em]" style={{ color: "var(--text-strong)" }}>
               Bothy
@@ -65,8 +69,12 @@ export default function Landing() {
           </p>
         </section>
 
-        {/* the turn — why this exists */}
-        <section className="reveal mx-auto max-w-xl px-6 py-24 text-center">
+        {/* the turn — why this exists. camera descends toward the A66 corridor:
+            the hill becomes a place, specific and real */}
+        <section
+          data-cam='{"id":"turn","center":[-2.11,54.51],"zoom":10,"pitch":48,"bearing":10}'
+          className="reveal mx-auto max-w-xl px-6 py-24 text-center"
+        >
           <p className="text-2xl font-semibold" style={{ color: "var(--text-strong)" }}>
             When the warning fails, someone gets a callout.
           </p>
@@ -81,8 +89,12 @@ export default function Landing() {
           </p>
         </section>
 
-        {/* the thesis — what a bothy is, and what Bothy is */}
-        <section className="reveal mx-auto max-w-xl px-6 pb-32 text-center">
+        {/* the thesis — what a bothy is, and what Bothy is. camera settles over
+            the pass, pitch flattening: landscape becoming instrument */}
+        <section
+          data-cam='{"id":"thesis","center":[-2.11,54.51],"zoom":11,"pitch":18,"bearing":-4}'
+          className="reveal mx-auto max-w-xl px-6 pb-32 text-center"
+        >
           <p className="mono text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
             A bothy, from Gaelic <em>bothan</em>: a shelter for walkers caught out in the hills. No booking, no staff —
             those inside decide together.

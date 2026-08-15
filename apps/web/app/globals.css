@@ -38,6 +38,27 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The door becomes the window: same-origin cross-document View Transitions
+   morph the landing's dim backdrop map into the watch room's live map.
+   Progressive enhancement — browsers without support navigate normally. */
+@view-transition {
+  navigation: auto;
+}
+.map-morph {
+  view-transition-name: bothy-map;
+}
+
+/* Keyboard focus is always visible — walk every state (design.md). */
+:focus-visible {
+  outline: 2px solid var(--cursor);
+  outline-offset: 2px;
+}
+
+/* Bordered controls lift their border on hover — one consistent affordance. */
+button:not(:disabled):hover {
+  border-color: var(--text-faint);
+}
+
 /* "Awaiting duty officer" — subtle pulse on the Approve control only. */
 @keyframes bothy-pulse {
   0%,

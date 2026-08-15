@@ -38,6 +38,22 @@ export const OSM_STYLE = {
   ],
 };
 
+/**
+ * MapLibre's style parser is stricter than CSS about modern colour formats —
+ * resolve oklch()/token values through the browser's canvas normaliser so
+ * paint properties always receive a format the map understands.
+ */
+const resolveColor = (() => {
+  let ctx: CanvasRenderingContext2D | null = null;
+  return (color: string): string => {
+    if (!ctx) ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return color;
+    ctx.fillStyle = "#000";
+    ctx.fillStyle = color;
+    return ctx.fillStyle;
+  };
+})();
+
 const centroid = (coords: [number, number][]) => {
   let x = 0;
   let y = 0;
@@ -138,7 +154,7 @@ export default function MapView({
           id: ghostId,
           type: "line",
           source: `s-${on.route.id}`,
-          paint: { "line-color": "#2a3a5b", "line-width": 2, "line-opacity": 0.35 },
+          paint: { "line-color": resolveColor("oklch(28% 0.008 255)"), "line-width": 2, "line-opacity": 0.35 },
         });
         // progress: risk-as-ink, reveals only up to the cursor
         map.addLayer({
@@ -146,7 +162,7 @@ export default function MapView({
           type: "line",
           source: `p-${on.route.id}`,
           paint: {
-            "line-color": on.color,
+            "line-color": resolveColor(on.color),
             "line-width": isSel || isHover ? 4 : 3,
             "line-opacity": isSel || isHover ? 1 : 0.55,
           },
@@ -160,8 +176,15 @@ export default function MapView({
             /* noop */
           }
         });
+        map.on("mouseleave", progId, () => {
+          try {
+            map.getCanvas().style.cursor = "";
+          } catch {
+            /* noop */
+          }
+        });
       } else {
-        map.setPaintProperty(progId, "line-color", on.color);
+        map.setPaintProperty(progId, "line-color", resolveColor(on.color));
         map.setPaintProperty(progId, "line-width", isSel ? 4 : isHover ? 4 : 3);
         map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
       }
@@ -243,7 +266,24 @@ export default function MapView({
     }
   }, [beats, cursorMs, selectedId, ready]);
 
-  return <div ref={container} className="h-full w-full absolute inset-0" style={{ background: "#0b1220" }} />;
+  return (
+    <div className="map-morph h-full w-full absolute inset-0" style={{ background: "var(--page)" }}>
+      {/* terrain arrives with a fade, not a pop; the hint holds the promise until it does */}
+      <div
+        ref={container}
+        className="h-full w-full"
+        style={{ opacity: ready ? 1 : 0, transition: "opacity 480ms var(--ease-base)" }}
+      />
+      {!ready && (
+        <div
+          className="mono pointer-events-none absolute inset-0 grid place-items-center text-xs uppercase tracking-widest"
+          style={{ color: "var(--text-faint)" }}
+        >
+          acquiring terrain…
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** A signal pin: cursor-coloured dot on a stem, with its arrival time as a mono label. */
@@ -257,7 +297,7 @@ function pinEl(b: MapBeat): HTMLElement {
   const time = b.text.split(" · ")[0];
   wrap.innerHTML =
     `<span class="mono" style="font-size:11px;color:var(--cursor);margin-bottom:2px;white-space:nowrap">${time}</span>` +
-    `<span style="width:8px;height:8px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px #131a26"></span>`;
+    `<span style="width:8px;height:8px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px var(--page)"></span>`;
   return wrap;
 }
 
@@ -268,6 +308,6 @@ function beaconEl(): HTMLElement {
   el.style.height = "10px";
   el.style.borderRadius = "50%";
   el.style.background = "var(--cursor)";
-  el.style.boxShadow = "0 0 0 2px #131a26";
+  el.style.boxShadow = "0 0 0 2px var(--page)";
   return el;
 }

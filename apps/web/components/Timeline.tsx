@@ -177,7 +177,12 @@ export default function Timeline({
             />
             <span
               className="mono pointer-events-none absolute -top-6 -translate-x-1/2 rounded border px-1.5 py-0.5 text-xs"
-              style={{ left: `${pct}%`, borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-strong)" }}
+              style={{
+                left: `clamp(18px, ${pct}%, calc(100% - 18px))`,
+                borderColor: "var(--rule)",
+                background: "var(--panel)",
+                color: "var(--text-strong)",
+              }}
             >
               {fmt(t)}
             </span>

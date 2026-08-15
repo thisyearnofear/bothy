@@ -82,21 +82,47 @@ under `prefers-reduced-motion`.
 | Replay | opt-in; playhead, map, and pins advance together. Reduced motion falls back to a manual beat step. |
 | Ambient map | non-interactive, very slow drift behind framing copy; never conveys a risk state or competes with controls. |
 
-### Interaction boundaries
+### Interaction boundaries — two surfaces, two laws
 
-- **Time remains the controller.** Scrubbing and replay advance the decision
-  lens. Scroll may reveal normal document sections, but it must never hijack
-  input, pin the user into a scene, or become a substitute for the replay.
-- **Ambient motion is secondary.** It may establish place while copy is read,
-  but it cannot encode data, affect decision state, or block interaction.
-- **Use the smallest robust runtime.** CSS and MapLibre are the default. A
-  choreography library such as GSAP is permissible for an isolated,
-  non-critical presentation sequence only when it produces a concrete benefit,
-  does not capture scrolling, and has an equivalent static/reduced-motion
-  state. Do not add one merely to decorate the product.
-- **Offline/degraded behaviour is designed.** A map backdrop falls back to the
-  page surface if tiles fail. No image, font, or animation dependency may hide
-  the core copy or decision path.
+Bothy has exactly two kinds of surface, and motion law differs between them:
+
+1. **Operational surfaces (the watch room).** *Time is the controller.* The
+   scrubber and replay are the only things that advance the decision lens.
+   Scroll inside the watch room may never drive time, pin content, hijack
+   input, or restate the replay. This is non-negotiable: an officer under
+   pressure must own the lens.
+2. **Storytelling surfaces (the landing page, any narrative page).** *Scroll is
+   a legitimate time surrogate.* The reader's scroll position may drive a
+   camera flight, ink reveal, or copy staging — the Codrops "pinned map
+   cinema" pattern is allowed here in a Bothy-legal form.
+
+**Bothy-legal scroll cinema** means all of:
+
+- **Native scroll only.** The page scrolls normally; sections are real document
+  flow. No `position: fixed` body-lock, no GSAP ScrollTrigger pin/scrub, no
+  wheel/touch capture. If the library needs to hijack scroll to work, the
+  technique is wrong, not the rule.
+- **Camera keyframes, not scrubbed frames.** Section anchors define discrete
+  camera states (centre / zoom / bearing / pitch). On section change the map
+  performs one interruptible `easeTo` (≤ 700ms, focus/expo easing). We do not
+  sample scroll position every pixel and scrub the camera 1:1 — that produces
+  the jank the pattern is infamous for. Scroll picks the *keyframe*; the camera
+  flies there on its own.
+- **Progressive enhancement.** Without JS or with tiles unavailable, the page
+  is a complete, readable document. With `prefers-reduced-motion`, the camera
+  jumps between keyframes with no flight and copy appears without staging.
+- **Assets stay local-or-tiled.** Atmosphere comes from MapLibre tiles and our
+  own geometry (route ink, pins), never from third-party hero images or
+  external webfonts — the flake-wifi rule applies to decoration too.
+- **One direction of influence.** Scroll may move the camera; the camera never
+  moves the page. No scroll-snap traps, no forced scrolling to reveal a door.
+
+**Runtime stance:** CSS + MapLibre + rAF + the View Transitions API remain the
+default and are sufficient for every pattern in this document. A choreography
+library (GSAP or similar) is permissible only for an isolated, non-critical
+presentation sequence that produces a concrete benefit CSS/MapLibre cannot,
+never captures scrolling, and has an equivalent reduced-motion state. Do not
+add one merely to decorate the product.
 
 ### Atmospheric map backdrop
 
@@ -108,14 +134,21 @@ This is an on-thesis visual, not a generic dark background.
   pass contrast checks without blur or glass layers.
 - Drift occurs on a tens-of-seconds timescale. It pauses completely when reduced
   motion is requested.
+- On storytelling surfaces the drift yields to scroll keyframes (above): the
+  ambient patrol is what the camera does while the reader is still; section
+  changes are what it does when they move.
 - The map uses the same MapLibre language as the watch room, so the visual
   transition into the decision workspace feels earned.
+- Dimming compounds: effective luminance = raster brightness × scrim
+  transparency. Keep the product above ~0.3 so the fells read as terrain, not
+  void.
 - If terrain tiles are unavailable, retain a flat neutral surface and all copy,
   controls, and navigation.
 
 ## Cinematic map primitives
 
-Borrow the language of map cinema, not its scroll-jacking mechanics:
+Borrow the language of map cinema; on operational surfaces borrow none of its
+scroll mechanics:
 
 | primitive | Bothy adaptation |
 |---|---|
@@ -124,22 +157,27 @@ Borrow the language of map cinema, not its scroll-jacking mechanics:
 | path draws itself | selected route ink reveals to the cursor; risk controls its colour and weight |
 | signal arrives | a timestamped pin lands with its citation as the replay crosses the beat |
 | focus changes | selecting a route performs one deliberate camera settle, not a perpetual camera tour |
-| reported outcome | the backtest horizon becomes a hatched boundary; the sourced outcome remains ghosted until revealed |
+| reported outcome | the backtest horizon becomes a hatched boundary; the sourced outcome stays ghosted until revealed, then the camera may hop once onto the outcome point |
+| camera flight between scenes | landing sections define keyframes; entering the watch room may use a same-document or cross-document View Transition so the window becomes the instrument |
 
 ### Motion beats for the demo
 
+- Landing flight: fells wide → descend toward the corridor → settle over the
+  pass as the thesis appears → the door opens into the watch room.
 - Replay: signals land, route ink grows, and the decision record stays pinned to
   the scenario horizon.
 - On approval: one short settle, then quiet; the audit line becomes the receipt.
 - Backtest reveal: crossing the horizon activates the sourced outcome without
-  altering the frozen risk assessment.
+  altering the frozen risk assessment; one beacon and, at most, one camera hop
+  onto the outcome point.
 
 ## States to design explicitly
 
-`loading` (first paint) · `empty` (no scenario) · `error` (agent down / DB) ·
-`reasoning` (agent trace streaming) · `scrubbing` (time cursor) ·
-`awaiting-approval` → `approved`/`rejected` · `backtest` (hatched "agent's view
-ends here"; outcome desaturated until the cursor crosses it).
+`loading` (first paint, skeleton in the shape of the room) · `empty` (no
+scenario) · `error` (agent down / DB) · `reasoning` (agent trace streaming, the
+room spotlights the trace) · `scrubbing` (time cursor) · `awaiting-approval` →
+`approved`/`rejected` · `backtest` (hatched "agent's view ends here"; outcome
+desaturated until the cursor crosses it).
 
 ## Motion budget
 

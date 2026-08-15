@@ -42,9 +42,14 @@ export default function Detail({
   const [showTrace, setShowTrace] = useState(false);
   if (!route || !horizon) {
     return (
-      <p className="text-sm" style={{ color: "var(--text-faint)" }}>
-        Select a route to inspect.
-      </p>
+      <div className="rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+        <p className="text-sm font-medium" style={{ color: "var(--text-strong)" }}>
+          No corridor under the lamp.
+        </p>
+        <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--text-faint)" }}>
+          Select a route to open its decision case.
+        </p>
+      </div>
     );
   }
   const visibleCitations = showAll ? horizon.citations : horizon.citations.slice(0, 3);
@@ -241,20 +246,28 @@ export default function Detail({
         </div>
       )}
 
+      {/* collapsed trace renders exactly like the live one — same log, frozen */}
       {assessment && assessment.toolTrace != null && (
         <div>
           <button onClick={() => setShowTrace((v) => !v)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
             {showTrace ? "hide" : "show"} agent trace
           </button>
           {showTrace && (
-            <pre
-              className="mono mt-2 max-h-48 overflow-auto rounded border p-2 text-xs leading-5"
-              style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}
+            <div
+              className="mt-2 rounded border p-2"
+              style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 60%, transparent)" }}
             >
-              {assessment.phases.join(" -> ")}
-              {"\n"}
-              {JSON.stringify(assessment.toolTrace, null, 1)}
-            </pre>
+              <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+                {assessment.phases.join(" -> ")}
+              </p>
+              <ul className="mono mt-1.5 max-h-44 space-y-1 overflow-auto text-xs leading-5">
+                {assessment.toolTrace.map((tc, i) => (
+                  <li key={i} style={{ color: tc.ok ? "var(--text-body)" : "oklch(64% 0.21 25)" }}>
+                    <span style={{ color: "var(--text-faint)" }}>{t(tc.at)}</span> {tc.tool}: {tc.summary}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}

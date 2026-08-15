@@ -50,9 +50,15 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
       onClick={() => close(onEnter)}
     >
       <div className="max-w-xl space-y-8 text-center">
-        {/* beat 1 — the definition card */}
+        {/* beat 1 — the wordmark + definition, same voice as the landing hero */}
         <div className={beat >= 0 ? "fade-up" : "opacity-0"}>
-          <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+          <h1 className="text-[clamp(3.5rem,9vw,6rem)] font-semibold leading-[0.8] tracking-[-0.075em]" style={{ color: "var(--text-strong)" }}>
+            Bothy
+          </h1>
+          <p className="mono mt-4 text-xs uppercase tracking-[0.22em] sm:text-sm" style={{ color: "var(--cursor)" }}>
+            Accountable winter access decisions
+          </p>
+          <p className="mono mt-6 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             both·y &nbsp;/ˈbɒθi/&nbsp; n. Scottish, from Gaelic <em>bothan</em>, “hut”
           </p>
           <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--text-body)" }}>
@@ -64,7 +70,7 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
         {/* beat 2 — the turn */}
         {beat >= 1 && (
           <div className="fade-up">
-            <p className="text-xl font-semibold" style={{ color: "var(--text-strong)" }}>
+            <p className="text-2xl font-semibold tracking-tight sm:text-3xl" style={{ color: "var(--text-strong)" }}>
               When the warning fails, someone gets a callout.
             </p>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
