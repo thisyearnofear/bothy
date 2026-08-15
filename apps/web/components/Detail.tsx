@@ -38,6 +38,7 @@ export default function Detail({
   onReject: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [showAllAudit, setShowAllAudit] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
   if (!route || !horizon) {
     return (
@@ -46,8 +47,7 @@ export default function Detail({
       </p>
     );
   }
-  const chain = horizon.citations.map((c) => `${t(c.at)} · ${c.text}`);
-  const visible = showAll ? chain : chain.slice(0, 3);
+  const visibleCitations = showAll ? horizon.citations : horizon.citations.slice(0, 3);
   // counterfactual: the single load-bearing piece of evidence — remove it and
   // the label changes. Pure client arithmetic over signed contributions.
   const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
@@ -82,19 +82,39 @@ export default function Detail({
       </div>
 
       <div>
-        <p className="mb-1 text-xs" style={{ color: "var(--text-faint)" }}>
+        <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
           Causal chain <span>(at {horizonTime})</span>
         </p>
+        {/* evidence chips — time, text, and the signed contribution that earned it */}
         <ol className="space-y-1.5">
-          {visible.map((l, i) => (
-            <li key={i} className="text-sm" style={{ color: "var(--text-body)" }}>
-              {l}
+          {visibleCitations.map((c, i) => (
+            <li
+              key={`${c.eventId}-${i}`}
+              className="flex items-start justify-between gap-2 rounded border px-2 py-1.5"
+              style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 60%, transparent)" }}
+            >
+              <span className="min-w-0 text-sm leading-snug" style={{ color: "var(--text-body)" }}>
+                <span className="mono mr-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
+                  {t(c.at)}
+                </span>
+                {c.text}
+              </span>
+              <span
+                className="mono tnum shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"
+                style={{
+                  background: `color-mix(in oklch, ${c.contribution >= 0 ? "oklch(72% 0.17 55)" : "var(--rule)"} 14%, transparent)`,
+                  color: c.contribution >= 0 ? "oklch(72% 0.17 55)" : "var(--text-faint)",
+                }}
+              >
+                {c.contribution >= 0 ? "+" : ""}
+                {c.contribution.toFixed(2)}
+              </span>
             </li>
           ))}
         </ol>
-        {chain.length > 3 && (
+        {horizon.citations.length > 3 && (
           <button onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs underline" style={{ color: "var(--cursor)" }}>
-            {showAll ? "collapse" : `+${chain.length - 3} earlier signals`}
+            {showAll ? "collapse" : `+${horizon.citations.length - 3} earlier signals`}
           </button>
         )}
         <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
@@ -184,10 +204,10 @@ export default function Detail({
           )}
         </div>
 
-        {/* Ledger receipt — official and final, like a stamp. */}
+        {/* Ledger receipt — official and final, like a stamp. One settle pulse, then quiet. */}
         {decided && assessment && (
           <p className="receipt-in mono mt-3 border-t pt-3 text-sm" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-            <span className="font-semibold" style={{ color: "var(--text-strong)" }}>
+            <span className="settle inline-block font-semibold" style={{ color: "var(--text-strong)" }}>
               {assessment.status === "approved" ? "APPROVED" : "REJECTED"}
             </span>
             {" · "}
@@ -196,19 +216,28 @@ export default function Detail({
         )}
       </div>
 
-      {/* Audit line — appends after the decision, announced politely. */}
+      {/* Audit line — appends after the decision, announced politely; latest first. */}
       {audit.length > 0 && (
         <div aria-live="polite">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             Audit
           </p>
           <ul className="mt-1 space-y-1">
-            {audit.slice(-4).reverse().map((a) => (
+            {(showAllAudit ? audit.slice().reverse() : audit.slice(-2).reverse()).map((a) => (
               <li key={a.id} className="mono text-xs" style={{ color: "var(--text-faint)" }}>
                 {fmtDateTime(a.at)} · {a.actor} · {a.action} · {a.detail}
               </li>
             ))}
           </ul>
+          {audit.length > 2 && (
+            <button
+              onClick={() => setShowAllAudit((v) => !v)}
+              className="mt-1 text-xs underline"
+              style={{ color: "var(--cursor)" }}
+            >
+              {showAllAudit ? "collapse" : `+${audit.length - 2} earlier entries`}
+            </button>
+          )}
         </div>
       )}
 

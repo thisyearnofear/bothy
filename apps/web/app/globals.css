@@ -87,6 +87,41 @@ body {
   animation: bothy-pin-in 200ms var(--ease-base) both;
 }
 
+/* Staged entrance (design.md: "sequence entry — map -> case -> risk line,
+   never everything at once"). Stagger = 120ms per semantic chunk. */
+@keyframes bothy-stage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.stage-in {
+  animation: bothy-stage 240ms var(--ease-base) backwards;
+  animation-delay: calc(var(--stage, 0) * 120ms);
+}
+
+/* Settle pulse — quick 1 -> 1.04 -> 1 scale, only on threshold cross and Approve. */
+.settle {
+  animation: bothy-beacon 480ms var(--ease-settle);
+  transform-origin: left center;
+}
+
+/* Reasoning spotlight: while the agent runs, the rest of the room dims —
+   staging; one active object holds the light. */
+.spot-dim {
+  transition:
+    opacity 240ms var(--ease-base),
+    filter 240ms var(--ease-base);
+}
+.reasoning-spotlight .spot-dim {
+  opacity: 0.55;
+  filter: saturate(0.75);
+}
+
 /* Scroll reveal for landing sections — enter lifted, settle flat. */
 .reveal {
   opacity: 0;
@@ -160,5 +195,8 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .stage-in {
+    animation: none;
   }
 }

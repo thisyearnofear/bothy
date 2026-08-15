@@ -54,6 +54,7 @@ export { pointAt };
 export default function MapView({
   routes,
   selectedId,
+  hoverId,
   onSelect,
   cursorMs,
   startMs,
@@ -63,6 +64,7 @@ export default function MapView({
 }: {
   routes: RouteOnMap[];
   selectedId: string | null;
+  hoverId?: string | null;
   onSelect: (id: string) => void;
   cursorMs: number;
   startMs: number;
@@ -120,6 +122,7 @@ export default function MapView({
       const ghostId = `g-${on.route.id}`;
       const progId = `l-${on.route.id}`;
       const isSel = on.route.id === selectedId;
+      const isHover = on.route.id === hoverId;
 
       if (!map.getLayer(ghostId)) {
         map.addSource(`s-${on.route.id}`, {
@@ -142,7 +145,11 @@ export default function MapView({
           id: progId,
           type: "line",
           source: `p-${on.route.id}`,
-          paint: { "line-color": on.color, "line-width": isSel ? 4 : 3, "line-opacity": isSel ? 1 : 0.6 },
+          paint: {
+            "line-color": on.color,
+            "line-width": isSel || isHover ? 4 : 3,
+            "line-opacity": isSel || isHover ? 1 : 0.55,
+          },
         });
         map.on("click", progId, () => onSelectRef.current(on.route.id));
         map.on("click", ghostId, () => onSelectRef.current(on.route.id));
@@ -155,8 +162,8 @@ export default function MapView({
         });
       } else {
         map.setPaintProperty(progId, "line-color", on.color);
-        map.setPaintProperty(progId, "line-width", isSel ? 4 : 3);
-        map.setPaintProperty(progId, "line-opacity", isSel ? 1 : 0.6);
+        map.setPaintProperty(progId, "line-width", isSel ? 4 : isHover ? 4 : 3);
+        map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
       }
 
       // self-draw: the polyline grows with the elapsed fraction of the day
@@ -190,7 +197,7 @@ export default function MapView({
         map.jumpTo({ center: pos });
       }
     }
-  }, [routes, selectedId, fraction, revealed, ready]);
+  }, [routes, selectedId, hoverId, fraction, revealed, ready]);
 
   // signal pins: land at the cursor crossing (pin-in), un-land when scrubbed back past them.
   // Each carries its citation + timestamp — "every number on this screen cites a source".

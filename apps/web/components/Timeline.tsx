@@ -18,6 +18,8 @@ export default function Timeline({
   inevitableMs,
   revealMs,
   revealText,
+  playing,
+  onTogglePlay,
 }: {
   startMs: number;
   endMs: number;
@@ -31,6 +33,8 @@ export default function Timeline({
   inevitableMs?: number;
   revealMs?: number;
   revealText?: string;
+  playing: boolean;
+  onTogglePlay: () => void;
 }) {
   const uid = useId();
   const W = 640;
@@ -119,10 +123,35 @@ export default function Timeline({
           <line x1={x(t)} y1={8} x2={x(t)} y2={H - 8} stroke="var(--cursor)" strokeWidth="1.5" />
         </svg>
 
+        {/* transport — video-player grammar: step between beats, play the day */}
         <div className="mt-2 flex items-center gap-2">
-          <button onClick={onPrevStep} aria-label="Previous signal" className="rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-            ‹ prev
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onPrevStep}
+              aria-label="Previous signal"
+              className="rounded border px-2 py-1 text-xs transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              ‹
+            </button>
+            <button
+              onClick={onTogglePlay}
+              aria-label={playing ? "Pause replay" : "Replay the day"}
+              aria-pressed={playing}
+              className="rounded border px-2.5 py-1 text-xs transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
+            >
+              {playing ? "❙❙" : "▶"}
+            </button>
+            <button
+              onClick={onNextStep}
+              aria-label="Next signal"
+              className="rounded border px-2 py-1 text-xs transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              ›
+            </button>
+          </div>
           {/* time bubble tracks the thumb */}
           <div className="relative flex-1">
             <input
@@ -153,9 +182,12 @@ export default function Timeline({
               {fmt(t)}
             </span>
           </div>
-          <button onClick={onNextStep} aria-label="Next signal" className="rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-            next ›
-          </button>
+        </div>
+        {/* axis + affordance hint — the scrubber explains itself once, quietly */}
+        <div className="mono mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-faint)" }}>
+          <span>{fmt(startMs)}</span>
+          <span aria-hidden="true">drag to rewind · ← → jumps between signals</span>
+          <span>{fmt(endMs)}</span>
         </div>
       </div>
     </div>

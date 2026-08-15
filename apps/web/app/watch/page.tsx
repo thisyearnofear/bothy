@@ -27,6 +27,7 @@ export default function Watch() {
   const [t, setT] = useState(0);
   const [range, setRange] = useState({ start: 0, end: 0, horizon: 0, outcome: undefined as number | undefined });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const [assessments, setAssessments] = useState<Record<string, Assessment>>({});
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -280,8 +281,14 @@ export default function Watch() {
       ? `reported closure · modeled lead time ${leadTimeLabel(scenario.now, scenario.outcomeAt)}`
       : undefined;
 
+  // Scenario data arrives asynchronously, so keep the swap honest and direct rather
+  // than animating an unchanged workspace before its new evidence is available.
+  const switchScenario = (id: ScenarioId) => {
+    void load(id);
+  };
+
   return (
-    <main className="mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5">
+    <main className={`mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5${running ? " reasoning-spotlight" : ""}`}>
       {showIntro && (
         <Intro
           onEnter={() => setShowIntro(false)}
@@ -301,7 +308,7 @@ export default function Watch() {
             Bothy · the watch room
           </p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="text-xl font-semibold" style={{ color: "var(--text-strong)" }}>
+            <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
               {scenario?.title ?? (loading ? "Loading…" : "Bothy")}
             </h1>
             {scenario && (
@@ -310,6 +317,11 @@ export default function Watch() {
               </span>
             )}
           </div>
+          {scenario?.subtitle && (
+            <p className="mt-0.5 text-sm" style={{ color: "var(--text-faint)" }}>
+              {scenario.subtitle}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2" aria-label="Watch room controls">
@@ -317,7 +329,7 @@ export default function Watch() {
             {(["live", "backtest"] as const).map((id) => (
               <button
                 key={id}
-                onClick={() => load(id)}
+                onClick={() => switchScenario(id)}
                 className="rounded-md px-3 py-1.5 text-sm transition-colors"
                 style={
                   scenario?.id === id
@@ -329,13 +341,6 @@ export default function Watch() {
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setPlaying((p) => !p)}
-            className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
-            style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
-          >
-            {playing ? "Pause replay" : "Replay day"}
-          </button>
           {scenario?.id === "live" && (
             <button
               onClick={() => {
@@ -377,7 +382,10 @@ export default function Watch() {
       ) : (
         <>
           {headline && (
-            <section className="mb-4 rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+            <section
+              className="stage-in mb-4 rounded-lg border px-4 py-3"
+              style={{ borderColor: "var(--rule)", background: "var(--panel)", ["--stage" as string]: 0 }}
+            >
               <p className="mono mb-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
                 Current decision picture
               </p>
@@ -390,8 +398,11 @@ export default function Watch() {
             </section>
           )}
 
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]">
-            <aside className="order-2 xl:sticky xl:top-4 xl:order-1 xl:self-start">
+          <div
+            key={scenario?.id}
+            className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]"
+          >
+            <aside className="stage-in spot-dim order-2 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
               <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
@@ -406,11 +417,11 @@ export default function Watch() {
                     {rows.length} routes
                   </span>
                 </div>
-                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} fresh={at(t)} />
+                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} onHover={setHoverId} fresh={at(t)} />
               </section>
             </aside>
 
-            <section className="order-1 min-w-0 space-y-4 xl:order-2">
+            <section className="stage-in spot-dim order-1 min-w-0 space-y-4 xl:order-2" style={{ ["--stage" as string]: 0 }}>
               <section
                 className="relative h-[420px] overflow-hidden rounded-lg border sm:h-[52vh] xl:h-[min(58vh,680px)]"
                 style={{ borderColor: "var(--rule)" }}
@@ -424,6 +435,7 @@ export default function Watch() {
                     return { route: r, color: riskColor(label), score: s?.score ?? 0, label };
                   })}
                   selectedId={selectedId}
+                  hoverId={hoverId}
                   onSelect={setSelectedId}
                   cursorMs={t}
                   startMs={range.start}
@@ -447,6 +459,25 @@ export default function Watch() {
                     </p>
                   </div>
                 )}
+                {/* severity legend — colour + label, never colour alone */}
+                <div
+                  className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded-lg border px-2.5 py-1.5"
+                  style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 85%, transparent)" }}
+                >
+                  <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
+                    risk at <span style={{ color: "var(--cursor)" }}>{at(t)}</span>
+                  </span>
+                  {(["LOW", "MODERATE", "ELEVATED", "HIGH"] as const).map((l) => (
+                    <span key={l} className="flex items-center gap-1 text-xs" style={{ color: "var(--text-body)" }}>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: riskColor(l) }}
+                      />
+                      {l}
+                    </span>
+                  ))}
+                </div>
               </section>
 
               {scenario?.id === "live" && selectedLiveWeather && (
@@ -481,7 +512,11 @@ export default function Watch() {
                 </section>
               )}
 
-              <section aria-label="Decision replay timeline">
+              <section
+                className="stage-in spot-dim"
+                style={{ ["--stage" as string]: 2 }}
+                aria-label="Decision replay timeline"
+              >
                 <Timeline
                   startMs={range.start}
                   endMs={range.end}
@@ -495,6 +530,8 @@ export default function Watch() {
                   inevitableMs={inevitableMs}
                   revealMs={range.outcome}
                   revealText={revealText}
+                  playing={playing}
+                  onTogglePlay={() => setPlaying((p) => !p)}
                 />
                 {scenario?.outcomeAt && scenario.outcome && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
@@ -504,7 +541,10 @@ export default function Watch() {
               </section>
             </section>
 
-            <aside className="order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start">
+            <aside
+              className="stage-in order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
+              style={{ ["--stage" as string]: 3 }}
+            >
               <section className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
                 <Detail
                   route={selected}
@@ -527,7 +567,12 @@ export default function Watch() {
           </div>
 
           <footer className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "var(--text-faint)" }}>
-            <span>providers: {llm.length ? llm.map((p) => p.id).join(", ") : "scripted only"}</span>
+            <span>
+              {scenario?.id === "live"
+                ? `live context: ${liveWeather ? "Open-Meteo frozen snapshot" : "no operator snapshot"} · map © OpenStreetMap · engine: bothy-agent`
+                : "illustrative backtest · modeled pre-closure signals only · map © OpenStreetMap · engine: bothy-agent"}
+              {llm.length ? ` (llm chain: ${llm.map((p) => p.id).join(", ")})` : " (scripted brain)"}
+            </span>
             {scenario?.outcomeAt && (
               <span>
                 horizon <span className="tnum">{at(range.horizon)}</span>

@@ -61,8 +61,8 @@ export default function LandingBackdrop() {
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
       <div ref={container} className="absolute inset-0" style={{ background: "var(--page)" }} />
-      {/* flat dim layer for text legibility — no gradient overlays, per design.md */}
-      <div className="absolute inset-0" style={{ background: "color-mix(in oklch, var(--page) 72%, transparent)" }} />
+      {/* One restrained scrim keeps copy legible without erasing the map's terrain and road texture. */}
+      <div className="absolute inset-0" style={{ background: "color-mix(in oklch, var(--page) 60%, transparent)" }} />
     </div>
   );
 }
@@ -71,9 +71,9 @@ export default function LandingBackdrop() {
 function darkStyle() {
   const style = JSON.parse(JSON.stringify(OSM_STYLE));
   style.layers[0].paint = {
-    "raster-brightness-max": 0.38,
-    "raster-saturation": -0.85,
-    "raster-contrast": 0.05,
+    "raster-brightness-max": 0.52,
+    "raster-saturation": -0.7,
+    "raster-contrast": 0.1,
   };
   return style;
 }

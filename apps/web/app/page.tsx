@@ -28,14 +28,22 @@ export default function Landing() {
       <div className="relative">
         {/* hero — the whole pitch in ten words, and the door, zero scroll required */}
         <section className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          <p className="mono fade-up text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+          <div className="fade-up" style={{ animationDelay: "80ms" }}>
+            <h1 className="text-[clamp(5rem,17vw,10rem)] font-semibold leading-[0.8] tracking-[-0.075em]" style={{ color: "var(--text-strong)" }}>
+              Bothy
+            </h1>
+            <p className="mono mt-5 text-xs uppercase tracking-[0.22em] sm:text-sm" style={{ color: "var(--cursor)" }}>
+              Accountable winter access decisions
+            </p>
+          </div>
+          <p className="mono fade-up mt-7 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)", animationDelay: "180ms" }}>
             both·y &nbsp;/ˈbɒθi/&nbsp; n. Scottish
           </p>
-          <h1 className="fade-up mt-4 text-4xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--text-strong)", animationDelay: "120ms" }}>
+          <h2 className="fade-up mt-4 text-3xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--text-strong)", animationDelay: "280ms" }}>
             The agent watches the hill.
             <br />
             The human owns the call.
-          </h1>
+          </h2>
           <div className="fade-up mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
             <button
               onClick={() => enter(false)}

@@ -12,11 +12,13 @@ export default function RiskList({
   rows,
   selectedId,
   onSelect,
+  onHover,
   fresh,
 }: {
   rows: RiskRow[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onHover?: (id: string | null) => void;
   fresh: string; // the cursor time label shown on each card
 }) {
   return (
@@ -28,6 +30,10 @@ export default function RiskList({
           <li key={r.routeId}>
             <button
               onClick={() => onSelect(r.routeId)}
+              onMouseEnter={() => onHover?.(r.routeId)}
+              onMouseLeave={() => onHover?.(null)}
+              onFocus={() => onHover?.(r.routeId)}
+              onBlur={() => onHover?.(null)}
               aria-pressed={selected}
               className="w-full rounded-lg border px-3 py-2 text-left transition-colors"
               style={{
@@ -56,6 +62,16 @@ export default function RiskList({
                 </span>
                 <span style={{ color: "var(--text-faint)" }}>at {fresh}</span>
               </div>
+              {/* the seismograph tick: the bar eases to the new score as the day scrubs */}
+              <span
+                aria-hidden="true"
+                className="mt-1.5 block h-[3px] rounded-full"
+                style={{
+                  width: `${Math.max(3, r.score * 100)}%`,
+                  background: r.color,
+                  transition: "width 240ms var(--ease-base), background 240ms var(--ease-base)",
+                }}
+              />
             </button>
           </li>
         );
