@@ -47,6 +47,7 @@ runAssessment({ scenario, routeId?, at, engine })
 
 | tool | side effect | purpose |
 |------|-------------|---------|
+| `get_live_weather_snapshot` | read | latest operator-persisted Open-Meteo context; non-evidentiary and score-neutral |
 | `get_weather_warning` | read | active Met Office warnings |
 | `get_road_disruptions` | read | closures / disrupts / plough status |
 | `search_incidents` | read | route / hazard / geo filter → semantic rank |
@@ -54,8 +55,9 @@ runAssessment({ scenario, routeId?, at, engine })
 | `draft_public_warning` | read | template draft from engine score |
 | `create_human_review` | **write** | persist assessment to approval queue |
 
-No open browsing, no autonomous send. `create_human_review` is the **only** exit
-point — both brains end by calling it.
+No open browsing, provider fetch, or autonomous send occurs during assessment.
+`get_live_weather_snapshot` reads a frozen database snapshot only, and
+`create_human_review` is the **only** exit point — both brains end by calling it.
 
 ## Brains
 
@@ -109,6 +111,8 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | GET | `/api/scenario/:id` |
 | GET | `/api/scenario/:id/risk?at=` |
 | GET | `/api/scenario/:id/route/:rid/timeline` |
+| GET | `/api/scenario/live/live-weather` — latest persisted Open-Meteo snapshot only; never fetches on read or serves backtests |
+| POST | `/api/scenario/live/live-weather/refresh` — operator-triggered fetch, provenance persistence, and audit entry |
 | POST | `/api/scenario/:id/assess` |
 | POST | `/api/assessments/:id/decision` |
 | GET | `/api/scenario/:id/assessments` · `/api/scenario/:id/audit` |
@@ -124,6 +128,7 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | `PORT` | `8787` | agent API |
 | `AGENT_URL` | `http://localhost:8787` | web → agent proxy target |
 | `WEB_ORIGIN` | `http://localhost:3000` | browser origin allowed to call the agent directly |
+| `OPEN_METEO_BASE_URL` | `https://api.open-meteo.com/v1/forecast` | no-key live-weather context provider; server-side only |
 
 **LLM provider chain**
 

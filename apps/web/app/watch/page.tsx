@@ -11,6 +11,7 @@ import { inflections, leadTimeLabel, ms, pointAt, riskColor, snapshotAt } from "
 import type {
   Assessment,
   AuditEntry,
+  LiveWeatherResponse,
   RiskLabel,
   RiskSnapshot,
   RouteInfo,
@@ -34,6 +35,7 @@ export default function Watch() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [llm, setLlm] = useState<{ id: string; label: string; model: string }[]>([]);
+  const [liveWeather, setLiveWeather] = useState<LiveWeatherResponse | null>(null);
   // cold open: once per session, unless ?demo=1 (pitch mode) or already seen via the landing
   const [showIntro, setShowIntro] = useState(false);
 
@@ -94,6 +96,11 @@ export default function Watch() {
       const end = scenario.outcomeAt ? ms(scenario.fullEnd) : horizon;
       setScenario(scenario);
       setRoutes(routes);
+      if (id === "live") {
+        api.liveWeather().then(setLiveWeather).catch(() => setLiveWeather(null));
+      } else {
+        setLiveWeather(null);
+      }
       setSnapshots(snap);
       setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
       setT(horizon);
@@ -198,6 +205,7 @@ export default function Watch() {
   }, [routes, snapshots, range.start, range.end]);
 
   const selected = routes.find((r) => r.id === selectedId) ?? null;
+  const selectedLiveWeather = liveWeather?.routes.find((weather) => weather.routeId === selectedId) ?? null;
   const selectedAssessment = scenario && selectedId ? assessments[assessmentKey(scenario.id, selectedId)] ?? null : null;
   const selSnap = selected ? snapshotAt(snapshots[selected.id] ?? [], t) : undefined;
   const selHorizon = selected ? snapshotAt(snapshots[selected.id] ?? [], range.horizon) : undefined;
@@ -313,6 +321,20 @@ export default function Watch() {
           >
             {playing ? "Pause" : "Replay day"}
           </button>
+          {scenario?.id === "live" && (
+            <button
+              onClick={() =>
+                api
+                  .refreshLiveWeather()
+                  .then(setLiveWeather)
+                  .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+              }
+              className="rounded-lg border px-3 py-1 text-sm transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
+            >
+              Refresh live context
+            </button>
+          )}
         </div>
       </header>
 
@@ -343,6 +365,28 @@ export default function Watch() {
               </span>{" "}
               <span className="mono tnum">{selHorizon?.score.toFixed(2)}</span> — {headline}
             </p>
+          )}
+
+          {scenario?.id === "live" && selectedLiveWeather && (
+            <section
+              className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
+              style={{ borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }}
+            >
+              <div>
+                <span className="mono mr-2 uppercase tracking-wider" style={{ color: "var(--cursor)" }}>live weather context</span>
+                <strong>{selectedLiveWeather.condition}</strong>
+                {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
+                {selectedLiveWeather.windGustKph != null && <> · gusts {Math.round(selectedLiveWeather.windGustKph)} km/h</>}
+                {selectedLiveWeather.snowfallCm != null && selectedLiveWeather.snowfallCm > 0 && <> · snow {selectedLiveWeather.snowfallCm.toFixed(1)} cm</>}
+              </div>
+              <a href={selectedLiveWeather.sourceUrl} target="_blank" rel="noreferrer" className="mono underline" style={{ color: "var(--text-faint)" }}>
+                {selectedLiveWeather.source} · {selectedLiveWeather.mode}
+              </a>
+              <p className="basis-full" style={{ color: "var(--text-faint)" }}>
+                {selectedLiveWeather.note}
+                {liveWeather?.ingestedAt && <> · frozen snapshot ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
+              </p>
+            </section>
           )}
 
           {/* the scrubber is the mechanism — it gets the full width, above the fold */}

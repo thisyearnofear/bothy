@@ -15,6 +15,7 @@ import {
   logAudit,
 } from "./repo";
 import type { ScenarioId } from "../../../packages/shared/src/types";
+import { getLiveWeather } from "./integrations/openMeteo";
 import { hasProviders, providerSummary } from "./agent/providers";
 
 const app = express();
@@ -62,6 +63,41 @@ app.get("/api/scenario/:scenario/risk", async (req, res) => {
     .sort((a, b) => b.score - a.score)
     .map(({ coords, hazards, ...rest }) => ({ ...rest, coords, hazards }));
   res.json({ at, routes: ranked });
+});
+
+app.get("/api/scenario/:scenario/live-weather", async (req, res) => {
+  const sc = req.params.scenario as ScenarioId;
+  if (sc !== "live") {
+    return res.status(409).json({ error: "live weather is unavailable for frozen backtest evidence" });
+  }
+  const meta = await getScenario(sc);
+  if (!meta) return res.status(404).json({ error: "unknown scenario" });
+  const { getLatestLiveWeatherSnapshot } = await import("./repo");
+  const snapshot = await getLatestLiveWeatherSnapshot();
+  if (!snapshot) {
+    return res.status(404).json({ error: "no persisted live weather snapshot; use the operator refresh action first" });
+  }
+  res.json(snapshot);
+});
+
+app.post("/api/scenario/:scenario/live-weather/refresh", async (req, res) => {
+  const sc = req.params.scenario as ScenarioId;
+  if (sc !== "live") {
+    return res.status(409).json({ error: "live weather refresh is unavailable for frozen backtest evidence" });
+  }
+  const meta = await getScenario(sc);
+  if (!meta) return res.status(404).json({ error: "unknown scenario" });
+
+  const { saveLiveWeatherSnapshot } = await import("./repo");
+  const fetched = await getLiveWeather(await listRoutes(sc));
+  const snapshot = await saveLiveWeatherSnapshot(fetched);
+  await logAudit(
+    sc,
+    "operator",
+    "weather_snapshot_refresh",
+    `Persisted ${snapshot.routes.length} Open-Meteo route observations as ${snapshot.snapshotId} at ${snapshot.ingestedAt}`
+  );
+  res.status(201).json(snapshot);
 });
 
 app.get("/api/scenario/:scenario/route/:routeId/timeline", async (req, res) => {

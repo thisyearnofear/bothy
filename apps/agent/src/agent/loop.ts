@@ -72,6 +72,10 @@ export async function runAssessment(input: RunInput): Promise<AssessmentRow> {
     render: (r, at) => scoreAt(r, events, incidents, at),
     persist: saveAssessment,
     audit: logAudit,
+    loadLiveWeatherSnapshot: async () => {
+      const { getLatestLiveWeatherSnapshot } = await import("../repo");
+      return getLatestLiveWeatherSnapshot();
+    },
   };
   const ctx: AgentCtx = { ...props, route };
   const tools = makeTools(ctx);

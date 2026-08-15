@@ -80,3 +80,21 @@ default is the tunnel above.
   port (`5433`) and the same credentials the container was created with.
 - PostGIS missing on the server: the `postgis/postgis` image ships PostGIS already
   (`SELECT postgis_version();` to confirm); you do not need to install it.
+
+
+
+## Live-weather rehearsal
+
+The watch room reads only the most recently persisted Open-Meteo snapshot. Before
+a demo, start the agent and perform one operator refresh; this records provider,
+source URL, observation time, fetch time, and ingestion time in Postgres:
+
+```bash
+curl -X POST http://localhost:8787/api/scenario/live/live-weather/refresh
+curl http://localhost:8787/api/scenario/live/live-weather
+```
+
+The second command must remain available if venue connectivity disappears. The
+weather context is deliberately non-evidentiary: it never changes seeded risk
+scores or backtest replay inputs. `npm run seed` drops these snapshots along with
+the other demo tables, so refresh again after a destructive reset.

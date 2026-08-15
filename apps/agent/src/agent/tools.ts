@@ -21,6 +21,7 @@ export interface AgentCtx {
   render: (route: RouteInfo, at: string) => { score: number; label: string; citations: EvidenceCitation[] };
   persist: (a: AssessmentRow) => Promise<AssessmentRow>;
   audit: (scenario: string, actor: string, action: string, detail: string) => Promise<void>;
+  loadLiveWeatherSnapshot: () => Promise<import("../../../../packages/shared/src/types").LiveWeatherResponse | null>;
 }
 
 export interface CreateReviewArgs {
@@ -33,6 +34,7 @@ export interface CreateReviewArgs {
 }
 
 export interface ToolSet {
+  get_live_weather_snapshot: () => Promise<string>;
   get_weather_warning: (a?: { area?: string }) => Promise<string>;
   get_road_disruptions: (a?: { route_id?: string }) => Promise<string>;
   search_incidents: (a?: { route_id?: string; hazard?: string; query?: string; limit?: number }) => Promise<string>;
@@ -50,6 +52,22 @@ export function makeTools(ctx: AgentCtx): ToolSet {
     ctx.trace.push({ tool, args, at: new Date().toISOString(), ok: true, summary });
 
   return {
+    async get_live_weather_snapshot() {
+      const snapshot = await ctx.loadLiveWeatherSnapshot();
+      if (!snapshot) {
+        const body = "No persisted Open-Meteo snapshot is available. This is non-evidentiary context; score unchanged.";
+        track("get_live_weather_snapshot", {}, body);
+        return body;
+      }
+      const route = snapshot.routes.find((item) => item.routeId === ctx.route.id);
+      const detail = route
+        ? `${route.condition}${route.temperatureC != null ? `, ${route.temperatureC.toFixed(1)}°C` : ""}${route.windGustKph != null ? `, gusts ${Math.round(route.windGustKph)} km/h` : ""}`
+        : "no route-level observation";
+      const body = `${snapshot.provider} snapshot ${snapshot.snapshotId ?? "unknown"}, ingested ${snapshot.ingestedAt ?? "unknown"}: ${ctx.route.name}: ${detail}. Non-evidentiary context; score unchanged.`;
+      track("get_live_weather_snapshot", {}, body);
+      return body;
+    },
+
     async get_weather_warning({ area } = {}) {
       const active = ctx.events.filter((e) => {
         if (e.kind !== "warning" || e.at > ctx.now) return false;

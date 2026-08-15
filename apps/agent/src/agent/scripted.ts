@@ -39,6 +39,9 @@ export async function scriptedDraft(ctx: AgentCtx, tools: ToolSet): Promise<Scri
     summary: `detect: ${ctx.route.id} selected for assessment.`,
   });
 
+  if (ctx.scenario === "live") {
+    await tools.get_live_weather_snapshot();
+  }
   await tools.get_weather_warning();
   await tools.get_road_disruptions({ route_id: ctx.route.id });
   await tools.search_incidents({ route_id: ctx.route.id, limit: 3 });

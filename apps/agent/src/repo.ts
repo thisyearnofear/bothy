@@ -242,3 +242,100 @@ export async function listRiskSnapshots(scenario: string, routeId: string) {
     };
   });
 }
+
+
+
+type LiveWeatherSnapshot = import("../../../packages/shared/src/types").LiveWeatherResponse;
+type LiveWeatherRoute = import("../../../packages/shared/src/types").LiveWeatherRoute;
+
+type ObservationPayload = {
+  response: Omit<LiveWeatherSnapshot, "routes" | "snapshotId" | "ingestedAt">;
+  route: LiveWeatherRoute;
+};
+
+/**
+ * Persist a complete externally-fetched weather snapshot outside signal_events.
+ * The snapshot is context for operators only; it is never joined into scoring.
+ */
+export async function saveLiveWeatherSnapshot(response: LiveWeatherSnapshot): Promise<LiveWeatherSnapshot> {
+  const snapshotId = `weather-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const ingestedAt = new Date().toISOString();
+  const header: Omit<LiveWeatherSnapshot, "routes" | "snapshotId" | "ingestedAt"> = {
+    provider: response.provider,
+    providerUrl: response.providerUrl,
+    fetchedAt: response.fetchedAt,
+    cacheTtlSeconds: response.cacheTtlSeconds,
+    scoreBoundary: response.scoreBoundary,
+  };
+
+  for (const route of response.routes) {
+    await q(
+      `INSERT INTO external_observations
+        (snapshot_id, scenario, route_id, provider, source_url, observed_at, fetched_at, ingested_at, category, payload)
+       VALUES ($1, 'live', $2, $3, $4, $5, $6, $7, 'weather', $8)`,
+      [
+        snapshotId,
+        route.routeId,
+        response.provider,
+        route.sourceUrl,
+        route.observedAt ?? null,
+        route.fetchedAt ?? response.fetchedAt,
+        ingestedAt,
+        JSON.stringify({ response: header, route } satisfies ObservationPayload),
+      ]
+    );
+  }
+
+  return {
+    ...response,
+    snapshotId,
+    ingestedAt,
+    routes: response.routes.map((route) => ({
+      ...route,
+      mode: "persisted",
+      note: `${route.note} Persisted as frozen operator context; score unchanged.`,
+    })),
+  };
+}
+
+/** Return the newest complete operator snapshot; this function never fetches a provider. */
+export async function getLatestLiveWeatherSnapshot(): Promise<LiveWeatherSnapshot | null> {
+  const { rows: snapshots } = await q(
+    `SELECT snapshot_id
+       FROM external_observations
+      WHERE scenario = 'live' AND category = 'weather'
+      ORDER BY ingested_at DESC, id DESC
+      LIMIT 1`
+  );
+  if (!snapshots.length) return null;
+
+  const snapshotId = (snapshots[0] as Row).snapshot_id as string;
+  const { rows } = await q(
+    `SELECT *
+       FROM external_observations
+      WHERE snapshot_id = $1 AND scenario = 'live' AND category = 'weather'
+      ORDER BY id`,
+    [snapshotId]
+  );
+  if (!rows.length) return null;
+
+  const first = rows[0] as Row;
+  const firstPayload = first.payload as ObservationPayload;
+  const header = firstPayload.response;
+  return {
+    ...header,
+    snapshotId,
+    ingestedAt: iso(first.ingested_at),
+    routes: rows.map((raw) => {
+      const observation = raw as Row;
+      const payload = observation.payload as ObservationPayload;
+      return {
+        ...payload.route,
+        mode: "persisted" as const,
+        observedAt: observation.observed_at ? iso(observation.observed_at) : undefined,
+        fetchedAt: observation.fetched_at ? iso(observation.fetched_at) : undefined,
+        note: `${payload.route.note} Loaded from frozen operator snapshot; score unchanged.`,
+      };
+    }),
+  };
+}

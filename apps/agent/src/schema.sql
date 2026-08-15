@@ -107,3 +107,24 @@ CREATE TABLE IF NOT EXISTS audit_log (
   action   text NOT NULL,
   detail   text NOT NULL
 );
+
+-- External context is deliberately isolated from signal_events. It preserves
+-- source provenance for operator-triggered snapshots without affecting the
+-- deterministic scoring engine or frozen backtest evidence.
+CREATE TABLE IF NOT EXISTS external_observations (
+  id          bigserial PRIMARY KEY,
+  snapshot_id text NOT NULL,
+  scenario    text NOT NULL,
+  route_id    text NOT NULL,
+  provider    text NOT NULL,
+  source_url  text NOT NULL,
+  observed_at timestamptz,
+  fetched_at  timestamptz,
+  ingested_at timestamptz NOT NULL DEFAULT now(),
+  category    text NOT NULL,
+  payload     jsonb NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_external_observations_scenario_route_ingested
+  ON external_observations (scenario, route_id, ingested_at DESC);
+CREATE INDEX IF NOT EXISTS idx_external_observations_snapshot
+  ON external_observations (snapshot_id);

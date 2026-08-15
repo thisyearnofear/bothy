@@ -8,7 +8,7 @@ import type { SignalEvent } from "../../../packages/shared/src/types";
 async function main() {
   const schema = await readFile(new URL("./schema.sql", import.meta.url), "utf8");
   await q(
-    "DROP TABLE IF EXISTS risk_snapshots, assessments, audit_log, incidents, signal_events, routes, scenarios CASCADE"
+    "DROP TABLE IF EXISTS external_observations, risk_snapshots, assessments, audit_log, incidents, signal_events, routes, scenarios CASCADE"
   );
   await q(schema);
 

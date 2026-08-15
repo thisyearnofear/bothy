@@ -21,6 +21,39 @@ export interface RouteInfo {
   lng: number;
 }
 
+export interface LiveWeatherRoute {
+  routeId: string;
+  routeName: string;
+  source: string;
+  sourceUrl: string;
+  /** Acquisition mode at the time this immutable snapshot was captured. */
+  mode: "live" | "cached" | "demo-fallback" | "persisted";
+  condition: string;
+  observedAt?: string;
+  fetchedAt?: string;
+  temperatureC?: number;
+  apparentTemperatureC?: number;
+  precipitationMm?: number;
+  snowfallCm?: number;
+  windSpeedKph?: number;
+  windGustKph?: number;
+  weatherCode?: number;
+  note: string;
+  error?: string;
+}
+
+export interface LiveWeatherResponse {
+  provider: string;
+  providerUrl: string;
+  fetchedAt: string;
+  /** Present only after an operator-triggered response has been persisted. */
+  snapshotId?: string;
+  ingestedAt?: string;
+  cacheTtlSeconds: number;
+  scoreBoundary: string;
+  routes: LiveWeatherRoute[];
+}
+
 export interface SignalEvent {
   id: string;
   scenario: ScenarioId;

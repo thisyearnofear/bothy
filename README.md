@@ -16,7 +16,7 @@ intervention* problem (floods, wildfire evacuation, humanitarian logistics).
 ```bash
 npm install
 cp .env.example .env     # DATABASE_URL defaults to the tunneled remote DB (:5433)
-scripts/db-tunnel.sh     # SSH tunnel: remote Postgres (Docker + PostGIS) -> localhost:5433
+bash scripts/db-tunnel.sh # SSH tunnel: remote Postgres (Docker + PostGIS) -> localhost:5433
 npm run seed             # reset the demo DB and load live + backtest scenarios
 npm run dev              # agent API :8787 · web :3000
 ```
@@ -52,6 +52,14 @@ Full details live in [`docs/`](docs/):
 - [ops.md](docs/ops.md) — hosting, DB topology/credentials, security & production
 - [decisions.md](docs/decisions.md) — why hand-rolled loop, PostGIS vs pgvector, scripted brain
 - [alignment.md](docs/alignment.md) — how this fits the hackathon challenges
+
+## Built with Kiro
+
+This repository commits project steering in [`.kiro/steering/`](.kiro/steering/)
+so Kiro sessions share Bothy’s product contract, replay/provenance boundaries,
+and validation workflow. The implementation has been developed and verified with
+Kiro-guided agent workflows; the demo should show these steering files alongside
+the reproducible scripted-agent and validation path.
 
 ## Hygiene
 

@@ -1,6 +1,7 @@
 import type {
   Assessment,
   AuditEntry,
+  LiveWeatherResponse,
   RouteInfo,
   RiskSnapshot,
   ScenarioId,
@@ -31,6 +32,8 @@ export const api = {
   scenario: (id: ScenarioId) => get<{ scenario: ScenarioInfo; routes: RouteInfo[] }>(`/api/scenario/${id}`),
   timeline: (id: ScenarioId, routeId: string) =>
     get<RiskSnapshot[]>(`/api/scenario/${id}/route/${routeId}/timeline`),
+  liveWeather: () => get<LiveWeatherResponse>("/api/scenario/live/live-weather"),
+  refreshLiveWeather: () => post<LiveWeatherResponse>("/api/scenario/live/live-weather/refresh", {}),
   risk: (id: ScenarioId, at?: string) => get<{ at: string; routes: RouteInfo[] }>(`/api/scenario/${id}/risk${at ? `?at=${encodeURIComponent(at)}` : ""}`),
   assess: (id: ScenarioId, opts: { routeId?: string; engine?: "llm" | "scripted"; force?: boolean } = {}) =>
     post<Assessment>(`/api/scenario/${id}/assess`, { ...opts }),
