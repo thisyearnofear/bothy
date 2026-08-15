@@ -15,6 +15,7 @@ import {
   logAudit,
 } from "./repo";
 import type { ScenarioId } from "../../../packages/shared/src/types";
+import { hasProviders, providerSummary } from "./agent/providers";
 
 const app = express();
 app.use(cors());
@@ -66,14 +67,19 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
   const at = (req.body.at as string) || meta.now;
-  const engine = req.body.engine === "llm" ? "llm" : "scripted";
+  const engine = req.body.engine === "scripted" ? "scripted" : hasProviders() ? "llm" : "scripted";
   const assessment = await runAssessment({
     scenario: sc,
     routeId: req.body.routeId,
     at,
     engine,
+    force: Boolean(req.body.force),
   });
   res.json(assessment);
+});
+
+app.get("/api/llm", (_req, res) => {
+  res.json({ now: new Date().toISOString(), providers: providerSummary(), scripted: true });
 });
 
 app.post("/api/assessments/:id/decision", async (req, res) => {
