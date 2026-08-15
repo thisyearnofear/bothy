@@ -20,6 +20,10 @@ type CamKey = {
  * camera flies once to that section's keyframe — native scroll picks the
  * keyframe, an interruptible easeTo performs the flight, and reduced motion
  * jumps instead. Falls back to a flat surface if tiles can't load.
+ *
+ * The map is viewport-fixed. Pinning it to the full document height makes
+ * MapLibre size a canvas taller than the screen, so the first viewport shows
+ * empty mercator void (a black page) and scroll keyframes never read.
  */
 export default function LandingBackdrop() {
   const container = useRef<HTMLDivElement>(null);
@@ -62,8 +66,8 @@ export default function LandingBackdrop() {
     const flyTo = (k: CamKey) => {
       if (!alive || !map) return;
       try {
-        if (reduced) map.jumpTo(k);
-        else map.easeTo({ ...k, duration: 700, easing: (x: number) => 1 - Math.pow(1 - x, 4) }); // ~focus/expo
+        if (reduced) map.jumpTo({ center: k.center, zoom: k.zoom, pitch: k.pitch, bearing: k.bearing });
+        else map.easeTo({ center: k.center, zoom: k.zoom, pitch: k.pitch, bearing: k.bearing, duration: 700, easing: (x: number) => 1 - Math.pow(1 - x, 4) });
       } catch {
         /* map torn down between scroll ticks */
       }
@@ -71,52 +75,80 @@ export default function LandingBackdrop() {
 
     const cleanup: Array<() => void> = [];
 
+    const attachCamera = () => {
+      const keyed = new Map<Element, CamKey>();
+      document.querySelectorAll<HTMLElement>("[data-cam]").forEach((el) => {
+        try {
+          keyed.set(el, JSON.parse(el.dataset.cam ?? "{}") as CamKey);
+        } catch {
+          /* malformed keyframe — leave the camera alone */
+        }
+      });
+      if (!keyed.size) return;
+
+      let lastId: string | null = null;
+      const pick = () => {
+        if (!alive) return;
+        const aim = window.innerHeight * 0.38;
+        let closest: CamKey | null = null;
+        let closestDist = Infinity;
+        for (const [el, k] of keyed) {
+          const r = el.getBoundingClientRect();
+          if (r.bottom < 80 || r.top > window.innerHeight - 80) continue;
+          const dist = Math.abs(r.top + r.height / 2 - aim);
+          if (dist < closestDist) {
+            closest = k;
+            closestDist = dist;
+          }
+        }
+        if (!closest || closest.id === lastId) return;
+        lastId = closest.id;
+        if (closest.id === "hero") {
+          stopPatrol();
+          flyTo(closest);
+          startPatrol();
+        } else {
+          stopPatrol();
+          flyTo(closest);
+        }
+      };
+
+      const io = new IntersectionObserver(pick, { threshold: [0, 0.15, 0.35, 0.5, 0.75, 1] });
+      keyed.forEach((_, el) => io.observe(el));
+      pick();
+      cleanup.push(() => io.disconnect());
+    };
+
     (async () => {
       const ml = await import("maplibre-gl");
       if (!alive || !container.current) return;
       map = new ml.Map({
         container: container.current,
-        // darker + flatter than the watch room — text sits on top of this
         style: darkStyle(),
-        ...HERO,
+        center: HERO.center,
+        zoom: HERO.zoom,
+        pitch: HERO.pitch,
+        bearing: HERO.bearing,
         interactive: false,
         attributionControl: { compact: true },
       });
-      map.on("load", () => {
-        if (!alive || !map) return;
-        startPatrol();
+      const resize = () => {
+        try {
+          map.resize();
+        } catch {
+          /* torn down */
+        }
+      };
+      requestAnimationFrame(resize);
+      const ro = new ResizeObserver(resize);
+      ro.observe(container.current);
+      cleanup.push(() => ro.disconnect());
 
-        // scroll keyframes: sections carrying data-cam define the flight
-        const keyed = new Map<Element, CamKey>();
-        document.querySelectorAll<HTMLElement>("[data-cam]").forEach((el) => {
-          try {
-            keyed.set(el, JSON.parse(el.dataset.cam ?? "{}") as CamKey);
-          } catch {
-            /* malformed keyframe — leave the camera alone */
-          }
-        });
-        if (!keyed.size) return;
-        const io = new IntersectionObserver(
-          (entries) => {
-            if (!alive) return;
-            for (const e of entries) {
-              if (!e.isIntersecting) continue;
-              const k = keyed.get(e.target);
-              if (!k) continue;
-              if (k.id === "hero") {
-                stopPatrol();
-                flyTo(k);
-                startPatrol(); // home again: resume the watch
-              } else {
-                stopPatrol();
-                flyTo(k);
-              }
-            }
-          },
-          { threshold: 0.5 }
-        );
-        keyed.forEach((_, el) => io.observe(el));
-        cleanup.push(() => io.disconnect());
+      attachCamera();
+      map.on("load", () => {
+        if (!alive) return;
+        resize();
+        startPatrol();
       });
     })();
 
@@ -129,11 +161,10 @@ export default function LandingBackdrop() {
   }, []);
 
   return (
-    <div className="map-morph absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div ref={container} className="absolute inset-0" style={{ background: "var(--page)" }} />
-      {/* One restrained scrim keeps copy legible without erasing the map's terrain and road texture.
-          Effective luminance = raster brightness (0.6) x scrim transparency — keep the product above ~0.3. */}
-      <div className="absolute inset-0" style={{ background: "color-mix(in oklch, var(--page) 50%, transparent)" }} />
+    <div className="map-morph pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div ref={container} className="absolute inset-0 h-full w-full" />
+      {/* Scrim keeps copy legible. Product ≈ brightness 0.82 × (1 − 0.32) so the fells still read as terrain. */}
+      <div className="absolute inset-0" style={{ background: "color-mix(in oklch, var(--page) 32%, transparent)" }} />
     </div>
   );
 }
@@ -143,9 +174,9 @@ export default function LandingBackdrop() {
 function darkStyle() {
   const style = JSON.parse(JSON.stringify(OSM_STYLE));
   style.layers[0].paint = {
-    "raster-brightness-max": 0.6,
-    "raster-saturation": -0.7,
-    "raster-contrast": 0.08,
+    "raster-brightness-max": 0.82,
+    "raster-saturation": -0.45,
+    "raster-contrast": 0.12,
   };
   return style;
 }

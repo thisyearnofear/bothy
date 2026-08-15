@@ -18,6 +18,7 @@ export default function Detail({
   running,
   traceLines,
   llmAvailable,
+  compact,
   onRun,
   onApprove,
   onReject,
@@ -33,6 +34,7 @@ export default function Detail({
   running?: boolean;
   traceLines?: ToolCall[];
   llmAvailable?: boolean;
+  compact?: boolean;
   onRun: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -40,6 +42,8 @@ export default function Detail({
   const [showAll, setShowAll] = useState(false);
   const [showAllAudit, setShowAllAudit] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
+  const [showDraft, setShowDraft] = useState(false);
+  const [showCase, setShowCase] = useState(false);
   if (!route || !horizon) {
     return (
       <div className="rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
@@ -52,9 +56,8 @@ export default function Detail({
       </div>
     );
   }
-  const visibleCitations = showAll ? horizon.citations : horizon.citations.slice(0, 3);
-  // counterfactual: the single load-bearing piece of evidence — remove it and
-  // the label changes. Pure client arithmetic over signed contributions.
+  const expanded = !compact || showCase;
+  const citations = expanded && showAll ? horizon.citations : horizon.citations.slice(0, 3);
   const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
     (best, c) => (!best || Math.abs(c.contribution) > Math.abs(best.contribution) ? c : best),
     null
@@ -63,6 +66,9 @@ export default function Detail({
   const withoutLabel = withoutScore != null ? riskLabel(withoutScore) : null;
   const pending = assessment?.status === "pending" || !assessment;
   const decided = assessment && assessment.status !== "pending";
+  const draftLines = (assessment?.draft ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const draftPreview = draftLines.slice(0, 3).join("\n");
+  const draftClipped = draftLines.length > 3;
   return (
     <div className="space-y-4">
       <div>
@@ -76,10 +82,15 @@ export default function Detail({
           <span className="font-semibold" style={{ color }}>
             {horizon.label}
           </span>{" "}
-          <span className="mono tnum">{horizon.score.toFixed(2)}</span>{" · assessed at "}
-          <span className="mono">{horizonTime}</span>
+          <span className="mono tnum">{horizon.score.toFixed(2)}</span>
+          {expanded && (
+            <>
+              {" · "}
+              <span className="mono">{horizonTime}</span>
+            </>
+          )}
         </p>
-        {assessment && (
+        {expanded && assessment && (
           <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>
             engine: {assessment.engine} · confidence <span className="tnum">{assessment.confidence.toFixed(2)}</span>
           </p>
@@ -88,11 +99,10 @@ export default function Detail({
 
       <div>
         <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
-          Causal chain <span>(at {horizonTime})</span>
+          {expanded ? `Causal chain (at ${horizonTime})` : "Why this score"}
         </p>
-        {/* evidence chips — time, text, and the signed contribution that earned it */}
         <ol className="space-y-1.5">
-          {visibleCitations.map((c, i) => (
+          {citations.map((c, i) => (
             <li
               key={`${c.eventId}-${i}`}
               className="flex items-start justify-between gap-2 rounded border px-2 py-1.5"
@@ -117,15 +127,17 @@ export default function Detail({
             </li>
           ))}
         </ol>
-        {horizon.citations.length > 3 && (
+        {expanded && horizon.citations.length > 3 && (
           <button onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs underline" style={{ color: "var(--cursor)" }}>
             {showAll ? "collapse" : `+${horizon.citations.length - 3} earlier signals`}
           </button>
         )}
-        <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
-          Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals} signals known here.
-        </p>
-        {loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
+        {expanded && (
+          <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
+            Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals} signals known here.
+          </p>
+        )}
+        {expanded && loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
           <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
             Counterfactual — without the <span className="mono">{t(loadBearing.at)}</span> signal, risk would be{" "}
             <span className="font-semibold" style={{ color: "var(--text-body)" }}>
@@ -136,7 +148,6 @@ export default function Detail({
         )}
       </div>
 
-      {/* reasoning state — the live code path, streaming tool call by tool call */}
       {running && (
         <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-live="polite">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
@@ -163,31 +174,40 @@ export default function Detail({
       {!running && assessment?.draft && (
         <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
           <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--text-body)" }}>
-            {assessment.draft}
+            {expanded || showDraft || !draftClipped ? assessment.draft : draftPreview}
           </p>
+          {!expanded && !showDraft && draftClipped && (
+            <button onClick={() => setShowDraft(true)} className="mt-2 text-xs underline" style={{ color: "var(--cursor)" }}>
+              full draft
+            </button>
+          )}
         </div>
       )}
 
-      {/* The accountable gate: Bothy never publishes automatically. */}
       <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-          Bothy never publishes automatically
-        </p>
-        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-          a shelter for the decision — the agent watches, a human owns the call.
-        </p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            onClick={onRun}
-            disabled={running}
-            className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
-            style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
-          >
-            {running ? "Reasoning…" : llmAvailable ? "Run agent (live LLM)" : "Run agent"}
-          </button>
+        {expanded && (
+          <>
+            <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+              Bothy never publishes automatically
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+              a shelter for the decision — the agent watches, a human owns the call.
+            </p>
+          </>
+        )}
+        <div className={`flex flex-wrap items-center gap-2${expanded ? " mt-2" : ""}`}>
+          {expanded && (
+            <button
+              onClick={onRun}
+              disabled={running}
+              className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              {running ? "Reasoning…" : llmAvailable ? "Run agent (live LLM)" : "Run agent"}
+            </button>
+          )}
           {assessment && pending && (
             <>
-              {/* Approval is a ledger treatment — neutral, strong border; risk colour stays risk-only. */}
               <button
                 onClick={onApprove}
                 className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96]"
@@ -209,7 +229,6 @@ export default function Detail({
           )}
         </div>
 
-        {/* Ledger receipt — official and final, like a stamp. One settle pulse, then quiet. */}
         {decided && assessment && (
           <p className="receipt-in mono mt-3 border-t pt-3 text-sm" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
             <span className="settle inline-block font-semibold" style={{ color: "var(--text-strong)" }}>
@@ -221,8 +240,13 @@ export default function Detail({
         )}
       </div>
 
-      {/* Audit line — appends after the decision, announced politely; latest first. */}
-      {audit.length > 0 && (
+      {compact && !showCase && (
+        <button onClick={() => setShowCase(true)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
+          full case · audit · trace
+        </button>
+      )}
+
+      {expanded && audit.length > 0 && (
         <div aria-live="polite">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             Audit
@@ -246,8 +270,7 @@ export default function Detail({
         </div>
       )}
 
-      {/* collapsed trace renders exactly like the live one — same log, frozen */}
-      {assessment && assessment.toolTrace != null && (
+      {expanded && assessment && assessment.toolTrace != null && (
         <div>
           <button onClick={() => setShowTrace((v) => !v)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
             {showTrace ? "hide" : "show"} agent trace

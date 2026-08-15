@@ -14,12 +14,14 @@ export default function RiskList({
   onSelect,
   onHover,
   fresh,
+  compact,
 }: {
   rows: RiskRow[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onHover?: (id: string | null) => void;
-  fresh: string; // the cursor time label shown on each card
+  fresh: string;
+  compact?: boolean;
 }) {
   return (
     <ul className="space-y-2">
@@ -53,14 +55,13 @@ export default function RiskList({
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                {/* colour + text label, never colour alone */}
                 <span
                   className="rounded px-1.5 py-0.5 font-semibold"
                   style={{ background: `color-mix(in oklch, ${r.color} 16%, transparent)`, color: r.color }}
                 >
                   {r.label}
                 </span>
-                <span style={{ color: "var(--text-faint)" }}>at {fresh}</span>
+                {!compact && <span style={{ color: "var(--text-faint)" }}>at {fresh}</span>}
               </div>
               {/* the seismograph tick: the bar eases to the new score as the day scrubs */}
               <span

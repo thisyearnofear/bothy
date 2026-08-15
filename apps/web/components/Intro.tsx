@@ -74,13 +74,10 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
         {/* beat 2 — the turn */}
         {beat >= 1 && (
           <div className="fade-up">
-            <p className="text-2xl font-semibold tracking-tight sm:text-3xl" style={{ color: "var(--text-strong)" }}>
-              When the warning fails, someone gets a callout.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-              Every winter, drivers strand on Cumbria&apos;s passes — not because no one saw it coming, but because the
-              signals lived in five systems and no one had to look at them together. The people who pay are the ones who
-              go out at 19:45 in the dark: mountain rescue, duty officers, farmers with a tractor.
+            <p className="text-[clamp(1.8rem,5vw,3rem)] font-semibold leading-[1.05] tracking-[-0.04em]" style={{ color: "var(--text-strong)" }}>
+              When the warning fails,
+              <br />
+              someone gets a callout.
             </p>
           </div>
         )}
@@ -89,8 +86,8 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
         {beat >= 2 && (
           <div className="fade-up">
             <p className="text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-              Bothy is not a dashboard. It is a <span style={{ color: "var(--text-strong)" }}>decision case you can rewind</span>{" "}
-              — every number cited, every decision signed by a human.
+              Not a dashboard. A <span style={{ color: "var(--text-strong)" }}>decision case you can rewind</span>
+              {" — "}every number cited, a human signs.
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button

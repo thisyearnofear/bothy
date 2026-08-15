@@ -25,7 +25,7 @@ export default function Landing() {
     <main className="relative min-h-screen">
       <LandingBackdrop />
 
-      <div className="relative">
+      <div className="relative z-10">
         {/* hero — the whole pitch in ten words, and the door, zero scroll required.
             camera keyframes (Bothy-legal scroll cinema): wide over the fells while the reader is still */}
         <section
@@ -73,44 +73,55 @@ export default function Landing() {
             the hill becomes a place, specific and real */}
         <section
           data-cam='{"id":"turn","center":[-2.11,54.51],"zoom":10,"pitch":48,"bearing":10}'
-          className="reveal mx-auto max-w-xl px-6 py-24 text-center"
+          className="reveal flex min-h-screen flex-col items-center justify-center px-6 text-center"
         >
-          <p className="text-2xl font-semibold" style={{ color: "var(--text-strong)" }}>
-            When the warning fails, someone gets a callout.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-            Every winter, drivers strand on Cumbria&apos;s passes — not because no one saw it coming, but because the
-            signals lived in five systems and no one had to look at them together. The people who pay are the ones who
-            go out at 19:45 in the dark: mountain rescue, duty officers, farmers with a tractor.
-          </p>
-          <p className="mono mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-            Mountain Rescue England &amp; Wales teams answer over 1,000 callouts a year — many avoidable with earlier,
-            better-placed warnings.
+          <h2 className="max-w-5xl text-[clamp(2.4rem,7vw,5.25rem)] font-semibold leading-[0.9] tracking-[-0.055em]" style={{ color: "var(--text-strong)" }}>
+            When the warning fails,
+            <br />
+            someone gets a callout.
+          </h2>
+          <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--text-faint)" }}>
+            five systems · no one had to look together
           </p>
         </section>
 
-        {/* the thesis — what a bothy is, and what Bothy is. camera settles over
-            the pass, pitch flattening: landscape becoming instrument */}
+        {/* the thesis — what Bothy is. camera settles over the pass:
+            landscape becoming instrument */}
         <section
           data-cam='{"id":"thesis","center":[-2.11,54.51],"zoom":11,"pitch":18,"bearing":-4}'
-          className="reveal mx-auto max-w-xl px-6 pb-32 text-center"
+          className="reveal flex min-h-screen flex-col items-center justify-center px-6 pb-24 text-center"
         >
-          <p className="mono text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-            A bothy, from Gaelic <em>bothan</em>: a shelter for walkers caught out in the hills. No booking, no staff —
-            those inside decide together.
+          <h2 className="max-w-5xl text-[clamp(2.4rem,7vw,5.25rem)] font-semibold leading-[0.9] tracking-[-0.055em]" style={{ color: "var(--text-strong)" }}>
+            Not a dashboard.
+            <br />
+            A case you can rewind.
+          </h2>
+          <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--cursor)" }}>
+            every number cited · a human signs
           </p>
-          <p className="mt-4 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-            Bothy is that shelter for the decision: not a dashboard, but a{" "}
-            <span style={{ color: "var(--text-strong)" }}>decision case you can rewind</span> — every number cited,
-            every decision signed by a human.
+          <p className="mono mt-16 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+            floods · fires · convoys — same shelter, different hill
           </p>
-          <p className="mono mt-16 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-            there are bothies for floods, fires and convoys too — same shelter, different hill
-          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => enter(true)}
+              className="rounded-lg border-2 px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
+            >
+              watch the day happen in 20s
+            </button>
+            <button
+              onClick={() => enter(false)}
+              className="rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)", background: "color-mix(in oklch, var(--page) 60%, transparent)" }}
+            >
+              Enter the watch room
+            </button>
+          </div>
         </section>
       </div>
 
-      <footer className="mono absolute bottom-4 left-0 right-0 flex justify-center gap-4 text-xs" style={{ color: "var(--text-faint)" }}>
+      <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-xs" style={{ color: "var(--text-faint)" }}>
         <Link href="/watch?demo=1" className="underline">
           demo mode (skip intro)
         </Link>
@@ -136,7 +147,7 @@ function useReveal() {
           }
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();

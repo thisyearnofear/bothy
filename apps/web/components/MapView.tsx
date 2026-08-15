@@ -239,20 +239,31 @@ export default function MapView({
     }
   }, [routes, selectedId, hoverId, fraction, revealed, ready]);
 
-  // signal pins: land at the cursor crossing (pin-in), un-land when scrubbed back past them.
-  // Each carries its citation + timestamp — "every number on this screen cites a source".
+  // Signal pins land at their replay crossing. Only the active signal expands;
+  // nearby evidence stays separately selectable as compact, offset dots.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
     const pins = pinsRef.current;
-    const landed = beats.filter((b) => b.atMs <= cursorMs);
+    const landed = beats
+      .filter((b) => b.atMs <= cursorMs)
+      .sort((a, b) => a.atMs - b.atMs || a.id.localeCompare(b.id));
+    const staged = [...landed].reverse().find((b) => b.routeId === selectedId);
+    const presentations = pinPresentations(map, landed, staged?.id);
 
     const ml = libRef.current;
     if (!ml) return;
     for (const b of landed) {
-      if (pins.has(b.id)) continue;
-      const el = pinEl(b);
-      const marker = new ml.Marker({ element: el, anchor: "bottom" }).setLngLat(b.lngLat).addTo(map);
+      const presentation = presentations.get(b.id) ?? { expanded: false, offset: [0, 0] as [number, number] };
+      const existing = pins.get(b.id);
+      if (existing) {
+        updatePinElement(existing.marker.getElement(), b, presentation.expanded);
+        existing.marker.setOffset(presentation.offset);
+        continue;
+      }
+
+      const el = pinEl(b, presentation.expanded);
+      const marker = new ml.Marker({ element: el, anchor: "bottom", offset: presentation.offset }).setLngLat(b.lngLat).addTo(map);
       const popup = new ml.Popup({ closeButton: false, offset: 14 }).setHTML(
         `<div class="mono" style="font-size:12px;line-height:1.5">${b.text}` +
           ` <span style="color:var(--cursor)">(${b.delta >= 0 ? "+" : ""}${b.delta.toFixed(2)})</span></div>`
@@ -260,7 +271,8 @@ export default function MapView({
       marker.setPopup(popup);
       pins.set(b.id, { marker, popup });
     }
-    // scrubbed backwards: rewind the day, pins lift off again
+
+    // Scrubbed backwards: rewind the day, pins lift off again.
     for (const [id, p] of [...pins]) {
       if (!landed.some((b) => b.id === id)) {
         p.marker.remove();
@@ -268,8 +280,9 @@ export default function MapView({
         pins.delete(id);
       }
     }
-    // staging: the latest landed pin on the selected route holds the open popup
-    const staged = [...landed].reverse().find((b) => b.routeId === selectedId);
+
+    // The latest landed signal for the selected route is the sole expanded
+    // citation. Other markers remain dots, avoiding overlapping evidence tags.
     if (staged && openPin.current !== staged.id) {
       pins.get(openPin.current ?? "")?.marker.getPopup()?.remove();
       const p = pins.get(staged.id);
@@ -303,19 +316,58 @@ export default function MapView({
   );
 }
 
-/** A signal pin: cursor-coloured dot on a stem, with its arrival time as a mono label. */
-function pinEl(b: MapBeat): HTMLElement {
+type PinPresentation = { expanded: boolean; offset: [number, number] };
+
+const PIN_STACK_OFFSETS: [number, number][] = [
+  [0, 0],
+  [18, -8],
+  [-18, -8],
+  [0, -20],
+  [28, -20],
+  [-28, -20],
+];
+
+function pinPresentations(map: any, beats: MapBeat[], expandedId?: string): Map<string, PinPresentation> {
+  const groups: { anchor: { x: number; y: number }; beats: MapBeat[] }[] = [];
+  for (const beat of beats) {
+    const point = map.project(beat.lngLat);
+    const group = groups.find(({ anchor }) => Math.hypot(point.x - anchor.x, point.y - anchor.y) < 30);
+    if (group) group.beats.push(beat);
+    else groups.push({ anchor: point, beats: [beat] });
+  }
+
+  const result = new Map<string, PinPresentation>();
+  for (const group of groups) {
+    group.beats
+      .sort((a, b) => Number(b.id === expandedId) - Number(a.id === expandedId) || a.atMs - b.atMs || a.id.localeCompare(b.id))
+      .forEach((beat, index) => {
+        const offset = PIN_STACK_OFFSETS[index] ?? [((index % 3) - 1) * 20, -20 * Math.ceil(index / 3)];
+        result.set(beat.id, { expanded: beat.id === expandedId, offset });
+      });
+  }
+  return result;
+}
+
+/** A signal pin is compact by default; the selected route's latest signal expands. */
+function pinEl(b: MapBeat, expanded: boolean): HTMLElement {
   const wrap = document.createElement("div");
-  wrap.className = "pin-in";
-  wrap.style.display = "flex";
-  wrap.style.flexDirection = "column";
-  wrap.style.alignItems = "center";
-  wrap.style.cursor = "pointer";
-  const time = b.text.split(" · ")[0];
-  wrap.innerHTML =
-    `<span class="mono" style="font-size:11px;color:var(--cursor);margin-bottom:2px;white-space:nowrap">${time}</span>` +
-    `<span style="width:8px;height:8px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px var(--page)"></span>`;
+  updatePinElement(wrap, b, expanded);
   return wrap;
+}
+
+function updatePinElement(el: HTMLElement, b: MapBeat, expanded: boolean) {
+  const time = b.text.split(" · ")[0];
+  el.className = "pin-in";
+  el.style.display = "flex";
+  el.style.flexDirection = "column";
+  el.style.alignItems = "center";
+  el.style.cursor = "pointer";
+  el.title = `${time} · ${b.text}`;
+  el.setAttribute("aria-label", `${time}: ${b.text}`);
+  el.innerHTML = expanded
+    ? `<span class="mono" style="font-size:11px;color:var(--cursor);margin-bottom:2px;white-space:nowrap">${time}</span>` +
+      `<span style="width:9px;height:9px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px var(--page)"></span>`
+    : `<span aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px var(--page)"></span>`;
 }
 
 /** The risk-cursor: a small dot riding the line, drifting along as you scrub. */

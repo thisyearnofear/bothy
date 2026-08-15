@@ -40,6 +40,8 @@ export default function Watch() {
   const [refreshingWeather, setRefreshingWeather] = useState(false);
   // cold open: once per session, unless ?demo=1 (pitch mode) or already seen via the landing
   const [showIntro, setShowIntro] = useState(false);
+  const [deskOpen, setDeskOpen] = useState(true);
+  const [tape, setTape] = useState(false);
 
   const startReplay = useCallback(() => {
     setT((cur) => (cur > range.start + 1000 ? range.start : cur));
@@ -73,6 +75,8 @@ export default function Watch() {
     })();
     if (!q.get("demo") && !seen && q.get("replay") !== "1") setShowIntro(true);
     if (q.get("replay") === "1") {
+      setTape(true);
+      setDeskOpen(false);
       try {
         sessionStorage.setItem(INTRO_KEY, "1");
       } catch {
@@ -179,7 +183,9 @@ export default function Watch() {
       .scenarios(ac.signal)
       .then((list) => {
         if (ac.signal.aborted) return;
-        return load(list[0]?.id ?? ("live" as ScenarioId));
+        const replay = new URLSearchParams(window.location.search).get("replay") === "1";
+        const preferred = replay ? list.find((s) => s.id === "backtest") : undefined;
+        return load(preferred?.id ?? list[0]?.id ?? ("live" as ScenarioId));
       })
       .catch((e) => {
         if (isAbortError(e) || ac.signal.aborted) return;
@@ -300,11 +306,8 @@ export default function Watch() {
   // money shot: a warm one-sentence causal story for the selected route — headline first, numbers after
   const headline = useMemo(() => {
     if (!selected || !selHorizon) return null;
-    const story = selHorizon.citations
-      .slice(-3)
-      .map((c) => c.text.toLowerCase())
-      .join("; ");
-    return `${selected.name} is ${selHorizon.label}: ${story.charAt(0).toUpperCase() + story.slice(1)}.`;
+    const bits = selHorizon.citations.slice(-3).map((c) => c.text.split(/[—,(]/)[0].trim().toLowerCase());
+    return bits.filter(Boolean).join(" · ");
   }, [selected, selHorizon]);
 
   const step = (dir: 1 | -1) => {
@@ -367,6 +370,9 @@ export default function Watch() {
 
   // Scenario data arrives asynchronously, so keep the swap honest and direct rather
   // than animating an unchanged workspace before its new evidence is available.
+  const compact = tape && !deskOpen;
+  const revealed = range.outcome != null && t >= range.outcome;
+
   const switchScenario = (id: ScenarioId) => {
     void load(id);
   };
@@ -378,6 +384,8 @@ export default function Watch() {
           onEnter={() => setShowIntro(false)}
           onReplay={() => {
             setShowIntro(false);
+            setTape(true);
+            setDeskOpen(false);
             startReplay();
           }}
         />
@@ -389,11 +397,11 @@ export default function Watch() {
       >
         <div className="min-w-0">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-            Bothy · the watch room
+            Bothy
           </p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
-              {scenario?.title ?? (loading ? "Loading…" : "Bothy")}
+              {scenario ? (scenario.id === "backtest" ? "A66 Brough–Bowes" : "Lake District") : loading ? "Loading…" : "Bothy"}
             </h1>
             {scenario && (
               <span className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
@@ -401,7 +409,7 @@ export default function Watch() {
               </span>
             )}
           </div>
-          {scenario?.subtitle && (
+          {!compact && scenario?.subtitle && (
             <p className="mt-0.5 text-sm" style={{ color: "var(--text-faint)" }}>
               {scenario.subtitle}
             </p>
@@ -452,6 +460,15 @@ export default function Watch() {
               {refreshingWeather ? "Refreshing…" : "Refresh live context"}
             </button>
           )}
+          {tape && (
+            <button
+              onClick={() => setDeskOpen((v) => !v)}
+              className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              {deskOpen ? "Demo desk" : "Full desk"}
+            </button>
+          )}
         </div>
       </header>
 
@@ -473,7 +490,7 @@ export default function Watch() {
           </div>
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]">
             <div className="order-2 h-72 rounded-lg border xl:order-1" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
-            <div className="order-1 h-[420px] rounded-lg border xl:order-2 sm:h-[52vh]" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
+            <div className="order-1 h-[470px] rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)] xl:order-2" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
             <div className="order-3 h-96 rounded-lg border" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} />
           </div>
           <p className="mono text-center text-xs" style={{ color: "var(--text-faint)" }}>
@@ -497,49 +514,47 @@ export default function Watch() {
         </div>
       ) : (
         <>
-          {headline && (
+          {!compact && headline && selHorizon && (
             <section
               className="stage-in mb-4 rounded-lg border px-4 py-3"
               style={{ borderColor: "var(--rule)", background: "var(--panel)", ["--stage" as string]: 0 }}
             >
-              <p className="mono mb-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-                Current decision picture
-              </p>
               <p className="max-w-5xl text-base leading-relaxed" style={{ color: "var(--text-body)" }}>
-                <span className="font-semibold" style={{ color: selHorizon ? riskColor(selHorizon.label) : undefined }}>
-                  {selHorizon?.label}
+                <span className="font-semibold" style={{ color: riskColor(selHorizon.label) }}>
+                  {selHorizon.label}
                 </span>{" "}
-                <span className="mono tnum">{selHorizon?.score.toFixed(2)}</span> — {headline}
+                <span className="mono tnum">{selHorizon.score.toFixed(2)}</span>
+                {headline ? ` — ${headline}` : ""}
               </p>
             </section>
           )}
 
           <div
             key={scenario?.id}
-            className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]"
+            className={`grid items-start gap-4 ${compact ? "xl:grid-cols-[minmax(160px,0.46fr)_minmax(0,2fr)_minmax(240px,0.78fr)]" : "xl:grid-cols-[minmax(220px,0.66fr)_minmax(0,1.8fr)_minmax(300px,0.88fr)]"}`}
           >
             <aside className="stage-in spot-dim order-2 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
               <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-                      Route priority
-                    </p>
-                    <p className="mt-1 text-sm" style={{ color: "var(--text-body)" }}>
-                      Rank at <span className="mono">{at(t)}</span>
-                    </p>
-                  </div>
-                  <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
-                    {rows.length} routes
-                  </span>
+                  <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+                    Routes
+                    <span className="ml-2" style={{ color: "var(--text-body)" }}>
+                      {at(t)}
+                    </span>
+                  </p>
+                  {!compact && (
+                    <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
+                      {rows.length}
+                    </span>
+                  )}
                 </div>
-                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} onHover={setHoverId} fresh={at(t)} />
+                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} onHover={setHoverId} fresh={at(t)} compact={compact} />
               </section>
             </aside>
 
             <section className="stage-in spot-dim order-1 min-w-0 space-y-4 xl:order-2" style={{ ["--stage" as string]: 0 }}>
               <section
-                className="relative h-[420px] overflow-hidden rounded-lg border sm:h-[52vh] xl:h-[min(58vh,680px)]"
+                className="relative h-[470px] overflow-hidden rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)]"
                 style={{ borderColor: "var(--rule)" }}
                 aria-label="Route risk map"
               >
@@ -557,16 +572,13 @@ export default function Watch() {
                   startMs={range.start}
                   endMs={range.end}
                   beats={mapBeats}
-                  revealed={range.outcome != null && t >= range.outcome}
+                  revealed={revealed}
                 />
                 {selected && selHorizon && (
                   <div
                     className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg border px-3 py-2"
                     style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
                   >
-                    <p className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
-                      selected corridor
-                    </p>
                     <p className="mt-0.5 text-sm font-medium" style={{ color: "var(--text-strong)" }}>
                       {selected.name}
                     </p>
@@ -649,7 +661,7 @@ export default function Watch() {
                   playing={playing}
                   onTogglePlay={() => setPlaying((p) => !p)}
                 />
-                {scenario?.outcomeAt && scenario.outcome && (
+                {(!compact || revealed) && scenario?.outcomeAt && scenario.outcome && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
                     {scenario.outcome}
                   </p>
@@ -674,6 +686,7 @@ export default function Watch() {
                   running={running}
                   traceLines={traceLines}
                   llmAvailable={llm.length > 0}
+                  compact={compact}
                   onRun={run}
                   onApprove={() => decide("approved")}
                   onReject={() => decide("rejected")}
@@ -685,15 +698,10 @@ export default function Watch() {
           <footer className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "var(--text-faint)" }}>
             <span>
               {scenario?.id === "live"
-                ? `live context: ${liveWeather ? "Open-Meteo frozen snapshot" : "no operator snapshot"} · map © OpenStreetMap · engine: bothy-agent`
-                : "illustrative backtest · modeled pre-closure signals only · map © OpenStreetMap · engine: bothy-agent"}
-              {llm.length ? ` (llm chain: ${llm.map((p) => p.id).join(", ")})` : " (scripted brain)"}
+                ? `live context · map © OpenStreetMap`
+                : "illustrative replay · modeled signals · map © OpenStreetMap"}
+              {!compact && (llm.length ? ` · ${llm.map((p) => p.id).join(", ")}` : " · scripted")}
             </span>
-            {scenario?.outcomeAt && (
-              <span>
-                horizon <span className="tnum">{at(range.horizon)}</span>
-              </span>
-            )}
           </footer>
         </>
       )}
