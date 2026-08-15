@@ -8,6 +8,8 @@ import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import Intro, { INTRO_KEY } from "../../components/Intro";
 import WatchLoading from "../../components/WatchLoading";
+import { CaseSwitch } from "../../components/CaseList";
+import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
 import { inflections, leadTimeLabel, ms, pointAt, riskColor, snapshotAt } from "../../lib/derive";
 import type {
@@ -45,11 +47,6 @@ export default function Watch() {
   const [deskOpen, setDeskOpen] = useState(true);
   const [tape, setTape] = useState(false);
 
-  const startReplay = useCallback(() => {
-    setT((cur) => (cur > range.start + 1000 ? range.start : cur));
-    setPlaying(true);
-  }, [range.start]);
-
   const loadCtl = useRef<AbortController | null>(null);
   const assessCtl = useRef(new AbortController());
   const runCtl = useRef<AbortController | null>(null);
@@ -75,7 +72,7 @@ export default function Watch() {
         return true;
       }
     })();
-    if (!q.get("demo") && !seen && q.get("replay") !== "1") setShowIntro(true);
+    if (!q.get("demo") && !q.get("case") && !seen && q.get("replay") !== "1") setShowIntro(true);
     if (q.get("replay") === "1") {
       setTape(true);
       setDeskOpen(false);
@@ -120,7 +117,7 @@ export default function Watch() {
   }, []);
 
   const load = useCallback(
-    async (id: ScenarioId) => {
+    async (id: CaseId, opts?: { tape?: boolean }) => {
       loadCtl.current?.abort();
       const ac = new AbortController();
       loadCtl.current = ac;
@@ -129,9 +126,19 @@ export default function Watch() {
 
       setError(null);
       setLoading(true);
+      setScenario(null);
+      setRoutes([]);
       setAssessments({});
       setAudit([]);
       setPlaying(false);
+      const tape = opts?.tape ?? (id === "backtest" && new URLSearchParams(window.location.search).get("replay") === "1");
+      if (tape) {
+        setTape(true);
+        setDeskOpen(false);
+      } else if (id !== "backtest") {
+        setTape(false);
+        setDeskOpen(true);
+      }
       try {
         const { scenario, routes } = await api.scenario(id, ac.signal);
         const tls = await Promise.all(routes.map((r: RouteInfo) => api.timeline(id, r.id, ac.signal)));
@@ -143,18 +150,18 @@ export default function Watch() {
         const top = [...routes].sort(
           (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
         )[0];
-        const replay = new URLSearchParams(window.location.search).get("replay") === "1";
         startTransition(() => {
           setScenario(scenario);
           setRoutes(routes);
           if (id !== "live") setLiveWeather(null);
           setSnapshots(snap);
           setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
-          setT(replay ? ms(scenario.start) : horizon);
+          setT(tape ? ms(scenario.start) : horizon);
           setSelectedId(top?.id ?? null);
-          setPlaying(replay);
+          setPlaying(tape);
           setLoading(false);
         });
+        window.history.replaceState(null, "", caseUrl(id, tape, window.location.search));
         if (id === "live") {
           api
             .liveWeather(ac.signal)
@@ -184,9 +191,9 @@ export default function Watch() {
       .scenarios(ac.signal)
       .then((list) => {
         if (ac.signal.aborted) return;
-        const replay = new URLSearchParams(window.location.search).get("replay") === "1";
-        const preferred = replay ? list.find((s) => s.id === "backtest") : undefined;
-        return load(preferred?.id ?? list[0]?.id ?? ("live" as ScenarioId));
+        const { id, tape } = caseFromSearch(window.location.search);
+        const chosen = list.some((s) => s.id === id) ? id : (list[0]?.id ?? "live");
+        return load(chosen, { tape: tape && chosen === "backtest" });
       })
       .catch((e) => {
         if (isAbortError(e) || ac.signal.aborted) return;
@@ -374,10 +381,6 @@ export default function Watch() {
   const compact = tape && !deskOpen;
   const revealed = range.outcome != null && t >= range.outcome;
 
-  const switchScenario = (id: ScenarioId) => {
-    void load(id);
-  };
-
   return (
     <main className={`mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5${running ? " reasoning-spotlight" : ""}`}>
       {showIntro && (
@@ -385,9 +388,7 @@ export default function Watch() {
           onEnter={() => setShowIntro(false)}
           onReplay={() => {
             setShowIntro(false);
-            setTape(true);
-            setDeskOpen(false);
-            startReplay();
+            void load("backtest", { tape: true });
           }}
         />
       )}
@@ -420,22 +421,13 @@ export default function Watch() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2" aria-label="Watch room controls">
-          <div className="flex rounded-lg border p-0.5" style={{ borderColor: "var(--rule)" }}>
-            {(["live", "backtest"] as const).map((id) => (
-              <button
-                key={id}
-                onClick={() => switchScenario(id)}
-                className="rounded-md px-3 py-1.5 text-sm transition-colors"
-                style={
-                  scenario?.id === id
-                    ? { background: "var(--rule)", color: "var(--text-strong)" }
-                    : { color: "var(--text-body)" }
-                }
-              >
-                {id === "live" ? "Live" : "Backtest"}
-              </button>
-            ))}
-          </div>
+          <CaseSwitch
+            current={scenario?.id ?? null}
+            compact={compact}
+            onSwitch={(id) => {
+              void load(id, { tape: false });
+            }}
+          />
           {scenario?.id === "live" && (
             <button
               onClick={() => {

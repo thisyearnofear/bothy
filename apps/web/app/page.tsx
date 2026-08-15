@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import LandingBackdrop from "../components/LandingBackdrop";
+import CaseList from "../components/CaseList";
 import { INTRO_KEY } from "../components/Intro";
 
 const markSeen = () => {
@@ -51,7 +52,7 @@ export default function Landing() {
           </h2>
           <div className="fade-up mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
             <Link
-              href="/watch?demo=1"
+              href="/watch?case=live"
               prefetch
               transitionTypes={["nav-forward"]}
               onClick={markSeen}
@@ -106,37 +107,19 @@ export default function Landing() {
           <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--cursor)" }}>
             every number cited · a human signs
           </p>
+          <CaseList onOpen={markSeen} />
           <p className="mono mt-16 text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
             floods · fires · convoys — same shelter, different hill
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/watch?replay=1"
-              prefetch
-              transitionTypes={["nav-forward"]}
-              onClick={markSeen}
-              className="rounded-lg border-2 px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.96]"
-              style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
-            >
-              watch the day happen in 20s
-            </Link>
-            <Link
-              href="/watch?demo=1"
-              prefetch
-              transitionTypes={["nav-forward"]}
-              onClick={markSeen}
-              className="rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
-              style={{ borderColor: "var(--rule)", color: "var(--text-body)", background: "color-mix(in oklch, var(--page) 60%, transparent)" }}
-            >
-              Enter the watch room
-            </Link>
-          </div>
         </section>
       </div>
 
       <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-        <Link href="/watch?demo=1" prefetch transitionTypes={["nav-forward"]} onClick={markSeen} className="underline">
-          demo mode (skip intro)
+        <Link href="/watch?case=live" prefetch transitionTypes={["nav-forward"]} onClick={markSeen} className="underline">
+          Lake District case
+        </Link>
+        <Link href="/watch?case=backtest" prefetch transitionTypes={["nav-forward"]} onClick={markSeen} className="underline">
+          A66 case
         </Link>
       </footer>
     </main>
