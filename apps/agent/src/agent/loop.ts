@@ -10,7 +10,7 @@ import {
   logAudit,
   saveAssessment,
 } from "../repo";
-import type { ScenarioId } from "../../../../packages/shared/src/types";
+import type { ScenarioId, ToolCall } from "../../../../packages/shared/src/types";
 import type { AssessmentRow } from "../repo";
 
 export interface RunInput {
@@ -19,6 +19,7 @@ export interface RunInput {
   at: string;
   engine: "llm" | "scripted";
   force?: boolean; // bypass the short-term assessment cache
+  onTrace?: (t: ToolCall) => void; // live trace tap for SSE streaming
 }
 
 // Short-TTL cache: identical (scenario, route, at, engine) runs reuse the last
@@ -37,7 +38,11 @@ export async function runAssessment(input: RunInput): Promise<AssessmentRow> {
   const cacheKey = `${input.scenario}|${input.routeId ?? "auto"}|${input.at}|${input.engine}`;
   if (!input.force) {
     const hit = assessCache.get(cacheKey);
-    if (hit && Date.now() - hit.at < ASSESS_TTL_MS) return hit.a;
+    if (hit && Date.now() - hit.at < ASSESS_TTL_MS) {
+      const trace = Array.isArray(hit.a.toolTrace) ? (hit.a.toolTrace as ToolCall[]) : [];
+      for (const entry of trace) input.onTrace?.(entry);
+      return hit.a;
+    }
   }
 
   const routes = await listRoutes(input.scenario);
@@ -48,7 +53,14 @@ export async function runAssessment(input: RunInput): Promise<AssessmentRow> {
     ? routes.find((r) => r.id === input.routeId) ?? routes[0]
     : [...routes].sort((a, b) => scoreAt(b, events, incidents, input.at).score - scoreAt(a, events, incidents, input.at).score)[0];
 
-  const trace: AgentCtx["trace"] = [];
+  // trace tap: every tool call is recorded AND forwarded live (SSE) — the UI
+  // shows the code path as it runs, not after the fact.
+  const trace: ToolCall[] = [];
+  const origPush = trace.push.bind(trace);
+  trace.push = (...items: ToolCall[]) => {
+    for (const item of items) input.onTrace?.(item);
+    return origPush(...items);
+  };
   const props: Omit<AgentCtx, "route"> = {
     scenario: input.scenario,
     now: input.at,

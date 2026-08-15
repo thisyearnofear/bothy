@@ -18,7 +18,7 @@ import type { ScenarioId } from "../../../packages/shared/src/types";
 import { hasProviders, providerSummary } from "./agent/providers";
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -84,6 +84,35 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
     force: Boolean(req.body.force),
   });
   res.json(assessment);
+});
+
+// Live agent trace as a POST stream: each tool call streams as it happens, then
+// the final assessment. A command must never be hidden behind retryable SSE GET.
+app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
+  const sc = req.params.scenario as ScenarioId;
+  const meta = await getScenario(sc);
+  if (!meta) return res.status(404).json({ error: "unknown scenario" });
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+    "x-accel-buffering": "no",
+  });
+  const send = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  try {
+    const assessment = await runAssessment({
+      scenario: sc,
+      routeId: req.body.routeId as string | undefined,
+      at: meta.now,
+      engine: req.body.engine === "llm" ? "llm" : "scripted",
+      onTrace: (t) => send("trace", t),
+    });
+    send("assessment", assessment);
+  } catch (e) {
+    send("error", { message: e instanceof Error ? e.message : String(e) });
+  } finally {
+    res.end();
+  }
 });
 
 app.get("/api/llm", (_req, res) => {

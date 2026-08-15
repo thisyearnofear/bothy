@@ -15,6 +15,7 @@ export default function Timeline({
   onNextStep,
   series,
   snaps,
+  inevitableMs,
   revealMs,
   revealText,
 }: {
@@ -27,6 +28,7 @@ export default function Timeline({
   onNextStep: () => void;
   series: Series[];
   snaps: Beat[];
+  inevitableMs?: number;
   revealMs?: number;
   revealText?: string;
 }) {
@@ -83,6 +85,25 @@ export default function Timeline({
               </g>
             );
           })}
+          {/* the point it became inevitable — the story's climax, annotated once the cursor reaches it */}
+          {inevitableMs != null && (
+            <g className={t >= inevitableMs ? "pin-in" : ""} opacity={t >= inevitableMs ? 1 : 0.35}>
+              <line x1={x(inevitableMs)} y1={8} x2={x(inevitableMs)} y2={H - 8} stroke="oklch(64% 0.21 25)" strokeWidth="1" />
+              <rect
+                x={Math.min(x(inevitableMs) - 3, W - 6)}
+                y={H - 22}
+                width="6"
+                height="6"
+                transform={`rotate(45 ${Math.min(x(inevitableMs), W)} ${H - 19})`}
+                fill="oklch(64% 0.21 25)"
+              />
+              {t >= inevitableMs && (
+                <text x={Math.min(x(inevitableMs) + 6, W - 80)} y={H - 15} fontSize="10.5" fill="oklch(64% 0.21 25)" className="mono">
+                  inevitable
+                </text>
+              )}
+            </g>
+          )}
           {/* outcome reveal — ghosted until the cursor crosses it, then beacon */}
           {revealMs != null && (
             <g className={revealed ? "beacon" : ""} opacity={revealed ? 1 : 0.35}>

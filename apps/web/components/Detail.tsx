@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Assessment, AuditEntry, RiskSnapshot, RouteInfo } from "../../../packages/shared/src/types";
-import { fmtDateTime } from "../../../packages/shared/src/lib";
+import type { Assessment, AuditEntry, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
+import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
 
 const t = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
 
@@ -16,6 +16,7 @@ export default function Detail({
   assessment,
   audit,
   running,
+  traceLines,
   llmAvailable,
   onRun,
   onApprove,
@@ -30,6 +31,7 @@ export default function Detail({
   assessment: Assessment | null;
   audit: AuditEntry[];
   running?: boolean;
+  traceLines?: ToolCall[];
   llmAvailable?: boolean;
   onRun: () => void;
   onApprove: () => void;
@@ -46,6 +48,14 @@ export default function Detail({
   }
   const chain = horizon.citations.map((c) => `${t(c.at)} · ${c.text}`);
   const visible = showAll ? chain : chain.slice(0, 3);
+  // counterfactual: the single load-bearing piece of evidence — remove it and
+  // the label changes. Pure client arithmetic over signed contributions.
+  const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
+    (best, c) => (!best || Math.abs(c.contribution) > Math.abs(best.contribution) ? c : best),
+    null
+  );
+  const withoutScore = loadBearing ? clamp01(horizon.score - loadBearing.contribution) : null;
+  const withoutLabel = withoutScore != null ? riskLabel(withoutScore) : null;
   const pending = assessment?.status === "pending" || !assessment;
   const decided = assessment && assessment.status !== "pending";
   return (
@@ -90,19 +100,38 @@ export default function Detail({
         <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
           Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals} signals known here.
         </p>
+        {loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            Counterfactual — without the <span className="mono">{t(loadBearing.at)}</span> signal, risk would be{" "}
+            <span className="font-semibold" style={{ color: "var(--text-body)" }}>
+              {withoutLabel}
+            </span>{" "}
+            (<span className="mono tnum">{withoutScore.toFixed(2)}</span>).
+          </p>
+        )}
       </div>
 
-      {/* reasoning state — the agent trace streaming in */}
+      {/* reasoning state — the live code path, streaming tool call by tool call */}
       {running && (
         <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-live="polite">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             reasoning…
           </p>
-          <div className="mt-2 space-y-2">
-            <div className="h-3 w-11/12 animate-pulse rounded" style={{ background: "var(--rule)" }} />
-            <div className="h-3 w-4/5 animate-pulse rounded" style={{ background: "var(--rule)", animationDelay: "120ms" }} />
-            <div className="h-3 w-2/3 animate-pulse rounded" style={{ background: "var(--rule)", animationDelay: "240ms" }} />
-          </div>
+          {(traceLines ?? []).length === 0 ? (
+            <div className="mt-2 space-y-2">
+              <div className="h-3 w-11/12 animate-pulse rounded" style={{ background: "var(--rule)" }} />
+              <div className="h-3 w-4/5 animate-pulse rounded" style={{ background: "var(--rule)", animationDelay: "120ms" }} />
+              <div className="h-3 w-2/3 animate-pulse rounded" style={{ background: "var(--rule)", animationDelay: "240ms" }} />
+            </div>
+          ) : (
+            <ul className="mono mt-2 max-h-44 space-y-1 overflow-auto text-xs leading-5">
+              {(traceLines ?? []).map((tc, i) => (
+                <li key={i} className="pin-in" style={{ color: tc.ok ? "var(--text-body)" : "oklch(64% 0.21 25)" }}>
+                  <span style={{ color: "var(--text-faint)" }}>{t(tc.at)}</span> {tc.tool}: {tc.summary}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -118,6 +147,9 @@ export default function Detail({
       <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
           Bothy never publishes automatically
+        </p>
+        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+          a shelter for the decision — the agent watches, a human owns the call.
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <button

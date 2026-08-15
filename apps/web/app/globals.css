@@ -87,6 +87,21 @@ body {
   animation: bothy-pin-in 200ms var(--ease-base) both;
 }
 
+/* Staged copy beats for the cold open / landing. */
+@keyframes bothy-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: bothy-fade-up 480ms var(--ease-base) both;
+}
+
 /* Ledger receipt slides in on Approve. */
 @keyframes bothy-receipt {
   from {
