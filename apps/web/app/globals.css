@@ -1,21 +1,130 @@
 @import "tailwindcss";
 
+/* Locked tokens — docs/design.md "Locked tokens". Don't improvise. */
 :root {
   color-scheme: dark;
-  --bg: #0b1220;
-  --panel: #111a2c;
-  --line: #1f2b44;
-  --muted: #8aa0c4;
+  --page: oklch(13% 0.008 255);
+  --panel: oklch(17% 0.008 255);
+  --rule: oklch(28% 0.008 255);
+  --text-strong: oklch(92% 0 0);
+  --text-body: oklch(70% 0 0);
+  --text-faint: oklch(52% 0 0);
+  --cursor: oklch(75% 0.11 230);
+
+  /* motion tokens (durations never hardcoded in components) */
+  --dur-micro: 80ms;
+  --dur-standard: 240ms;
+  --dur-expressive: 700ms;
+  --ease-base: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-settle: cubic-bezier(0.2, 0.3, 0.2, 1);
 }
 
 html,
 body {
   margin: 0;
-  background: var(--bg);
-  color: #dbe6ff;
+  background: var(--page);
+  color: var(--text-body);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* One font for instruments, one for reading. Tabular digits stop the
+   score/time jiggling while the timeline scrubs. */
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Awaiting duty officer" — subtle pulse on the Approve control only. */
+@keyframes bothy-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--cursor) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--cursor) 0%, transparent);
+  }
+}
+.awaiting-pulse {
+  animation: bothy-pulse 1.8s var(--ease-base) infinite;
+}
+
+/* Beacon flash on backtest outcome reveal / threshold cross. */
+@keyframes bothy-beacon {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.beacon {
+  animation: bothy-beacon 480ms var(--ease-settle);
+}
+
+/* Signal lands -> pin: opacity/blur/scale in, ~200ms ease-out. */
+@keyframes bothy-pin-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.25);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+.pin-in {
+  animation: bothy-pin-in 200ms var(--ease-base) both;
+}
+
+/* Ledger receipt slides in on Approve. */
+@keyframes bothy-receipt {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.receipt-in {
+  animation: bothy-receipt 240ms var(--ease-base) both;
+}
+
+/* MapLibre chrome onto the token palette — popups are instrument surfaces, not white cards. */
+.maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--text-body);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 16px oklch(10% 0.01 250 / 0.6);
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--rule);
+  border-bottom-color: var(--rule);
+}
+.maplibregl-popup-close-button {
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

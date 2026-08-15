@@ -7,16 +7,17 @@ export function riskLabel(score: number): RiskLabel {
   return "HIGH";
 }
 
+// Locked severity tokens (docs/design.md) — >=3:1 against page, always paired with a text label.
 export function riskColor(label: RiskLabel): string {
   switch (label) {
     case "LOW":
-      return "#34d399";
+      return "oklch(72% 0.16 155)";
     case "MODERATE":
-      return "#fbbf24";
+      return "oklch(80% 0.14 85)";
     case "ELEVATED":
-      return "#fb923c";
+      return "oklch(72% 0.17 55)";
     case "HIGH":
-      return "#f87171";
+      return "oklch(64% 0.21 25)";
   }
 }
 
