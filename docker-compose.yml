@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.5
+    container_name: bothy-db
+    environment:
+      POSTGRES_USER: bothy
+      POSTGRES_PASSWORD: bothy
+      POSTGRES_DB: bothy
+    ports:
+      - "5432:5432"
+    volumes:
+      - bothy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bothy"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  bothy_pgdata:
