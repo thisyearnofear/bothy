@@ -104,12 +104,12 @@ function toScenarioRow(r: Row) {
 }
 
 export async function listRoutes(scenario: string): Promise<RouteInfo[]> {
-  const { rows } = await q(`SELECT * FROM routes WHERE scenario = $1`, [scenario]);
+  const { rows } = await q(`SELECT *, ST_AsText(geom) AS geom FROM routes WHERE scenario = $1`, [scenario]);
   return rows.map((r) => toRoute(r as Row));
 }
 
 export async function getRoute(scenario: string, id: string): Promise<RouteInfo | null> {
-  const { rows } = await q(`SELECT * FROM routes WHERE scenario = $1 AND id = $2`, [scenario, id]);
+  const { rows } = await q(`SELECT *, ST_AsText(geom) AS geom FROM routes WHERE scenario = $1 AND id = $2`, [scenario, id]);
   return rows.length ? toRoute(rows[0] as Row) : null;
 }
 
