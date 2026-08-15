@@ -6,7 +6,7 @@ import MapView, { type MapBeat, type RouteOnMap } from "../../components/MapView
 import Timeline, { type Series } from "../../components/Timeline";
 import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
-import Intro, { INTRO_KEY } from "../../components/Intro";
+import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
@@ -42,10 +42,9 @@ export default function Watch() {
   const [llm, setLlm] = useState<{ id: string; label: string; model: string }[]>([]);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherResponse | null>(null);
   const [refreshingWeather, setRefreshingWeather] = useState(false);
-  // cold open: once per session, unless ?demo=1 (pitch mode) or already seen via the landing
-  const [showIntro, setShowIntro] = useState(false);
   const [deskOpen, setDeskOpen] = useState(true);
   const [tape, setTape] = useState(false);
+  const [coach, setCoach] = useState(false);
 
   const loadCtl = useRef<AbortController | null>(null);
   const assessCtl = useRef(new AbortController());
@@ -65,22 +64,14 @@ export default function Watch() {
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    const seen = (() => {
-      try {
-        return sessionStorage.getItem(INTRO_KEY) === "1";
-      } catch {
-        return true;
-      }
-    })();
-    if (!q.get("demo") && !q.get("case") && !seen && q.get("replay") !== "1") setShowIntro(true);
     if (q.get("replay") === "1") {
       setTape(true);
       setDeskOpen(false);
-      try {
-        sessionStorage.setItem(INTRO_KEY, "1");
-      } catch {
-        /* noop */
-      }
+    }
+    try {
+      if (sessionStorage.getItem(DESK_KEY) !== "1") setCoach(true);
+    } catch {
+      setCoach(true);
     }
   }, []);
 
@@ -318,11 +309,28 @@ export default function Watch() {
     return bits.filter(Boolean).join(" · ");
   }, [selected, selHorizon]);
 
+  const dismissCoach = useCallback(() => {
+    setCoach(false);
+    try {
+      sessionStorage.setItem(DESK_KEY, "1");
+    } catch {
+      /* private mode — fine */
+    }
+  }, []);
+
+  const seek = (ms: number) => {
+    setT(ms);
+    dismissCoach();
+  };
+
   const step = (dir: 1 | -1) => {
     if (!snaps.length) return;
     const times = [...snaps.map((s) => s.t), ...(inevitableMs != null ? [inevitableMs] : [])].sort((a, b) => a - b);
     const k = dir === 1 ? times.find((x) => x > t) : [...times].reverse().find((x) => x < t);
-    if (k != null) setT(k);
+    if (k != null) {
+      setT(k);
+      dismissCoach();
+    }
   };
 
   // keep the rail populated when the officer switches route mid-review
@@ -357,6 +365,7 @@ export default function Watch() {
     }
   };
   const decide = async (d: "approved" | "rejected") => {
+    dismissCoach();
     if (!selectedAssessment || !scenario) return;
     const { signal } = assessCtl.current;
     try {
@@ -383,16 +392,6 @@ export default function Watch() {
 
   return (
     <main className={`mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5${running ? " reasoning-spotlight" : ""}`}>
-      {showIntro && (
-        <Intro
-          onEnter={() => setShowIntro(false)}
-          onReplay={() => {
-            setShowIntro(false);
-            void load("backtest", { tape: true });
-          }}
-        />
-      )}
-
       <header
         className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border px-4 py-3"
         style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
@@ -496,6 +495,14 @@ export default function Watch() {
         </div>
       ) : (
         <>
+          {coach && (
+            <DeskCoach
+              tape={tape}
+              backtest={scenario?.id === "backtest"}
+              compact={compact}
+              onDismiss={dismissCoach}
+            />
+          )}
           {!compact && headline && selHorizon && (
             <section
               className="stage-in mb-4 rounded-lg border px-4 py-3"
@@ -640,7 +647,7 @@ export default function Watch() {
                   endMs={range.end}
                   horizonMs={range.horizon}
                   t={t}
-                  onSeek={setT}
+                  onSeek={seek}
                   onPrevStep={() => step(-1)}
                   onNextStep={() => step(1)}
                   series={series}

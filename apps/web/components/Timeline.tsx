@@ -196,7 +196,9 @@ export default function Timeline({
         {/* axis + affordance hint — the scrubber explains itself once, quietly */}
         <div className="mono mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-body)" }}>
           <span>{fmt(startMs)}</span>
-          <span aria-hidden="true">drag to rewind · ← → jumps between signals</span>
+          <span aria-hidden="true">
+            {past ? "drag to rewind · hatch ends the agent's view" : "drag to rewind · ← → jumps between signals"}
+          </span>
           <span>{fmt(endMs)}</span>
         </div>
       </div>
