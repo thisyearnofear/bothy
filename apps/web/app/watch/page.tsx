@@ -548,7 +548,15 @@ export default function Watch() {
                     </span>
                   )}
                 </div>
-                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} onHover={setHoverId} fresh={at(t)} compact={compact} />
+                <RiskList
+                  rows={rows}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onHover={setHoverId}
+                  fresh={at(t)}
+                  compact={compact}
+                  citations={selSnap?.citations}
+                />
               </section>
             </aside>
 

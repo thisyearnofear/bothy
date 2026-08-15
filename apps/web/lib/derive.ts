@@ -50,6 +50,12 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
   return out;
 }
 
+/** First clause of a citation — ranking copy, not the full causal stack. */
+export function citationClause(text: string, max = 42): string {
+  const cut = text.split(/[—,(]/)[0].trim();
+  return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
 /** "flagged 2h 15m before" — computed from data, never hardcoded. */
 export function leadTimeLabel(fromIso: string, toIso: string): string {
   const mins = Math.round((ms(toIso) - ms(fromIso)) / 60000);

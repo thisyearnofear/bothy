@@ -1,5 +1,8 @@
 "use client";
 
+import { citationClause } from "../lib/derive";
+import type { EvidenceCitation } from "../../../packages/shared/src/types";
+
 export type RiskRow = {
   routeId: string;
   name: string;
@@ -15,6 +18,7 @@ export default function RiskList({
   onHover,
   fresh,
   compact,
+  citations,
 }: {
   rows: RiskRow[];
   selectedId: string | null;
@@ -22,9 +26,11 @@ export default function RiskList({
   onHover?: (id: string | null) => void;
   fresh: string;
   compact?: boolean;
+  citations?: EvidenceCitation[];
 }) {
   return (
-    <ul className="space-y-2">
+    <>
+      <ul className="space-y-2">
       {rows.map((r, i) => {
         // LOW routes stay visible — the "not-a-wolf" credibility line, not filler.
         const selected = r.routeId === selectedId;
@@ -77,6 +83,60 @@ export default function RiskList({
           </li>
         );
       })}
-    </ul>
+      </ul>
+      <RankWhy rows={rows} selectedId={selectedId} citations={citations ?? []} at={fresh} compact={compact} />
+    </>
+  );
+}
+
+function RankWhy({
+  rows,
+  selectedId,
+  citations,
+  at,
+  compact,
+}: {
+  rows: RiskRow[];
+  selectedId: string | null;
+  citations: EvidenceCitation[];
+  at: string;
+  compact?: boolean;
+}) {
+  const rank = rows.findIndex((r) => r.routeId === selectedId);
+  if (rank < 0) return null;
+  const selected = rows[rank];
+  const leader = rows[0];
+  const runner = rank === 0 ? rows[1] : undefined;
+  const drivers = [...citations]
+    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+    .slice(0, compact ? 1 : 2)
+    .map((c) => citationClause(c.text, compact ? 28 : 42))
+    .filter(Boolean);
+  const gap = runner ? selected.score - runner.score : 0;
+
+  return (
+    <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
+      <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+        Why this rank
+      </p>
+      <p className="mt-1 text-sm leading-snug" style={{ color: "var(--text-strong)" }}>
+        <span className="mono">{String(rank + 1).padStart(2, "0")}</span>
+        {" at "}
+        <span className="mono">{at}</span>
+      </p>
+      <p className="mt-1 text-sm leading-snug" style={{ color: "var(--text-body)" }}>
+        {drivers.length ? drivers.join(" · ") : "no signals on this corridor yet"}
+      </p>
+      {rank === 0 && runner && (
+        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
+          {gap < 0.005 ? `level with ${runner.name}` : `${gap.toFixed(2)} ahead of ${runner.name}`}
+        </p>
+      )}
+      {rank > 0 && leader && (
+        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
+          {leader.name} leads at {leader.score.toFixed(2)}
+        </p>
+      )}
+    </div>
   );
 }
