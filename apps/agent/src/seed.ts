@@ -23,20 +23,19 @@ async function main() {
     );
   }
 
-  // routes — shared geography across scenarios (fixed road network)
-  const common = bundle.scenarios[0].id;
-  for (const r of bundle.routes) {
-    const line = r.coords.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
-    await q(
-      `INSERT INTO routes (id, scenario, name, region, geom, length_km, max_gradient, max_elev_m,
-         exposure, ploughed, hazards, actor, lat, lng)
-       VALUES ($1,$2,$3,$4, ST_GeomFromText($5, 4326), $6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [
-        r.id, common, r.name, r.region, `LINESTRING(${line})`,
-        r.lengthKm, r.maxGradientPct, r.maxElevationM,
-        r.exposure, r.ploughed, r.hazards, r.actor, r.lat, r.lng,
-      ]
-    );
+  // routes — per scenario (live: Lake District; backtest: real A66 corridor)
+  for (const sc of bundle.scenarios) {
+    for (const r of bundle.routes[sc.id] ?? []) {
+      const line = r.coords.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
+      await q(
+        `INSERT INTO routes (id, scenario, name, region, geom, length_km, max_gradient, max_elev_m,
+           exposure, ploughed, hazards, actor, lat, lng)
+         VALUES ($1,$2,$3,$4, ST_GeomFromText($5, 4326), $6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [r.id, sc.id, r.name, r.region, `LINESTRING(${line})`,
+          r.lengthKm, r.maxGradientPct, r.maxElevationM,
+          r.exposure, r.ploughed, r.hazards, r.actor, r.lat, r.lng]
+      );
+    }
   }
 
   // signal events
@@ -61,15 +60,26 @@ async function main() {
   for (const sc of bundle.scenarios) {
     const events = bundle.events.filter((e) => e.scenario === sc.id) as unknown as SignalEvent[];
     const incidents = bundle.incidents.filter((i) => i.scenario === sc.id);
-    for (const r of bundle.routes) {
-      const timeline = buildTimeline(r, events, incidents, sc.start, sc.now, 30);
-      for (const snap of timeline) {
-        await q(
-          `INSERT INTO risk_snapshots (route_id, scenario, at, score, label, citations)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [snap.routeId, sc.id, snap.at, snap.score, snap.label, JSON.stringify(snap.citations)]
-        );
+    const rid: string[] = [];
+    const ats: string[] = [];
+    const scs: number[] = [];
+    const lbl: string[] = [];
+    const cit: string[] = [];
+    for (const r of bundle.routes[sc.id] ?? []) {
+      for (const snap of buildTimeline(r, events, incidents, sc.start, sc.now, 30)) {
+        rid.push(snap.routeId);
+        ats.push(snap.at);
+        scs.push(snap.score);
+        lbl.push(snap.label);
+        cit.push(JSON.stringify(snap.citations));
       }
+    }
+    if (rid.length) {
+      await q(
+        `INSERT INTO risk_snapshots (route_id, scenario, at, score, label, citations)
+         SELECT * FROM unnest($1::text[], $2::text[], $3::timestamptz[], $4::real[], $5::text[], $6::jsonb[])`,
+        [rid, Array(rid.length).fill(sc.id), ats, scs, lbl, cit]
+      );
     }
   }
 

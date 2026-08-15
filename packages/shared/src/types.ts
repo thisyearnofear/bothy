@@ -123,6 +123,7 @@ export interface ScenarioInfo {
   subtitle: string;
   start: string;
   now: string; // agent horizon — agent can only see events at/before this
-  fullEnd: string; // full timeline extent (backtest includes real outcomes)
-  outcome?: { at: string; text: string }; // real outcome, hidden from agent
+  fullEnd: string; // full timeline extent (backtest includes a post-horizon replay marker)
+  outcomeAt?: string; // post-horizon replay marker, hidden from the agent
+  outcome?: string; // replay outcome description, including source/caveat when applicable
 }

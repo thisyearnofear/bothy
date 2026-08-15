@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION cosine_sim(a real[], b real[]) RETURNS real AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 CREATE TABLE IF NOT EXISTS routes (
-  id            text PRIMARY KEY,
+  id            text NOT NULL,
   scenario      text NOT NULL,
   name          text NOT NULL,
   region        text NOT NULL,
@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS routes (
   hazards       text[] NOT NULL,
   actor         text NOT NULL,
   lat           double precision NOT NULL,
-  lng           double precision NOT NULL
+  lng           double precision NOT NULL,
+  PRIMARY KEY (scenario, id)
 );
 
 CREATE TABLE IF NOT EXISTS scenarios (

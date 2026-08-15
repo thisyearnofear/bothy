@@ -23,6 +23,14 @@ app.use(express.json());
 
 const PORT = Number(process.env.PORT ?? 8787);
 
+function agentVisibleAt(value: unknown, horizon: string) {
+  if (typeof value !== "string") return horizon;
+  const requested = Date.parse(value);
+  const horizonMs = Date.parse(horizon);
+  if (Number.isNaN(requested) || Number.isNaN(horizonMs) || requested > horizonMs) return horizon;
+  return new Date(requested).toISOString();
+}
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "bothy-agent", ts: new Date().toISOString() });
 });
@@ -43,7 +51,7 @@ app.get("/api/scenario/:scenario/risk", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
-  const at = (req.query.at as string) || meta.now;
+  const at = agentVisibleAt(req.query.at, meta.now);
   const [routes, events, incidents] = await Promise.all([
     listRoutes(sc),
     listEvents(sc),
@@ -66,7 +74,7 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
-  const at = (req.body.at as string) || meta.now;
+  const at = agentVisibleAt(req.body.at, meta.now);
   const engine = req.body.engine === "scripted" ? "scripted" : hasProviders() ? "llm" : "scripted";
   const assessment = await runAssessment({
     scenario: sc,
