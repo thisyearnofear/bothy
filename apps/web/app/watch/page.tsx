@@ -281,7 +281,7 @@ export default function Watch() {
       : undefined;
 
   return (
-    <main className="relative min-h-screen p-4">
+    <main className="mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-5">
       {showIntro && (
         <Intro
           onEnter={() => setShowIntro(false)}
@@ -291,36 +291,50 @@ export default function Watch() {
           }}
         />
       )}
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
+
+      <header
+        className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border px-4 py-3"
+        style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
+      >
+        <div className="min-w-0">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             Bothy · the watch room
           </p>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--text-strong)" }}>
-            {scenario?.title ?? (loading ? "Loading…" : "Bothy")}
-          </h1>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-xl font-semibold" style={{ color: "var(--text-strong)" }}>
+              {scenario?.title ?? (loading ? "Loading…" : "Bothy")}
+            </h1>
+            {scenario && (
+              <span className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
+                {scenario.id === "backtest" ? "illustrative replay" : "operator view"}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {(["live", "backtest"] as const).map((id) => (
-            <button
-              key={id}
-              onClick={() => load(id)}
-              className="rounded-lg border px-3 py-1 text-sm transition-colors"
-              style={
-                scenario?.id === id
-                  ? { borderColor: "var(--text-strong)", color: "var(--text-strong)" }
-                  : { borderColor: "var(--rule)", color: "var(--text-body)" }
-              }
-            >
-              {id === "live" ? "Live" : "Backtest"}
-            </button>
-          ))}
+
+        <div className="flex flex-wrap items-center gap-2" aria-label="Watch room controls">
+          <div className="flex rounded-lg border p-0.5" style={{ borderColor: "var(--rule)" }}>
+            {(["live", "backtest"] as const).map((id) => (
+              <button
+                key={id}
+                onClick={() => load(id)}
+                className="rounded-md px-3 py-1.5 text-sm transition-colors"
+                style={
+                  scenario?.id === id
+                    ? { background: "var(--rule)", color: "var(--text-strong)" }
+                    : { color: "var(--text-body)" }
+                }
+              >
+                {id === "live" ? "Live" : "Backtest"}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setPlaying((p) => !p)}
-            className="rounded-lg border px-3 py-1 text-sm transition-transform active:scale-[0.96]"
+            className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
             style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
           >
-            {playing ? "Pause" : "Replay day"}
+            {playing ? "Pause replay" : "Replay day"}
           </button>
           {scenario?.id === "live" && (
             <button
@@ -333,7 +347,7 @@ export default function Watch() {
                   .finally(() => setRefreshingWeather(false));
               }}
               disabled={refreshingWeather}
-              className="rounded-lg border px-3 py-1 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
+              className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
               style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
             >
               {refreshingWeather ? "Refreshing…" : "Refresh live context"}
@@ -363,113 +377,156 @@ export default function Watch() {
       ) : (
         <>
           {headline && (
-            <p className="mb-3 max-w-3xl text-base leading-relaxed" style={{ color: "var(--text-body)" }}>
-              <span className="font-semibold" style={{ color: selHorizon ? riskColor(selHorizon.label) : undefined }}>
-                {selHorizon?.label}
-              </span>{" "}
-              <span className="mono tnum">{selHorizon?.score.toFixed(2)}</span> — {headline}
-            </p>
-          )}
-
-          {scenario?.id === "live" && selectedLiveWeather && (
-            <section
-              className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
-              style={
-                selectedLiveWeather.acquisitionMode === "demo-fallback"
-                  ? { borderColor: "oklch(80% 0.14 85)", background: "var(--panel)", color: "var(--text-body)" }
-                  : { borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }
-              }
-            >
-              <div>
-                <span
-                  className="mono mr-2 uppercase tracking-wider"
-                  style={{ color: selectedLiveWeather.acquisitionMode === "demo-fallback" ? "oklch(80% 0.14 85)" : "var(--cursor)" }}
-                >
-                  {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "live weather context"}
-                </span>
-                <strong>{selectedLiveWeather.condition}</strong>
-                {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
-                {selectedLiveWeather.windGustKph != null && <> · gusts {Math.round(selectedLiveWeather.windGustKph)} km/h</>}
-                {selectedLiveWeather.snowfallCm != null && selectedLiveWeather.snowfallCm > 0 && <> · snow {selectedLiveWeather.snowfallCm.toFixed(1)} cm</>}
-              </div>
-              <a href={selectedLiveWeather.sourceUrl} target="_blank" rel="noreferrer" className="mono underline" style={{ color: "var(--text-faint)" }}>
-                {selectedLiveWeather.source} · {selectedLiveWeather.mode}
-                {selectedLiveWeather.acquisitionMode ? ` · ${selectedLiveWeather.acquisitionMode}` : ""}
-              </a>
-              <p className="basis-full" style={{ color: "var(--text-faint)" }}>
-                {selectedLiveWeather.note}
-                {liveWeather?.ingestedAt && <> · frozen snapshot ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
+            <section className="mb-4 rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+              <p className="mono mb-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+                Current decision picture
+              </p>
+              <p className="max-w-5xl text-base leading-relaxed" style={{ color: "var(--text-body)" }}>
+                <span className="font-semibold" style={{ color: selHorizon ? riskColor(selHorizon.label) : undefined }}>
+                  {selHorizon?.label}
+                </span>{" "}
+                <span className="mono tnum">{selHorizon?.score.toFixed(2)}</span> — {headline}
               </p>
             </section>
           )}
 
-          {/* the scrubber is the mechanism — it gets the full width, above the fold */}
-          <div className="mb-4">
-            <Timeline
-              startMs={range.start}
-              endMs={range.end}
-              horizonMs={range.horizon}
-              t={t}
-              onSeek={setT}
-              onPrevStep={() => step(-1)}
-              onNextStep={() => step(1)}
-              series={series}
-              snaps={snaps}
-              inevitableMs={inevitableMs}
-              revealMs={range.outcome}
-              revealText={revealText}
-            />
-            {scenario?.outcomeAt && scenario.outcome && (
-              <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-                {scenario.outcome}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(240px,320px)_1fr]">
-            <aside className="order-2 space-y-4 lg:order-1">
-              <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} fresh={at(t)} />
-              <Detail
-                route={selected}
-                horizon={selHorizon}
-                horizonTime={at(range.horizon)}
-                color={selColor}
-                cursorSignals={selSnap?.citations.length ?? 0}
-                cursorTime={at(t)}
-                assessment={selectedAssessment}
-                audit={audit}
-                running={running}
-                traceLines={traceLines}
-                llmAvailable={llm.length > 0}
-                onRun={run}
-                onApprove={() => decide("approved")}
-                onReject={() => decide("rejected")}
-              />
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.55fr)_minmax(300px,0.98fr)]">
+            <aside className="order-2 xl:sticky xl:top-4 xl:order-1 xl:self-start">
+              <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+                      Route priority
+                    </p>
+                    <p className="mt-1 text-sm" style={{ color: "var(--text-body)" }}>
+                      Rank at <span className="mono">{at(t)}</span>
+                    </p>
+                  </div>
+                  <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
+                    {rows.length} routes
+                  </span>
+                </div>
+                <RiskList rows={rows} selectedId={selectedId} onSelect={setSelectedId} fresh={at(t)} />
+              </section>
             </aside>
 
-            <section
-              className="order-1 relative h-[56vh] overflow-hidden rounded-lg border lg:order-2"
-              style={{ borderColor: "var(--rule)" }}
-            >
-              <MapView
-                key={scenario?.id}
-                routes={routes.map<RouteOnMap>((r) => {
-                  const s = snapshotAt(snapshots[r.id] ?? [], t);
-                  const label = (s?.label ?? "LOW") as RiskLabel;
-                  return { route: r, color: riskColor(label), score: s?.score ?? 0, label };
-                })}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                cursorMs={t}
-                startMs={range.start}
-                endMs={range.end}
-                beats={mapBeats}
-                revealed={range.outcome != null && t >= range.outcome}
-              />
+            <section className="order-1 min-w-0 space-y-4 xl:order-2">
+              <section
+                className="relative h-[420px] overflow-hidden rounded-lg border sm:h-[52vh] xl:h-[min(58vh,680px)]"
+                style={{ borderColor: "var(--rule)" }}
+                aria-label="Route risk map"
+              >
+                <MapView
+                  key={scenario?.id}
+                  routes={routes.map<RouteOnMap>((r) => {
+                    const s = snapshotAt(snapshots[r.id] ?? [], t);
+                    const label = (s?.label ?? "LOW") as RiskLabel;
+                    return { route: r, color: riskColor(label), score: s?.score ?? 0, label };
+                  })}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  cursorMs={t}
+                  startMs={range.start}
+                  endMs={range.end}
+                  beats={mapBeats}
+                  revealed={range.outcome != null && t >= range.outcome}
+                />
+                {selected && selHorizon && (
+                  <div
+                    className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg border px-3 py-2"
+                    style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
+                  >
+                    <p className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
+                      selected corridor
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium" style={{ color: "var(--text-strong)" }}>
+                      {selected.name}
+                    </p>
+                    <p className="mono mt-1 text-xs" style={{ color: selColor }}>
+                      {selHorizon.label} {selHorizon.score.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              {scenario?.id === "live" && selectedLiveWeather && (
+                <section
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
+                  style={
+                    selectedLiveWeather.acquisitionMode === "demo-fallback"
+                      ? { borderColor: "oklch(80% 0.14 85)", background: "var(--panel)", color: "var(--text-body)" }
+                      : { borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }
+                  }
+                >
+                  <div>
+                    <span
+                      className="mono mr-2 uppercase tracking-wider"
+                      style={{ color: selectedLiveWeather.acquisitionMode === "demo-fallback" ? "oklch(80% 0.14 85)" : "var(--cursor)" }}
+                    >
+                      {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "live weather context"}
+                    </span>
+                    <strong>{selectedLiveWeather.condition}</strong>
+                    {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
+                    {selectedLiveWeather.windGustKph != null && <> · gusts {Math.round(selectedLiveWeather.windGustKph)} km/h</>}
+                    {selectedLiveWeather.snowfallCm != null && selectedLiveWeather.snowfallCm > 0 && <> · snow {selectedLiveWeather.snowfallCm.toFixed(1)} cm</>}
+                  </div>
+                  <a href={selectedLiveWeather.sourceUrl} target="_blank" rel="noreferrer" className="mono underline" style={{ color: "var(--text-faint)" }}>
+                    {selectedLiveWeather.source} · {selectedLiveWeather.mode}
+                    {selectedLiveWeather.acquisitionMode ? ` · ${selectedLiveWeather.acquisitionMode}` : ""}
+                  </a>
+                  <p className="basis-full" style={{ color: "var(--text-faint)" }}>
+                    {selectedLiveWeather.note}
+                    {liveWeather?.ingestedAt && <> · frozen snapshot ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
+                  </p>
+                </section>
+              )}
+
+              <section aria-label="Decision replay timeline">
+                <Timeline
+                  startMs={range.start}
+                  endMs={range.end}
+                  horizonMs={range.horizon}
+                  t={t}
+                  onSeek={setT}
+                  onPrevStep={() => step(-1)}
+                  onNextStep={() => step(1)}
+                  series={series}
+                  snaps={snaps}
+                  inevitableMs={inevitableMs}
+                  revealMs={range.outcome}
+                  revealText={revealText}
+                />
+                {scenario?.outcomeAt && scenario.outcome && (
+                  <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+                    {scenario.outcome}
+                  </p>
+                )}
+              </section>
             </section>
+
+            <aside className="order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start">
+              <section className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+                <Detail
+                  route={selected}
+                  horizon={selHorizon}
+                  horizonTime={at(range.horizon)}
+                  color={selColor}
+                  cursorSignals={selSnap?.citations.length ?? 0}
+                  cursorTime={at(t)}
+                  assessment={selectedAssessment}
+                  audit={audit}
+                  running={running}
+                  traceLines={traceLines}
+                  llmAvailable={llm.length > 0}
+                  onRun={run}
+                  onApprove={() => decide("approved")}
+                  onReject={() => decide("rejected")}
+                />
+              </section>
+            </aside>
           </div>
 
-          <footer className="mono mt-4 flex flex-wrap gap-4 text-xs" style={{ color: "var(--text-faint)" }}>
+          <footer className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "var(--text-faint)" }}>
             <span>providers: {llm.length ? llm.map((p) => p.id).join(", ") : "scripted only"}</span>
             {scenario?.outcomeAt && (
               <span>

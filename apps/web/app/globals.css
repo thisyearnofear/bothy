@@ -87,6 +87,25 @@ body {
   animation: bothy-pin-in 200ms var(--ease-base) both;
 }
 
+/* Scroll reveal for landing sections — enter lifted, settle flat. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 480ms var(--ease-base),
+    transform 480ms var(--ease-base);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Staged copy beats for the cold open / landing. */
 @keyframes bothy-fade-up {
   from {
