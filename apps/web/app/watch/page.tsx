@@ -6,7 +6,7 @@ import Timeline, { type Series } from "../../components/Timeline";
 import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import Intro, { INTRO_KEY } from "../../components/Intro";
-import { api } from "../../lib/api";
+import { api, isAbortError } from "../../lib/api";
 import { inflections, leadTimeLabel, ms, pointAt, riskColor, snapshotAt } from "../../lib/derive";
 import type {
   Assessment,
@@ -46,6 +46,22 @@ export default function Watch() {
     setPlaying(true);
   }, [range.start]);
 
+  const loadCtl = useRef<AbortController | null>(null);
+  const assessCtl = useRef(new AbortController());
+  const runCtl = useRef<AbortController | null>(null);
+  const weatherCtl = useRef<AbortController | null>(null);
+
+  const abortBackground = useCallback(() => {
+    assessCtl.current.abort();
+    assessCtl.current = new AbortController();
+    runCtl.current?.abort();
+    runCtl.current = null;
+    weatherCtl.current?.abort();
+    weatherCtl.current = null;
+    setRunning(false);
+    setRefreshingWeather(false);
+  }, []);
+
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const seen = (() => {
@@ -66,7 +82,15 @@ export default function Watch() {
   }, []);
 
   const refreshAudit = useCallback((id: ScenarioId) => {
-    api.audit(id).then(setAudit).catch(() => {});
+    const { signal } = assessCtl.current;
+    api
+      .audit(id, signal)
+      .then((entries) => {
+        if (!signal.aborted) setAudit(entries);
+      })
+      .catch((e) => {
+        if (isAbortError(e)) return;
+      });
   }, []);
 
   // money shot: the decision rail is populated at first paint — scripted engine is instant,
@@ -77,66 +101,107 @@ export default function Watch() {
     const key = assessmentKey(id, routeId);
     if (assessed.current.has(key)) return;
     assessed.current.add(key);
+    const { signal } = assessCtl.current;
     api
-      .assess(id, { routeId, engine: "scripted" })
-      .then((result) => setAssessments((prev) => ({ ...prev, [key]: result })))
-      .catch(() => assessed.current.delete(key));
+      .assess(id, { routeId, engine: "scripted" }, signal)
+      .then((result) => {
+        if (!signal.aborted) setAssessments((prev) => ({ ...prev, [key]: result }));
+      })
+      .catch((e) => {
+        assessed.current.delete(key);
+        if (isAbortError(e)) return;
+      });
   }, []);
 
-  const load = async (id: ScenarioId) => {
-    setError(null);
-    setLoading(true);
-    setAssessments({});
-    setAudit([]);
-    setPlaying(false);
-    try {
-      const { scenario, routes } = await api.scenario(id);
-      const tls = await Promise.all(routes.map((r: RouteInfo) => api.timeline(id, r.id)));
-      const snap: Record<string, RiskSnapshot[]> = {};
-      routes.forEach((r: RouteInfo, i: number) => (snap[r.id] = tls[i]));
-      const horizon = ms(scenario.now);
-      const end = scenario.outcomeAt ? ms(scenario.fullEnd) : horizon;
-      setScenario(scenario);
-      setRoutes(routes);
-      if (id === "live") {
-        api.liveWeather().then(setLiveWeather).catch(() => setLiveWeather(null));
-      } else {
-        setLiveWeather(null);
-      }
-      setSnapshots(snap);
-      setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
-      setT(horizon);
-      const top = [...routes].sort(
-        (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
-      )[0];
-      setSelectedId(top?.id ?? null);
+  const load = useCallback(
+    async (id: ScenarioId) => {
+      loadCtl.current?.abort();
+      const ac = new AbortController();
+      loadCtl.current = ac;
+      abortBackground();
       assessed.current.clear();
-      if (top) autoAssess(id, top.id);
-      refreshAudit(id);
-      // ?replay=1 deep-link: the day plays itself on arrival
-      if (new URLSearchParams(window.location.search).get("replay") === "1") {
-        setT(ms(scenario.start));
-        setPlaying(true);
+
+      setError(null);
+      setLoading(true);
+      setAssessments({});
+      setAudit([]);
+      setPlaying(false);
+      try {
+        const { scenario, routes } = await api.scenario(id, ac.signal);
+        const tls = await Promise.all(routes.map((r: RouteInfo) => api.timeline(id, r.id, ac.signal)));
+        if (ac.signal.aborted) return;
+        const snap: Record<string, RiskSnapshot[]> = {};
+        routes.forEach((r: RouteInfo, i: number) => (snap[r.id] = tls[i]));
+        const horizon = ms(scenario.now);
+        const end = scenario.outcomeAt ? ms(scenario.fullEnd) : horizon;
+        setScenario(scenario);
+        setRoutes(routes);
+        if (id === "live") {
+          api
+            .liveWeather(ac.signal)
+            .then((weather) => {
+              if (!ac.signal.aborted) setLiveWeather(weather);
+            })
+            .catch((e) => {
+              if (isAbortError(e) || ac.signal.aborted) return;
+              setLiveWeather(null);
+            });
+        } else {
+          setLiveWeather(null);
+        }
+        setSnapshots(snap);
+        setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
+        setT(horizon);
+        const top = [...routes].sort(
+          (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
+        )[0];
+        setSelectedId(top?.id ?? null);
+        if (top) autoAssess(id, top.id);
+        refreshAudit(id);
+        // ?replay=1 deep-link: the day plays itself on arrival
+        if (new URLSearchParams(window.location.search).get("replay") === "1") {
+          setT(ms(scenario.start));
+          setPlaying(true);
+        }
+      } catch (e) {
+        if (isAbortError(e) || ac.signal.aborted) return;
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [autoAssess, refreshAudit, abortBackground]
+  );
 
   useEffect(() => {
+    const ac = new AbortController();
     api
-      .scenarios()
-      .then((s) => s.map((s) => s.id))
-      .then((ids) => ids[0] ?? ("live" as ScenarioId))
-      .then(load)
+      .scenarios(ac.signal)
+      .then((list) => {
+        if (ac.signal.aborted) return;
+        return load(list[0]?.id ?? ("live" as ScenarioId));
+      })
       .catch((e) => {
+        if (isAbortError(e) || ac.signal.aborted) return;
         setError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       });
-    api.llm().then((r) => setLlm(r.providers)).catch(() => {});
-  }, []);
+    api
+      .llm(ac.signal)
+      .then((r) => {
+        if (!ac.signal.aborted) setLlm(r.providers);
+      })
+      .catch((e) => {
+        if (isAbortError(e)) return;
+      });
+    return () => {
+      ac.abort();
+      loadCtl.current?.abort();
+      assessCtl.current.abort();
+      runCtl.current?.abort();
+      weatherCtl.current?.abort();
+    };
+  }, [load]);
 
   // replay: advances the cursor start->end; reduced-motion falls back to beat stepping (no tween)
   useEffect(() => {
@@ -256,6 +321,9 @@ export default function Watch() {
 
   const run = async () => {
     if (!scenario || !selected) return;
+    runCtl.current?.abort();
+    const ac = new AbortController();
+    runCtl.current = ac;
     setRunning(true);
     setTraceLines([]);
     const key = assessmentKey(scenario.id, selected.id);
@@ -263,22 +331,30 @@ export default function Watch() {
       const result = await api.assessStream(
         scenario.id,
         { routeId: selected.id, engine: llm.length ? "llm" : "scripted" },
-        (tc) => setTraceLines((prev) => [...prev, tc])
+        (tc) => {
+          if (!ac.signal.aborted) setTraceLines((prev) => [...prev, tc]);
+        },
+        ac.signal
       );
+      if (ac.signal.aborted) return;
       setAssessments((prev) => ({ ...prev, [key]: result }));
     } catch (e) {
+      if (isAbortError(e) || ac.signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setRunning(false);
+      if (!ac.signal.aborted) setRunning(false);
     }
   };
   const decide = async (d: "approved" | "rejected") => {
     if (!selectedAssessment || !scenario) return;
+    const { signal } = assessCtl.current;
     try {
-      const result = await api.decide(selectedAssessment.id, d);
+      const result = await api.decide(selectedAssessment.id, d, undefined, signal);
+      if (signal.aborted) return;
       setAssessments((prev) => ({ ...prev, [assessmentKey(scenario.id, result.routeId)]: result }));
       refreshAudit(scenario.id);
     } catch (e) {
+      if (isAbortError(e) || signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
     }
   };
@@ -352,12 +428,22 @@ export default function Watch() {
           {scenario?.id === "live" && (
             <button
               onClick={() => {
+                weatherCtl.current?.abort();
+                const ac = new AbortController();
+                weatherCtl.current = ac;
                 setRefreshingWeather(true);
                 api
-                  .refreshLiveWeather()
-                  .then(setLiveWeather)
-                  .catch((e) => setError(e instanceof Error ? e.message : String(e))) // last good snapshot retained
-                  .finally(() => setRefreshingWeather(false));
+                  .refreshLiveWeather(ac.signal)
+                  .then((weather) => {
+                    if (!ac.signal.aborted) setLiveWeather(weather);
+                  })
+                  .catch((e) => {
+                    if (isAbortError(e) || ac.signal.aborted) return;
+                    setError(e instanceof Error ? e.message : String(e)); // last good snapshot retained
+                  })
+                  .finally(() => {
+                    if (!ac.signal.aborted) setRefreshingWeather(false);
+                  });
               }}
               disabled={refreshingWeather}
               className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"

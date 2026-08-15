@@ -67,10 +67,9 @@ export default function Timeline({
               key={sr.id}
               points={sr.points.map(([tx, s]) => `${x(tx)},${y(s)}`).join(" ")}
               fill="none"
-              stroke={sr.color}
               strokeWidth="1.5"
               strokeOpacity="0.8"
-              style={{ transition: "stroke 240ms var(--ease-base)" }}
+              style={{ stroke: sr.color, transition: "stroke 240ms var(--ease-base)" }}
             />
           ))}
           {/* signal pins — only the turning points, annotated with their delta */}
@@ -92,17 +91,17 @@ export default function Timeline({
           {/* the point it became inevitable — the story's climax, annotated once the cursor reaches it */}
           {inevitableMs != null && (
             <g className={t >= inevitableMs ? "pin-in" : ""} opacity={t >= inevitableMs ? 1 : 0.35}>
-              <line x1={x(inevitableMs)} y1={8} x2={x(inevitableMs)} y2={H - 8} stroke="oklch(64% 0.21 25)" strokeWidth="1" />
+              <line x1={x(inevitableMs)} y1={8} x2={x(inevitableMs)} y2={H - 8} strokeWidth="1" style={{ stroke: "oklch(64% 0.21 25)" }} />
               <rect
                 x={Math.min(x(inevitableMs) - 3, W - 6)}
                 y={H - 22}
                 width="6"
                 height="6"
                 transform={`rotate(45 ${Math.min(x(inevitableMs), W)} ${H - 19})`}
-                fill="oklch(64% 0.21 25)"
+                style={{ fill: "oklch(64% 0.21 25)" }}
               />
               {t >= inevitableMs && (
-                <text x={Math.min(x(inevitableMs) + 6, W - 80)} y={H - 15} fontSize="10.5" fill="oklch(64% 0.21 25)" className="mono">
+                <text x={Math.min(x(inevitableMs) + 6, W - 80)} y={H - 15} fontSize="10.5" className="mono" style={{ fill: "oklch(64% 0.21 25)" }}>
                   inevitable
                 </text>
               )}
@@ -111,9 +110,9 @@ export default function Timeline({
           {/* outcome reveal — ghosted until the cursor crosses it, then beacon */}
           {revealMs != null && (
             <g className={revealed ? "beacon" : ""} opacity={revealed ? 1 : 0.35}>
-              <circle cx={x(revealMs)} cy={12} r="4" fill={revealed ? "oklch(64% 0.21 25)" : "none"} stroke="oklch(64% 0.21 25)" strokeWidth="1.5" />
+              <circle cx={x(revealMs)} cy={12} r="4" strokeWidth="1.5" style={{ fill: revealed ? "oklch(64% 0.21 25)" : "none", stroke: "oklch(64% 0.21 25)" }} />
               {revealed && (
-                <text x={Math.min(x(revealMs) + 7, W - 150)} y={15} fontSize="11" fill="oklch(64% 0.21 25)" className="mono">
+                <text x={Math.min(x(revealMs) + 7, W - 150)} y={15} fontSize="11" className="mono" style={{ fill: "oklch(64% 0.21 25)" }}>
                   {revealText}
                 </text>
               )}

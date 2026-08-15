@@ -40,12 +40,17 @@ export default function LandingBackdrop() {
     ];
     let patrolI = 0;
     const patrolStep = () => {
+      if (!alive || !map) return;
       const p = patrol[patrolI % patrol.length];
       patrolI++;
-      map.easeTo({ ...p, easing: (x: number) => x });
+      try {
+        map.easeTo({ ...p, easing: (x: number) => x });
+      } catch {
+        /* map torn down between ticks */
+      }
     };
     const startPatrol = () => {
-      if (drift || reduced) return;
+      if (!alive || drift || reduced) return;
       patrolStep();
       drift = setInterval(patrolStep, 50_000);
     };
@@ -55,8 +60,13 @@ export default function LandingBackdrop() {
     };
     // one interruptible flight per keyframe change — never per-pixel scrubbing
     const flyTo = (k: CamKey) => {
-      if (reduced) map.jumpTo(k);
-      else map.easeTo({ ...k, duration: 700, easing: (x: number) => 1 - Math.pow(1 - x, 4) }); // ~focus/expo
+      if (!alive || !map) return;
+      try {
+        if (reduced) map.jumpTo(k);
+        else map.easeTo({ ...k, duration: 700, easing: (x: number) => 1 - Math.pow(1 - x, 4) }); // ~focus/expo
+      } catch {
+        /* map torn down between scroll ticks */
+      }
     };
 
     const cleanup: Array<() => void> = [];
@@ -88,6 +98,7 @@ export default function LandingBackdrop() {
         if (!keyed.size) return;
         const io = new IntersectionObserver(
           (entries) => {
+            if (!alive) return;
             for (const e of entries) {
               if (!e.isIntersecting) continue;
               const k = keyed.get(e.target);

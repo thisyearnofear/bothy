@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * The cold open: three staged beats — the bothy, the turn, the thesis —
@@ -12,6 +12,7 @@ export const INTRO_KEY = "bothy-intro-seen";
 export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onReplay: () => void }) {
   const [beat, setBeat] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const close = useCallback(
     (fn?: () => void) => {
@@ -21,23 +22,26 @@ export default function Intro({ onEnter, onReplay }: { onEnter: () => void; onRe
       } catch {
         /* private mode — fine */
       }
-      setTimeout(() => fn?.(), 180); // let the fade land
+      if (leaveTimer.current != null) clearTimeout(leaveTimer.current);
+      leaveTimer.current = setTimeout(() => fn?.(), 180); // let the fade land
     },
     []
   );
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ids: ReturnType<typeof setTimeout>[] = [];
     if (reduced) {
       setBeat(2);
-      return;
+    } else {
+      ids.push(setTimeout(() => setBeat(1), 4200), setTimeout(() => setBeat(2), 8400));
     }
-    const ids = [setTimeout(() => setBeat(1), 4200), setTimeout(() => setBeat(2), 8400)];
     const key = () => close(onEnter);
     window.addEventListener("keydown", key);
     return () => {
       ids.forEach(clearTimeout);
       window.removeEventListener("keydown", key);
+      if (leaveTimer.current != null) clearTimeout(leaveTimer.current);
     };
   }, [close, onEnter]);
 
