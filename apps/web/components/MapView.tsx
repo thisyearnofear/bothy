@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { RouteInfo } from "../../../packages/shared/src/types";
 import { pointAt } from "../lib/derive";
+import { resolveMapLibreColor } from "../lib/mapColor";
 
 export type RouteOnMap = {
   route: RouteInfo;
@@ -37,22 +38,6 @@ export const OSM_STYLE = {
     },
   ],
 };
-
-/**
- * MapLibre's style parser is stricter than CSS about modern colour formats —
- * resolve oklch()/token values through the browser's canvas normaliser so
- * paint properties always receive a format the map understands.
- */
-const resolveColor = (() => {
-  let ctx: CanvasRenderingContext2D | null = null;
-  return (color: string): string => {
-    if (!ctx) ctx = document.createElement("canvas").getContext("2d");
-    if (!ctx) return color;
-    ctx.fillStyle = "#000";
-    ctx.fillStyle = color;
-    return ctx.fillStyle;
-  };
-})();
 
 const centroid = (coords: [number, number][]) => {
   let x = 0;
@@ -140,35 +125,44 @@ export default function MapView({
       const isSel = on.route.id === selectedId;
       const isHover = on.route.id === hoverId;
 
-      if (!map.getLayer(ghostId)) {
-        map.addSource(`s-${on.route.id}`, {
+      const pathSourceId = `s-${on.route.id}`;
+      const progressSourceId = `p-${on.route.id}`;
+      if (!map.getSource(pathSourceId)) {
+        map.addSource(pathSourceId, {
           type: "geojson",
           data: { type: "Feature", geometry: { type: "LineString", coordinates: on.route.coords } },
         });
-        map.addSource(`p-${on.route.id}`, {
+      }
+      if (!map.getSource(progressSourceId)) {
+        map.addSource(progressSourceId, {
           type: "geojson",
           data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
         });
-        // ghost: the full path, faint — the shape of the day, visible before it happens
+      }
+
+      // Keep each MapLibre resource independently idempotent. A rejected layer
+      // must not cause the next React effect to re-add its existing sources.
+      if (!map.getLayer(ghostId)) {
         map.addLayer({
           id: ghostId,
           type: "line",
-          source: `s-${on.route.id}`,
-          paint: { "line-color": resolveColor("oklch(28% 0.008 255)"), "line-width": 2, "line-opacity": 0.35 },
+          source: pathSourceId,
+          paint: { "line-color": resolveMapLibreColor("oklch(28% 0.008 255)"), "line-width": 2, "line-opacity": 0.35 },
         });
-        // progress: risk-as-ink, reveals only up to the cursor
+        map.on("click", ghostId, () => onSelectRef.current(on.route.id));
+      }
+      if (!map.getLayer(progId)) {
         map.addLayer({
           id: progId,
           type: "line",
-          source: `p-${on.route.id}`,
+          source: progressSourceId,
           paint: {
-            "line-color": resolveColor(on.color),
+            "line-color": resolveMapLibreColor(on.color),
             "line-width": isSel || isHover ? 4 : 3,
             "line-opacity": isSel || isHover ? 1 : 0.55,
           },
         });
         map.on("click", progId, () => onSelectRef.current(on.route.id));
-        map.on("click", ghostId, () => onSelectRef.current(on.route.id));
         map.on("mouseenter", progId, () => {
           try {
             map.getCanvas().style.cursor = "pointer";
@@ -183,11 +177,11 @@ export default function MapView({
             /* noop */
           }
         });
-      } else {
-        map.setPaintProperty(progId, "line-color", resolveColor(on.color));
-        map.setPaintProperty(progId, "line-width", isSel ? 4 : isHover ? 4 : 3);
-        map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
       }
+
+      map.setPaintProperty(progId, "line-color", resolveMapLibreColor(on.color));
+      map.setPaintProperty(progId, "line-width", isSel || isHover ? 4 : 3);
+      map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
 
       // self-draw: the polyline grows with the elapsed fraction of the day
       const src = map.getSource(`p-${on.route.id}`);
