@@ -101,16 +101,31 @@ export default function MapView({
       });
       map.addControl(new ml.NavigationControl({ showCompass: false }), "top-right");
       libRef.current = ml;
+      mapRef.current = map;
       const marker = new ml.Marker({ element: beaconEl(), anchor: "center" }).setLngLat([-3.0, 54.45]);
       map.on("load", () => {
+        if (!alive) return;
         marker.addTo(map);
         markerRef.current = marker;
+        setReady(true);
       });
-      map.on("load", () => setReady(true));
-      mapRef.current = map;
     })();
     return () => {
       alive = false;
+      setReady(false);
+      markerRef.current = null;
+      mapRef.current = null;
+      libRef.current = null;
+      lastFollow.current = null;
+      for (const p of pinsRef.current.values()) {
+        try {
+          p.marker.remove();
+        } catch {
+          /* map teardown may have already detached the marker */
+        }
+      }
+      pinsRef.current.clear();
+      openPin.current = null;
       map?.remove();
     };
   }, []);
@@ -119,79 +134,83 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    const pathData = (coordinates: [number, number][]) => ({
+      type: "Feature" as const,
+      geometry: { type: "LineString" as const, coordinates },
+    });
     for (const on of routes) {
-      const ghostId = `g-${on.route.id}`;
-      const progId = `l-${on.route.id}`;
-      const isSel = on.route.id === selectedId;
-      const isHover = on.route.id === hoverId;
+      try {
+        const ghostId = `g-${on.route.id}`;
+        const progId = `l-${on.route.id}`;
+        const isSel = on.route.id === selectedId;
+        const isHover = on.route.id === hoverId;
 
-      const pathSourceId = `s-${on.route.id}`;
-      const progressSourceId = `p-${on.route.id}`;
-      if (!map.getSource(pathSourceId)) {
-        map.addSource(pathSourceId, {
-          type: "geojson",
-          data: { type: "Feature", geometry: { type: "LineString", coordinates: on.route.coords } },
-        });
-      }
-      if (!map.getSource(progressSourceId)) {
-        map.addSource(progressSourceId, {
-          type: "geojson",
-          data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
-        });
-      }
+        const pathSourceId = `s-${on.route.id}`;
+        const progressSourceId = `p-${on.route.id}`;
+        const path = map.getSource(pathSourceId);
+        if (!path) {
+          map.addSource(pathSourceId, { type: "geojson", data: pathData(on.route.coords) });
+        } else {
+          path.setData(pathData(on.route.coords));
+        }
+        if (!map.getSource(progressSourceId)) {
+          map.addSource(progressSourceId, { type: "geojson", data: pathData([]) });
+        }
 
-      // Keep each MapLibre resource independently idempotent. A rejected layer
-      // must not cause the next React effect to re-add its existing sources.
-      if (!map.getLayer(ghostId)) {
-        map.addLayer({
-          id: ghostId,
-          type: "line",
-          source: pathSourceId,
-          paint: { "line-color": resolveMapLibreColor("oklch(28% 0.008 255)"), "line-width": 2, "line-opacity": 0.35 },
-        });
-        map.on("click", ghostId, () => onSelectRef.current(on.route.id));
-      }
-      if (!map.getLayer(progId)) {
-        map.addLayer({
-          id: progId,
-          type: "line",
-          source: progressSourceId,
-          paint: {
-            "line-color": resolveMapLibreColor(on.color),
-            "line-width": isSel || isHover ? 4 : 3,
-            "line-opacity": isSel || isHover ? 1 : 0.55,
-          },
-        });
-        map.on("click", progId, () => onSelectRef.current(on.route.id));
-        map.on("mouseenter", progId, () => {
-          try {
-            map.getCanvas().style.cursor = "pointer";
-          } catch {
-            /* noop */
-          }
-        });
-        map.on("mouseleave", progId, () => {
-          try {
-            map.getCanvas().style.cursor = "";
-          } catch {
-            /* noop */
-          }
-        });
-      }
+        // Keep each MapLibre resource independently idempotent. A rejected layer
+        // must not cause the next React effect to re-add its existing sources.
+        if (!map.getLayer(ghostId)) {
+          map.addLayer({
+            id: ghostId,
+            type: "line",
+            source: pathSourceId,
+            paint: { "line-color": resolveMapLibreColor("oklch(28% 0.008 255)"), "line-width": 2, "line-opacity": 0.35 },
+          });
+          map.on("click", ghostId, () => onSelectRef.current(on.route.id));
+        }
+        if (!map.getLayer(progId)) {
+          map.addLayer({
+            id: progId,
+            type: "line",
+            source: progressSourceId,
+            paint: {
+              "line-color": resolveMapLibreColor(on.color),
+              "line-width": isSel || isHover ? 4 : 3,
+              "line-opacity": isSel || isHover ? 1 : 0.55,
+            },
+          });
+          map.on("click", progId, () => onSelectRef.current(on.route.id));
+          map.on("mouseenter", progId, () => {
+            try {
+              map.getCanvas().style.cursor = "pointer";
+            } catch {
+              /* noop */
+            }
+          });
+          map.on("mouseleave", progId, () => {
+            try {
+              map.getCanvas().style.cursor = "";
+            } catch {
+              /* noop */
+            }
+          });
+        }
 
-      map.setPaintProperty(progId, "line-color", resolveMapLibreColor(on.color));
-      map.setPaintProperty(progId, "line-width", isSel || isHover ? 4 : 3);
-      map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
+        if (map.getLayer(progId)) {
+          map.setPaintProperty(progId, "line-color", resolveMapLibreColor(on.color));
+          map.setPaintProperty(progId, "line-width", isSel || isHover ? 4 : 3);
+          map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
+        }
 
-      // self-draw: the polyline grows with the elapsed fraction of the day
-      const src = map.getSource(`p-${on.route.id}`);
-      if (src) {
-        const f = isSel ? fraction : 1;
-        const n = Math.max(2, Math.ceil(on.route.coords.length * f));
-        src.setData({
-          type: "Feature",
-          geometry: { type: "LineString", coordinates: on.route.coords.slice(0, n) },
-        });
+        // self-draw: the polyline grows with the elapsed fraction of the day
+        const src = map.getSource(progressSourceId);
+        if (src) {
+          const f = isSel ? fraction : 1;
+          const n = Math.max(2, Math.ceil(on.route.coords.length * f));
+          src.setData(pathData(on.route.coords.slice(0, n)));
+        }
+      } catch {
+        // One rejected route must not skip the rest of the corridors or the camera.
       }
     }
 
@@ -199,19 +218,23 @@ export default function MapView({
     const sel = routes.find((r) => r.route.id === selectedId);
     const marker = markerRef.current;
     if (sel && map.easeTo) {
-      const pos = pointAt(sel.route.coords, fraction);
-      marker?.setLngLat(pos);
-      const el = marker?.getElement();
-      if (el) el.classList.toggle("beacon", Boolean(revealed));
-      if (lastFollow.current !== sel.route.id) {
-        // new focus: one proper camera flight onto the corridor
-        lastFollow.current = sel.route.id;
-        map.easeTo({ center: centroid(sel.route.coords), zoom: 11.5, duration: 700 });
-      } else if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        // scrubbing: short, interruptible drift — the pointer is the camera
-        map.easeTo({ center: pos, duration: 240, easing: (x: number) => x });
-      } else {
-        map.jumpTo({ center: pos });
+      try {
+        const pos = pointAt(sel.route.coords, fraction);
+        marker?.setLngLat(pos);
+        const el = marker?.getElement();
+        if (el) el.classList.toggle("beacon", Boolean(revealed));
+        if (lastFollow.current !== sel.route.id) {
+          // new focus: one proper camera flight onto the corridor
+          lastFollow.current = sel.route.id;
+          map.easeTo({ center: centroid(sel.route.coords), zoom: 11.5, duration: 700 });
+        } else if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          // scrubbing: short, interruptible drift — the pointer is the camera
+          map.easeTo({ center: pos, duration: 240, easing: (x: number) => x });
+        } else {
+          map.jumpTo({ center: pos });
+        }
+      } catch {
+        /* map may have been torn down between ready and this paint */
       }
     }
   }, [routes, selectedId, hoverId, fraction, revealed, ready]);

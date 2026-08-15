@@ -73,7 +73,7 @@ export default function LandingBackdrop() {
         attributionControl: { compact: true },
       });
       map.on("load", () => {
-        if (!alive) return;
+        if (!alive || !map) return;
         startPatrol();
 
         // scroll keyframes: sections carrying data-cam define the flight

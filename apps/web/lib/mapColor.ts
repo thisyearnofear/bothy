@@ -3,15 +3,15 @@
  * MapLibre style properties. Non-OKLCH values pass through unchanged.
  */
 const OKLCH_PATTERN =
-  /^oklch\(\s*([+-]?(?:\d*\.)?\d+)(%)?\s+([+-]?(?:\d*\.)?\d+)\s+([+-]?(?:\d*\.)?\d+)(?:deg)?\s*\)$/i;
+  /^oklch\(\s*([+-]?(?:\d*\.)?\d+)(%)?\s+([+-]?(?:\d*\.)?\d+)\s+([+-]?(?:\d*\.)?\d+)(?:deg)?(?:\s*\/\s*([+-]?(?:\d*\.)?\d+)(%)?)?\s*\)$/i;
 
-const toSrgbHex = (channel: number) => {
+const toSrgbByte = (channel: number) => {
   const linear = Math.max(0, Math.min(1, channel));
   const encoded = linear <= 0.0031308 ? 12.92 * linear : 1.055 * linear ** (1 / 2.4) - 0.055;
-  return Math.round(encoded * 255)
-    .toString(16)
-    .padStart(2, "0");
+  return Math.round(encoded * 255);
 };
+
+const toSrgbHex = (channel: number) => toSrgbByte(channel).toString(16).padStart(2, "0");
 
 export const resolveMapLibreColor = (color: string): string => {
   const match = color.trim().match(OKLCH_PATTERN);
@@ -34,5 +34,12 @@ export const resolveMapLibreColor = (color: string): string => {
   const red = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
   const green = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
   const blue = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+
+  if (match[5] != null) {
+    const alpha = Number(match[5]) / (match[6] ? 100 : 1);
+    if (!Number.isFinite(alpha)) return "#64748b";
+    return `rgba(${toSrgbByte(red)}, ${toSrgbByte(green)}, ${toSrgbByte(blue)}, ${Math.max(0, Math.min(1, alpha))})`;
+  }
+
   return `#${toSrgbHex(red)}${toSrgbHex(green)}${toSrgbHex(blue)}`;
 };
