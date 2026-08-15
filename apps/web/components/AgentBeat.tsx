@@ -34,6 +34,7 @@ export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLi
   }, [id, lines.length]);
 
   if (!lines.length) return null;
+  const retrieve = lines.find((l) => l.phase === "retrieve");
 
   if (settled && !open) {
     return (
@@ -45,6 +46,11 @@ export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLi
         aria-expanded={false}
       >
         {lines.map((l) => l.phase).join(" → ")}
+        {retrieve && (
+          <span className="mt-1 block" style={{ color: "var(--text-faint)" }}>
+            {retrieve.text}
+          </span>
+        )}
       </button>
     );
   }

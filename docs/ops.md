@@ -100,7 +100,8 @@ The second command must remain available if venue connectivity disappears. A ful
 provider failure returns `503` and retains the last good snapshot rather than
 replacing it with fallback data. Acquisition mode is preserved on each persisted
 route observation. The weather context is deliberately non-evidentiary: it never
-changes seeded risk scores or backtest replay inputs. `npm run seed` drops these
+changes seeded risk scores or backtest replay inputs. The watch room labels it
+*not in the score*. `npm run seed` drops these
 snapshots along with the other demo tables, so refresh again after a destructive
 reset.
 

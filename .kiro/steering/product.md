@@ -26,3 +26,19 @@ chatbot, a weather app, a dispatch system, or an autonomous publisher.
 - Persist external data with provider, source URL, observation/fetch/ingestion timestamps and payload provenance.
 - UI and agent assessment read frozen snapshots from the database; they must not fetch providers during rendering or assessment.
 - External context must not change seeded signal events, deterministic scores, citations, causal chains, or replay inputs unless an explicit, separately designed scoring integration is requested.
+
+## Intake
+
+Bothy ingests **reports**, not media. A source may originate in an API, a duty
+feed, or a news desk; it only moves a score after it is a timestamped
+`warning | forecast | road | incident` citation.
+
+Three clocks, kept visible in the watch room:
+
+1. **Authored case tape** — seeded `signal_events`, rewindable, not a live firehose.
+2. **Operator-fetched API** — Open-Meteo, persisted, score-neutral, labelled *not in the score*.
+3. **Reported news** — A66 ITV outcome, beyond the hatch, not agent evidence.
+
+Audio, radio, and social are **not in this build**. Those modalities would land
+as the same report kinds with a source and a clock, or they would not land at
+all. Do not fake streams, crawlers, or microphones for a demo.

@@ -93,6 +93,27 @@ base 0.08
 `buildTimeline()` snapshots every route every 30 min across a scenario → powers
 the front-end **confidence timeline** (risk as a story over time, not a number).
 
+## Intake contract
+
+Bothy ingests **reports**, not media. Whatever the origin (duty feed, forecast
+API, news desk), a source only moves a score after it is a timestamped
+`SignalEvent` of kind `warning | forecast | road | incident` with a named
+`source` and a signed `contribution`. The watch room Intake legend, citation
+ledger, and live-weather row make this visible.
+
+Three clocks:
+
+| clock | what it is | in the score? |
+|---|---|---|
+| **Authored case tape** | Seeded `signal_events` for Lake District and A66 precursors | yes — rewindable citations |
+| **Operator-fetched API** | Open-Meteo, persisted on Refresh, read only from Postgres | **no** — frozen context |
+| **Reported news** | ITV A66 closure / reopening, after the hatch | **no** — sourced outcome, not agent evidence |
+
+Assessment never fetches a provider. Live weather is an operator act; the case
+is a frozen ledger. Audio, radio, and social are **not in this build**. They
+would enter the same ledger as reports (kind + source + clock) or not enter at
+all — never as a waveform, crawl, or firehose in the score.
+
 ## Scenarios
 
 | id | horizon | note |

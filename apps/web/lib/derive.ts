@@ -1,5 +1,5 @@
 import { riskColor, riskLabel } from "../../../packages/shared/src/lib";
-import type { EvidenceCitation, RiskSnapshot } from "../../../packages/shared/src/types";
+import type { EventKind, EvidenceCitation, RiskSnapshot } from "../../../packages/shared/src/types";
 
 export const ms = (iso: string) => new Date(iso).getTime();
 
@@ -9,7 +9,41 @@ export interface Inflection {
   score: number;
   label: string;
   signal: string;
+  kind: EventKind;
+  source: string;
   delta: number; // score jump vs the previous snapshot — the "+0.30"
+}
+
+export const KIND_LABEL: Record<EventKind, string> = {
+  warning: "warning",
+  forecast: "forecast",
+  road: "road",
+  incident: "incident",
+};
+
+const KIND_ORDER: EventKind[] = ["warning", "forecast", "road", "incident"];
+
+/** Heaviest citations first — the score is a weighted stack of reports. */
+export function byWeight(citations: EvidenceCitation[]): EvidenceCitation[] {
+  return [...citations].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+}
+
+export function sourceShort(source: string, max = 28): string {
+  const cut = source.split(/[,(]/)[0].trim();
+  return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
+/** Share of cited mass by report kind — how the stack is weighted, not a second score. */
+export function kindMix(citations: EvidenceCitation[]): { kind: EventKind; share: number }[] {
+  const abs = citations.reduce((sum, c) => sum + Math.abs(c.contribution), 0) || 1;
+  const byKind = new Map<EventKind, number>();
+  for (const c of citations) {
+    byKind.set(c.kind, (byKind.get(c.kind) ?? 0) + Math.abs(c.contribution));
+  }
+  return KIND_ORDER.filter((kind) => byKind.has(kind)).map((kind) => ({
+    kind,
+    share: (byKind.get(kind) ?? 0) / abs,
+  }));
 }
 
 /** Nearest snapshot at or before t - re-renders risk + evidence at that instant. */
@@ -31,7 +65,9 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
   for (const s of timeline) {
     const citeIds = s.citations.map((c) => c.eventId).join(",");
     if (prevKey && citeIds !== prevKey) {
-      const top = s.citations[s.citations.length - 1];
+      const prevIds = new Set(prevKey.split(",").filter(Boolean));
+      const added = s.citations.filter((c) => !prevIds.has(c.eventId));
+      const top = byWeight(added)[0] ?? s.citations.at(-1);
       if (top && !seen.has(top.eventId)) {
         seen.add(top.eventId);
         out.push({
@@ -41,6 +77,8 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
           label: s.label,
           delta: s.score - prevScore,
           signal: `${fmtAt(s.at)} · ${top.text}`,
+          kind: top.kind,
+          source: top.source,
         });
       }
     }
@@ -67,13 +105,14 @@ export function pipelineLines(input: {
   at: string;
   citations: EvidenceCitation[];
 }): PipelineLine[] {
-  const sources = [...new Set(input.citations.map((c) => c.source).filter(Boolean))].slice(0, 3);
-  const top = [...input.citations]
-    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
-    .slice(0, 2);
+  const sources = [...new Set(input.citations.map((c) => sourceShort(c.source)).filter(Boolean))].slice(0, 3);
+  const top = byWeight(input.citations).slice(0, 2);
   const reason =
     top
-      .map((c) => `${citationClause(c.text, 28)} ${c.contribution >= 0 ? "+" : ""}${c.contribution.toFixed(2)}`)
+      .map(
+        (c) =>
+          `${KIND_LABEL[c.kind]} · ${citationClause(c.text, 22)} ${c.contribution >= 0 ? "+" : ""}${c.contribution.toFixed(2)}`
+      )
       .join(" · ") || "terrain and exposure only";
   return [
     { phase: "detect", text: `${input.routeName} is ${input.label} ${input.score.toFixed(2)} at ${input.at}` },

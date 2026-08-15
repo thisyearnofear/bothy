@@ -14,6 +14,7 @@
 - Persist externally fetched context in `external_observations`, never in `signal_events`.
 - `GET /api/scenario/live/live-weather` is database-only; `POST /api/scenario/live/live-weather/refresh` is the operator-triggered ingestion path.
 - Live weather endpoints must return `409` for backtests.
+- Intake is typed reports (`warning | forecast | road | incident`), not raw media. Do not add audio, radio, news crawlers, or social firehoses that skip the citation ledger. News on the A66 case is a sourced outcome beyond the hatch, not a live scrape.
 
 ## Agent rules
 

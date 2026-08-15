@@ -2,10 +2,12 @@
 
 > Agents, but accountable.
 
-Bothy turns fragmented public **weak signals** (weather, roads, terrain, incident
-history) into a **specific, evidence-backed, human-approved intervention** — not
-a chatbot, not an alert. Every number is traceable to a cited source + timestamp;
-nothing publishes without a human sign-off.
+Bothy turns fragmented public **weak signals** (weather warnings, forecasts,
+road operations, incident history) into a **specific, evidence-backed,
+human-approved intervention** — not a chatbot, not an alert. Every number is
+traceable to a cited source + timestamp; nothing publishes without a human
+sign-off. Live weather is an optional frozen API snapshot and stays **off the
+score**. Audio, radio, and social are not ingested in this build.
 
 **Demo wedge:** winter access risk on UK upland roads (Lake District). The
 pipeline generalizes to any *time-evolving weak signals → accountable

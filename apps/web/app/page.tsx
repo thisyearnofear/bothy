@@ -78,7 +78,7 @@ export default function Landing() {
             someone gets a callout.
           </h2>
           <p className="mono mt-8 max-w-xl text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-            five systems · no one had to look together
+            warning · forecast · road · incident · live weather stays off the score
           </p>
         </section>
 
@@ -95,6 +95,9 @@ export default function Landing() {
           </h2>
           <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--cursor)" }}>
             every number cited · a human signs
+          </p>
+          <p className="mono mt-3 max-w-xl text-xs uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
+            reports, not streams · audio · radio · social are not in this build
           </p>
           <CaseList />
           <p className="mono mt-16 text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>

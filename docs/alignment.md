@@ -19,7 +19,10 @@ signals into a specific, evidence-backed, human-approved intervention.**
 
 ## What the demo must prove (5 mins)
 
-1. **Multi-source synthesis** — weather + road + terrain + history combine coherently.
+1. **Multi-source synthesis** — warning + forecast + road + incident combine
+   coherently, each sourced and weighted. Live Open-Meteo is visible as frozen
+   context and stays off the score. News on the A66 case is a sourced outcome
+   beyond the hatch, not a crawl. Audio / radio / social are not in this build.
 2. **Geographic reasoning** — route-specific, not a regional blanket.
 3. **Legible cause** — a non-technical judge can read the causal chain.
 4. **Realistic action** — correct actor + draft warning.

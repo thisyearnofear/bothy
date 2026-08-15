@@ -19,8 +19,10 @@ export type MapBeat = {
   routeId: string;
   atMs: number;
   lngLat: [number, number];
-  text: string; // "08:20 · closure reported"
+  text: string; // citation headline
   delta: number; // score contribution
+  kind?: string;
+  source?: string;
 };
 
 export const OSM_STYLE = {
@@ -265,8 +267,11 @@ export default function MapView({
       const el = pinEl(b, presentation.expanded);
       const marker = new ml.Marker({ element: el, anchor: "bottom", offset: presentation.offset }).setLngLat(b.lngLat).addTo(map);
       const popup = new ml.Popup({ closeButton: false, offset: 14 }).setHTML(
-        `<div class="mono" style="font-size:12px;line-height:1.5">${b.text}` +
-          ` <span style="color:var(--cursor)">(${b.delta >= 0 ? "+" : ""}${b.delta.toFixed(2)})</span></div>`
+        `<div class="mono" style="font-size:12px;line-height:1.5">` +
+          (b.kind || b.source
+            ? `<div style="color:var(--cursor);font-size:11px"><span style="text-transform:uppercase;letter-spacing:0.08em">${esc(b.kind ?? "")}</span>${b.kind && b.source ? " · " : ""}${esc(b.source ?? "")}</div>`
+            : "") +
+          `${esc(headline(b))} <span style="color:var(--cursor)">(${b.delta >= 0 ? "+" : ""}${b.delta.toFixed(2)})</span></div>`
       );
       marker.setPopup(popup);
       pins.set(b.id, { marker, popup });
@@ -356,14 +361,15 @@ function pinEl(b: MapBeat, expanded: boolean): HTMLElement {
 }
 
 function updatePinElement(el: HTMLElement, b: MapBeat, expanded: boolean) {
-  const time = b.text.split(" · ")[0];
+  const time = beatTime(b);
+  const label = [b.kind, b.source, headline(b)].filter(Boolean).join(" · ");
   el.className = "pin-in";
   el.style.display = "flex";
   el.style.flexDirection = "column";
   el.style.alignItems = "center";
   el.style.cursor = "pointer";
-  el.title = `${time} · ${b.text}`;
-  el.setAttribute("aria-label", `${time}: ${b.text}`);
+  el.title = `${time} · ${label}`;
+  el.setAttribute("aria-label", `${time}: ${label}`);
   el.innerHTML = expanded
     ? `<span class="mono" style="font-size:11px;color:var(--cursor);margin-bottom:2px;white-space:nowrap">${time}</span>` +
       `<span style="width:9px;height:9px;border-radius:50%;background:var(--cursor);box-shadow:0 0 0 2px var(--page)"></span>`
@@ -379,4 +385,21 @@ function beaconEl(): HTMLElement {
   el.style.background = "var(--cursor)";
   el.style.boxShadow = "0 0 0 2px var(--page)";
   return el;
+}
+
+function beatTime(b: MapBeat) {
+  const d = new Date(b.atMs);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function headline(b: MapBeat) {
+  const cut = b.text.split(" · ").slice(1).join(" · ").trim();
+  return cut || b.text;
+}
+
+function esc(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
 }

@@ -59,6 +59,12 @@ three questions at a glance:
    record beside the map, showing the horizon-bound draft, evidence, actor,
    and audit gate.
 
+A quiet **Intake** strip under the header states the contract without becoming
+a fourth widget: what is in the score (warning · forecast · road · incident),
+which clock is extra (frozen Open-Meteo, or ITV beyond the hatch), and what is
+not ingested (audio · radio · social). Live weather copy says *not in the
+score*. The A66 outcome is labelled sourced news beyond the hatch.
+
 On wide screens, compose these as adjacent rails: priority | map + replay |
 decision record. The map receives the most width. On narrow screens, present the
 map and replay first, then the priority queue, then the decision record; this

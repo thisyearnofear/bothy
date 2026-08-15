@@ -31,7 +31,7 @@ export const CASES: CaseDef[] = [
     short: "Lakes",
     kind: "operator view",
     place: "Borrowdale · Wasdale · Coniston",
-    blurb: "Four corridors, one morning. Rank the options and sign — no sourced outcome in this case.",
+    blurb: "Four corridors, one morning. Rank and sign — Open-Meteo is frozen context, not evidence.",
     href: "/watch?case=live",
   },
 ];

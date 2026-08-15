@@ -47,6 +47,11 @@ forecast snow/temperature, closures/ploughing, recent incidents, historical
 pattern. Every contribution is an evidence citation — the causal chain is built
 verbatim from those citations.
 
+Live Open-Meteo is **not** an input to this model. It is operator-fetched
+context, persisted, and labelled off the score. News appears only as the A66
+sourced outcome beyond the hatch. Audio, radio, and social are out of scope
+until they can land as the same citation kinds.
+
 ## Repo hygiene
 
 - ESLint flat config at the root (`npm run lint`), typecheck per workspace.

@@ -16,8 +16,8 @@ export default function DeskCoach({
 }) {
   const line =
     tape || backtest
-      ? "Time is yours. The hatch is the agent's view. Approve is the record."
-      : "You own the cursor. Evidence is what was known then. Approve is the record.";
+      ? "Reports land with a source. Weight sits on the case. The hatch is the agent's view."
+      : "Each report is sourced and weighted. Evidence is what was known then. Approve is the record.";
 
   return (
     <div

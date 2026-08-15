@@ -1,6 +1,6 @@
 "use client";
 
-import { citationClause } from "../lib/derive";
+import { byWeight, citationClause, KIND_LABEL, sourceShort } from "../lib/derive";
 import type { EvidenceCitation } from "../../../packages/shared/src/types";
 
 export type RiskRow = {
@@ -107,11 +107,9 @@ function RankWhy({
   const selected = rows[rank];
   const leader = rows[0];
   const runner = rank === 0 ? rows[1] : undefined;
-  const drivers = [...citations]
-    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+  const drivers = byWeight(citations)
     .slice(0, compact ? 1 : 2)
-    .map((c) => citationClause(c.text, compact ? 28 : 42))
-    .filter(Boolean);
+    .filter((c) => c.text);
   const gap = runner ? selected.score - runner.score : 0;
 
   return (
@@ -124,9 +122,34 @@ function RankWhy({
         {" at "}
         <span className="mono">{at}</span>
       </p>
-      <p className="mt-1 text-sm leading-snug" style={{ color: "var(--text-body)" }}>
-        {drivers.length ? drivers.join(" · ") : "no signals on this corridor yet"}
-      </p>
+      {drivers.length > 0 ? (
+        <ul className="mt-1.5 space-y-1">
+          {drivers.map((c) => (
+            <li key={`${c.eventId}-${c.text}`} className="flex items-baseline justify-between gap-2 text-xs">
+              <span style={{ color: "var(--text-body)" }}>
+                <span className="mono uppercase tracking-wider" style={{ color: "var(--cursor)" }}>
+                  {KIND_LABEL[c.kind]}
+                </span>
+                {" · "}
+                {sourceShort(c.source, compact ? 16 : 22)}
+                {!compact && (
+                  <span className="mt-0.5 block" style={{ color: "var(--text-faint)" }}>
+                    {citationClause(c.text, 36)}
+                  </span>
+                )}
+              </span>
+              <span className="mono tnum shrink-0" style={{ color: "var(--cursor)" }}>
+                {c.contribution >= 0 ? "+" : ""}
+                {c.contribution.toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-sm leading-snug" style={{ color: "var(--text-body)" }}>
+          no reports on this corridor yet
+        </p>
+      )}
       {rank === 0 && runner && (
         <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
           {gap < 0.005 ? `level with ${runner.name}` : `${gap.toFixed(2)} ahead of ${runner.name}`}

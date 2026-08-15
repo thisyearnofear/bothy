@@ -71,6 +71,23 @@ historical pattern, replay timestamps, and lead time are **illustrative demo
 inputs**. They are useful for explaining how the decision replay works, but are
 not offered as a historical weather record or as retrospective model validation.
 
+## Intake (what comes in)
+
+The score is a stack of **typed reports** — warning, forecast, road, incident —
+each with a source and a weight. It is not a live OSINT vacuum.
+
+- **In the score:** seeded weather warnings, forecasts, road operations, and
+  incident/history citations.
+- **In the room, not the score:** Open-Meteo on the Lake District desk.
+  Operator-triggered fetch, frozen snapshot, labelled *not in the score*.
+- **Beyond the hatch:** ITV News as the sourced A66 outcome. Not a news crawl;
+  not agent evidence.
+- **Not ingested in this build:** audio, radio, social. Same contract later:
+  they become reports, or they do not land.
+
+The watch room shows this as a quiet Intake strip. Do not add fake streams to
+answer a modality question.
+
 ## 5-minute storyboard
 
 - **Act 1 (15s)** Problem: a cold, snowy day; people get stuck is avoidable.
@@ -90,6 +107,7 @@ not offered as a historical weather record or as retrospective model validation.
 - A chat pane / CopilotKit widget (we are not a chatbot)
 - An alert/notification feed
 - A regional‑blanket "city risk" view
+- A live audio / radio / social firehose (modality without a citation)
 ## Build decisions (locked)
 
 1. **Approve pins to the horizon, not the cursor.** The timeline cursor is a
@@ -110,8 +128,10 @@ not offered as a historical weather record or as retrospective model validation.
    headline sentence, HIGH + score, <=3 evidence chips, red route on the map,
    decision rail visible with a pulsing "awaiting duty officer". The pitch is
    legible with zero interaction.
-5. **Evidence cap = 3, then "+n earlier".** Causal stack shows 3 lines,
-   collapses the rest (Miller's ~3-5 too).
+5. **Evidence cap = 3 by weight, then "+n more reports".** The causal stack
+   shows the heaviest citations first (kind, source, signed contribution, share
+   bar), then the rest. Miller's ~3–5 still holds; ranking by weight stops a
+   load-bearing road report hiding behind earlier warnings.
 6. **Provenance + honesty everywhere:** each assessment tags `engine: llm |
    scripted`; the agent trace is a collapsible mono block under the stack (the
    "show the code path" moment); approve copy is "recorded - pending dispatch

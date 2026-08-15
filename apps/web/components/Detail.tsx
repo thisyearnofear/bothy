@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Assessment, AuditEntry, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
+import type { Assessment, AuditEntry, EventKind, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
-import { pipelineLines } from "../lib/derive";
+import { KIND_LABEL, pipelineLines } from "../lib/derive";
 import AgentBeat from "./AgentBeat";
+import CitationRows from "./CitationRows";
 
 const t = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
 
@@ -15,6 +16,7 @@ export default function Detail({
   color,
   cursorSignals,
   cursorTime,
+  cursorKinds = [],
   assessment,
   audit,
   running,
@@ -31,6 +33,7 @@ export default function Detail({
   color: string;
   cursorSignals: number;
   cursorTime: string;
+  cursorKinds?: EventKind[];
   assessment: Assessment | null;
   audit: AuditEntry[];
   running?: boolean;
@@ -59,7 +62,8 @@ export default function Detail({
     );
   }
   const expanded = !compact || showCase;
-  const citations = expanded && showAll ? horizon.citations : horizon.citations.slice(0, 3);
+  const cap = expanded && showAll ? undefined : 3;
+  const hidden = Math.max(0, horizon.citations.length - 3);
   const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
     (best, c) => (!best || Math.abs(c.contribution) > Math.abs(best.contribution) ? c : best),
     null
@@ -115,47 +119,19 @@ export default function Detail({
 
       <div>
         <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
-          {expanded ? `Causal chain (at ${horizonTime})` : "Why this score"}
+          {expanded ? `What weighted this score (at ${horizonTime})` : "What weighted this score"}
         </p>
-        <ol className="space-y-1.5">
-          {citations.map((c, i) => (
-            <li
-              key={`${c.eventId}-${i}`}
-              className="flex items-start justify-between gap-2 rounded border px-2 py-1.5"
-              style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 60%, transparent)" }}
-            >
-              <span className="min-w-0 text-sm leading-snug" style={{ color: "var(--text-body)" }}>
-                <span className="mono mr-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
-                  {t(c.at)}
-                </span>
-                {c.text}
-                {c.source && (
-                  <span className="mt-0.5 block text-xs" style={{ color: "var(--text-faint)" }}>
-                    {c.source}
-                  </span>
-                )}
-              </span>
-              <span
-                className="mono tnum shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"
-                style={{
-                  background: `color-mix(in oklch, ${c.contribution >= 0 ? "oklch(72% 0.17 55)" : "var(--rule)"} 14%, transparent)`,
-                  color: c.contribution >= 0 ? "oklch(72% 0.17 55)" : "var(--text-faint)",
-                }}
-              >
-                {c.contribution >= 0 ? "+" : ""}
-                {c.contribution.toFixed(2)}
-              </span>
-            </li>
-          ))}
-        </ol>
-        {expanded && horizon.citations.length > 3 && (
+        <CitationRows citations={horizon.citations} cap={cap} compact={compact} showMix />
+        {expanded && hidden > 0 && (
           <button onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs underline" style={{ color: "var(--cursor)" }}>
-            {showAll ? "collapse" : `+${horizon.citations.length - 3} earlier signals`}
+            {showAll ? "collapse" : `+${hidden} more reports`}
           </button>
         )}
         {expanded && (
           <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
-            Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals} signals known here.
+            Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals}{" "}
+            {cursorSignals === 1 ? "report" : "reports"} known here
+            {cursorKinds.length > 0 ? ` · ${cursorKinds.map((k) => KIND_LABEL[k]).join(" · ")}` : ""}.
           </p>
         )}
         {expanded && loadBearing && withoutScore != null && withoutLabel !== horizon.label && (

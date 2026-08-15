@@ -7,11 +7,12 @@ import Timeline, { type Series } from "../../components/Timeline";
 import RiskList, { type RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
+import IntakeLegend from "../../components/IntakeLegend";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
-import { inflections, leadTimeLabel, ms, pointAt, riskColor, snapshotAt } from "../../lib/derive";
+import { byWeight, citationClause, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
 import type {
   Assessment,
   AuditEntry,
@@ -251,19 +252,18 @@ export default function Watch() {
     [routes, snapshots, range.horizon]
   );
 
-  // timeline beats: short annotations only ("closure reported +0.30") — the map
-  // popup carries the full citation; turning points stay terse (design.md)
-  const shortSignal = (signal: string) => {
-    const text = signal.split(" · ").slice(1).join(" · ");
-    const cut = text.split(/[,;(]/)[0].trim();
-    return cut.length > 26 ? `${cut.slice(0, 24).trimEnd()}…` : cut;
-  };
-
+  // timeline beats: kind + source so arriving reports read as a feed, not anonymous ticks
   const snaps = useMemo(() => {
     const map = new Map<number, { t: number; label: string; delta: number }>();
     routes.forEach((r) =>
       inflections(snapshots[r.id] ?? []).forEach((n) => {
-        if (!map.has(n.atMs)) map.set(n.atMs, { t: n.atMs, label: shortSignal(n.signal), delta: n.delta });
+        if (!map.has(n.atMs)) {
+          map.set(n.atMs, {
+            t: n.atMs,
+            label: `${KIND_LABEL[n.kind]} · ${sourceShort(n.source, 18)}`,
+            delta: n.delta,
+          });
+        }
       })
     );
     return [...map.values()].sort((a, b) => a.t - b.t);
@@ -280,6 +280,8 @@ export default function Watch() {
         lngLat: pointAt(r.coords, (n.atMs - range.start) / span),
         text: n.signal,
         delta: n.delta,
+        kind: KIND_LABEL[n.kind],
+        source: n.source,
       }))
     );
   }, [routes, snapshots, range.start, range.end]);
@@ -302,10 +304,12 @@ export default function Watch() {
     return undefined;
   }, [selected, snapshots, range.horizon]);
 
-  // money shot: a warm one-sentence causal story for the selected route — headline first, numbers after
+  // money shot: the heaviest sourced reports, not the last three in engine order
   const headline = useMemo(() => {
     if (!selected || !selHorizon) return null;
-    const bits = selHorizon.citations.slice(-3).map((c) => c.text.split(/[—,(]/)[0].trim().toLowerCase());
+    const bits = byWeight(selHorizon.citations)
+      .slice(0, 3)
+      .map((c) => `${sourceShort(c.source, 18)} ${citationClause(c.text, 28)}`.toLowerCase());
     return bits.filter(Boolean).join(" · ");
   }, [selected, selHorizon]);
 
@@ -503,6 +507,7 @@ export default function Watch() {
               onDismiss={dismissCoach}
             />
           )}
+          <IntakeLegend caseId={scenario?.id ?? null} compact={compact} />
           {!compact && headline && selHorizon && (
             <section
               className="stage-in mb-4 rounded-lg border px-4 py-3"
@@ -619,7 +624,7 @@ export default function Watch() {
                       className="mono mr-2 uppercase tracking-wider"
                       style={{ color: selectedLiveWeather.acquisitionMode === "demo-fallback" ? "oklch(80% 0.14 85)" : "var(--cursor)" }}
                     >
-                      {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "live weather context"}
+                      {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "not in the score"}
                     </span>
                     <strong>{selectedLiveWeather.condition}</strong>
                     {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
@@ -631,8 +636,8 @@ export default function Watch() {
                     {selectedLiveWeather.acquisitionMode ? ` · ${selectedLiveWeather.acquisitionMode}` : ""}
                   </a>
                   <p className="basis-full" style={{ color: "var(--text-faint)" }}>
-                    {selectedLiveWeather.note}
-                    {liveWeather?.ingestedAt && <> · frozen snapshot ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
+                    Open-Meteo frozen snapshot — operator-fetched API, never score evidence
+                    {liveWeather?.ingestedAt && <> · ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
                   </p>
                 </section>
               )}
@@ -660,6 +665,10 @@ export default function Watch() {
                 />
                 {(!compact || revealed) && scenario?.outcomeAt && scenario.outcome && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+                    <span className="mono uppercase tracking-wider" style={{ color: "var(--cursor)" }}>
+                      sourced news · beyond the hatch
+                    </span>
+                    {" — "}
                     {scenario.outcome}
                   </p>
                 )}
@@ -678,6 +687,7 @@ export default function Watch() {
                   color={selColor}
                   cursorSignals={selSnap?.citations.length ?? 0}
                   cursorTime={at(t)}
+                  cursorKinds={[...new Set((selSnap?.citations ?? []).map((c) => c.kind))]}
                   assessment={selectedAssessment}
                   audit={audit}
                   running={running}
