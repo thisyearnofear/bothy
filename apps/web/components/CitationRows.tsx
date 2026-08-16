@@ -4,6 +4,8 @@ import type { EvidenceCitation } from "../../../packages/shared/src/types";
 import { byWeight, KIND_LABEL, kindMix, sourceShort } from "../lib/derive";
 
 /** Weighted report stack — kind, source, and how much each citation moved the score. */
+const t = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
+
 export default function CitationRows({
   citations,
   cap,
@@ -45,6 +47,9 @@ export default function CitationRows({
                     </span>
                   )}
                   <span className={`block leading-snug ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--text-body)" }}>
+                    <span className="mono mr-1.5" style={{ color: "var(--text-faint)" }}>
+                      {t(c.at)}
+                    </span>
                     {c.text}
                   </span>
                 </span>

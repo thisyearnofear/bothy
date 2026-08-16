@@ -3,6 +3,13 @@ import type { ScenarioId } from "../../../packages/shared/src/types";
 /** Authored cases only — never generated. Same watch room, different hill. */
 export type CaseId = ScenarioId;
 
+/** Sourced A66 outcome — reported fact, not agent evidence. */
+export const A66_OUTCOME_SOURCE = {
+  name: "ITV News",
+  date: "13 Feb 2026",
+  url: "https://www.itv.com/news/border/2026-02-13/a66-in-cumbria-closed-in-both-directions-due-to-heavy-snow",
+} as const;
+
 export type CaseDef = {
   id: CaseId;
   name: string;

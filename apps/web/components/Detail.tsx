@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Assessment, AuditEntry, EventKind, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
+import type { Assessment, AuditEntry, EvidenceCitation, EventKind, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
 import { KIND_LABEL, pipelineLines } from "../lib/derive";
 import AgentBeat from "./AgentBeat";
@@ -14,7 +14,7 @@ export default function Detail({
   horizon,
   horizonTime,
   color,
-  cursorSignals,
+  cursorCitations,
   cursorTime,
   cursorKinds = [],
   assessment,
@@ -31,7 +31,7 @@ export default function Detail({
   horizon: RiskSnapshot | undefined;
   horizonTime: string;
   color: string;
-  cursorSignals: number;
+  cursorCitations: EvidenceCitation[];
   cursorTime: string;
   cursorKinds?: EventKind[];
   assessment: Assessment | null;
@@ -62,8 +62,9 @@ export default function Detail({
     );
   }
   const expanded = !compact || showCase;
-  const cap = expanded && showAll ? undefined : 3;
-  const hidden = Math.max(0, horizon.citations.length - 3);
+  const cap = showAll ? undefined : 3;
+  const hidden = Math.max(0, cursorCitations.length - 3);
+  const lensOffHorizon = cursorTime !== horizonTime;
   const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
     (best, c) => (!best || Math.abs(c.contribution) > Math.abs(best.contribution) ? c : best),
     null
@@ -89,14 +90,10 @@ export default function Detail({
             {horizon.label}
           </span>{" "}
           <span className="mono tnum">{horizon.score.toFixed(2)}</span>
-          {expanded && (
-            <>
-              {" · "}
-              <span className="mono">{horizonTime}</span>
-            </>
-          )}
+          {" · "}
+          <span className="mono">{horizonTime}</span>
         </p>
-        {expanded && assessment && (
+        {assessment && (
           <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>
             engine: {assessment.engine} · confidence <span className="tnum">{assessment.confidence.toFixed(2)}</span>
           </p>
@@ -119,19 +116,24 @@ export default function Detail({
 
       <div>
         <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
-          {expanded ? `What weighted this score (at ${horizonTime})` : "What weighted this score"}
+          Known at <span className="mono">{cursorTime}</span>
+          {cursorKinds.length > 0 ? ` · ${cursorKinds.map((k) => KIND_LABEL[k]).join(" · ")}` : ""}
         </p>
-        <CitationRows citations={horizon.citations} cap={cap} compact={compact} showMix />
-        {expanded && hidden > 0 && (
+        {cursorCitations.length === 0 ? (
+          <p className="text-sm leading-snug" style={{ color: "var(--text-body)" }}>
+            No reports on this corridor yet.
+          </p>
+        ) : (
+          <CitationRows citations={cursorCitations} cap={cap} compact={compact} showMix />
+        )}
+        {hidden > 0 && (
           <button onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs underline" style={{ color: "var(--cursor)" }}>
             {showAll ? "collapse" : `+${hidden} more reports`}
           </button>
         )}
-        {expanded && (
-          <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
-            Rewound lens — <span className="mono">{cursorTime}</span>: {cursorSignals}{" "}
-            {cursorSignals === 1 ? "report" : "reports"} known here
-            {cursorKinds.length > 0 ? ` · ${cursorKinds.map((k) => KIND_LABEL[k]).join(" · ")}` : ""}.
+        {lensOffHorizon && (
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            The draft still sits at <span className="mono">{horizonTime}</span> — scrubbing does not re-pin the call.
           </p>
         )}
         {expanded && loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
@@ -182,17 +184,15 @@ export default function Detail({
       )}
 
       <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
+          Bothy never publishes automatically
+        </p>
         {expanded && (
-          <>
-            <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-              Bothy never publishes automatically
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-              a shelter for the decision — the agent watches, a human owns the call.
-            </p>
-          </>
+          <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+            a shelter for the decision — the agent watches, a human owns the call.
+          </p>
         )}
-        <div className={`flex flex-wrap items-center gap-2${expanded ? " mt-2" : ""}`}>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {expanded && (
             <button
               onClick={onRun}
@@ -203,18 +203,21 @@ export default function Detail({
               {running ? "Reasoning…" : llmAvailable ? "Run agent (live LLM)" : "Run agent"}
             </button>
           )}
-          {assessment && pending && (
+          {pending && (
             <>
               <button
+                id="approve-gate"
                 onClick={onApprove}
-                className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96]"
+                disabled={!assessment}
+                className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
               >
                 Approve
               </button>
               <button
                 onClick={onReject}
-                className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
+                disabled={!assessment}
+                className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
               >
                 Reject
@@ -239,23 +242,23 @@ export default function Detail({
 
       {compact && !showCase && (
         <button onClick={() => setShowCase(true)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
-          full case · audit · trace
+          full case · trace
         </button>
       )}
 
-      {expanded && audit.length > 0 && (
+      {audit.length > 0 && (
         <div aria-live="polite">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             Audit
           </p>
           <ul className="mt-1 space-y-1">
-            {(showAllAudit ? audit.slice().reverse() : audit.slice(-2).reverse()).map((a) => (
+            {(expanded && showAllAudit ? audit.slice().reverse() : audit.slice(-2).reverse()).map((a) => (
               <li key={a.id} className="mono text-xs" style={{ color: "var(--text-faint)" }}>
                 {fmtDateTime(a.at)} · {a.actor} · {a.action} · {a.detail}
               </li>
             ))}
           </ul>
-          {audit.length > 2 && (
+          {expanded && audit.length > 2 && (
             <button
               onClick={() => setShowAllAudit((v) => !v)}
               className="mt-1 text-xs underline"

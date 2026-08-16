@@ -75,6 +75,7 @@ export default function MapView({
   endMs,
   beats,
   revealed,
+  revealMs,
 }: {
   routes: RouteOnMap[];
   selectedId: string | null;
@@ -85,6 +86,7 @@ export default function MapView({
   endMs: number;
   beats: MapBeat[];
   revealed?: boolean;
+  revealMs?: number;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -95,6 +97,7 @@ export default function MapView({
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const lastFollow = useRef<string | null>(null);
+  const hoppedReveal = useRef(false);
   const [ready, setReady] = useState(false);
 
   const fraction = endMs > startMs ? Math.max(0, Math.min(1, (cursorMs - startMs) / (endMs - startMs))) : 1;
@@ -240,17 +243,27 @@ export default function MapView({
           // new focus: one proper camera flight onto the corridor
           lastFollow.current = sel.route.id;
           map.easeTo({ center: centroid(sel.route.coords), zoom: 11.5, duration: 700 });
+        } else if (revealed && revealMs != null) {
+          // one hop onto the sourced outcome; hold there — do not chase the cursor past the hatch
+          if (!hoppedReveal.current) {
+            hoppedReveal.current = true;
+            const outcomePos = pointAt(sel.route.coords, (revealMs - startMs) / (endMs - startMs || 1));
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.jumpTo({ center: outcomePos, zoom: 12 });
+            else map.easeTo({ center: outcomePos, zoom: 12, duration: 700 });
+          }
         } else if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          hoppedReveal.current = false;
           // scrubbing: short, interruptible drift — the pointer is the camera
           map.easeTo({ center: pos, duration: 240, easing: (x: number) => x });
         } else {
+          hoppedReveal.current = false;
           map.jumpTo({ center: pos });
         }
       } catch {
         /* map may have been torn down between ready and this paint */
       }
     }
-  }, [routes, selectedId, hoverId, fraction, revealed, ready]);
+  }, [routes, selectedId, hoverId, fraction, revealed, revealMs, startMs, endMs, ready]);
 
   // Signal pins land at their replay crossing. Only the active signal expands;
   // nearby evidence stays separately selectable as compact, offset dots.

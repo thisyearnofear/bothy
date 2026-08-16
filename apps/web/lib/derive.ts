@@ -1,5 +1,5 @@
 import { riskColor, riskLabel } from "../../../packages/shared/src/lib";
-import type { EventKind, EvidenceCitation, RiskSnapshot } from "../../../packages/shared/src/types";
+import type { EventKind, EvidenceCitation, RiskSnapshot, RouteInfo } from "../../../packages/shared/src/types";
 
 export const ms = (iso: string) => new Date(iso).getTime();
 
@@ -92,6 +92,40 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
 export function citationClause(text: string, max = 42): string {
   const cut = text.split(/[—,(]/)[0].trim();
   return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
+function terrainClause(route: RouteInfo): string {
+  const bits: string[] = [];
+  if (route.exposure >= 0.7) bits.push("exposed");
+  if (!route.ploughed) bits.push("un-ploughed");
+  if (!bits.length) return "this corridor";
+  return `${bits[0] === "exposed" ? "an" : "a"} ${bits.join(", ")} road`;
+}
+
+function citationBit(c: EvidenceCitation): string {
+  const text = c.text.toLowerCase();
+  if (c.kind === "warning") {
+    if (text.includes("amber")) return "an amber warning";
+    if (text.includes("yellow")) return "a yellow warning";
+    if (text.includes("red")) return "a red warning";
+    return "a weather warning";
+  }
+  if (c.kind === "forecast" && text.includes("snow")) return "forecast snow";
+  if (c.kind === "forecast" && (text.includes("icing") || text.includes("ice"))) return "icing risk";
+  if (c.kind === "road" && (text.includes("drift") || text.includes("blocked") || text.includes("closure"))) {
+    return "a drifting closure";
+  }
+  return citationClause(c.text, 28).toLowerCase() || KIND_LABEL[c.kind];
+}
+
+/** Causal clause after "{route} is {label}" — numbers sit beside the sentence, not inside it. */
+export function causalHeadline(route: RouteInfo, snap: RiskSnapshot): string {
+  const pair = byWeight(snap.citations).slice(0, 2);
+  const terrain = terrainClause(route);
+  if (!pair.length) return `on ${terrain}.`;
+  const bits = pair.map(citationBit);
+  if (bits.length === 1) return `${bits[0]} meets ${terrain}.`;
+  return `${bits[0]} + ${bits[1]} meet ${terrain}.`;
 }
 
 export type PipelineLine = { phase: string; text: string };

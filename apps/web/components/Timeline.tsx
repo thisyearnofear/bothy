@@ -49,7 +49,7 @@ export default function Timeline({
   const tags = layoutTags([
     ...(past ? [{ key: "horizon", ms: horizonMs, label: "beyond agent's view", tone: "mute" as const }] : []),
     ...(latest
-      ? [{ key: `beat-${latest.t}`, ms: latest.t, label: `${latest.label} ${latest.delta >= 0 ? "+" : ""}${latest.delta.toFixed(2)}`, tone: "signal" as const }]
+      ? [{ key: `beat-${latest.t}`, ms: latest.t, label: `${fmt(latest.t)} ${latest.label} ${latest.delta >= 0 ? "+" : ""}${latest.delta.toFixed(2)}`, tone: "signal" as const }]
       : []),
     ...(inevitableMs != null && t >= inevitableMs
       ? [{ key: "inevitable", ms: inevitableMs, label: "inevitable", tone: "alert" as const }]

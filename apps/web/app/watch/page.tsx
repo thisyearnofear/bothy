@@ -12,9 +12,9 @@ import NextDoors from "../../components/NextDoors";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
-import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
+import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
-import { byWeight, citationClause, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
+import { byWeight, causalHeadline, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
 import type {
   Assessment,
   AuditEntry,
@@ -306,14 +306,12 @@ export default function Watch() {
     return undefined;
   }, [selected, snapshots, range.horizon]);
 
-  // money shot: the heaviest sourced reports, not the last three in engine order
-  const headline = useMemo(() => {
-    if (!selected || !selHorizon) return null;
-    const bits = byWeight(selHorizon.citations)
-      .slice(0, 3)
-      .map((c) => `${sourceShort(c.source, 18)} ${citationClause(c.text, 28)}`.toLowerCase());
-    return bits.filter(Boolean).join(" · ");
-  }, [selected, selHorizon]);
+  const overlaySnap = selSnap ?? selHorizon;
+  const overlayColor = overlaySnap ? riskColor(overlaySnap.label) : "var(--text-faint)";
+
+  // money shot: a causal sentence from the heaviest reports + terrain, numbers beside it
+  const headline = selected && overlaySnap ? causalHeadline(selected, overlaySnap) : null;
+  const chips = overlaySnap ? byWeight(overlaySnap.citations).slice(0, 3) : [];
 
   const dismissCoach = useCallback(() => {
     setCoach(false);
@@ -338,6 +336,20 @@ export default function Watch() {
       dismissCoach();
     }
   };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      step(e.key === "ArrowRight" ? 1 : -1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   // keep the rail populated when the officer switches route mid-review
   useEffect(() => {
@@ -397,6 +409,7 @@ export default function Watch() {
   const revealed = range.outcome != null && t >= range.outcome;
   const signed = selectedAssessment != null && selectedAssessment.status !== "pending";
   const tapeEnded = tape && !playing && range.end > 0 && t >= range.end;
+  const showStory = !compact || !playing;
   const nextBeat: "tape-end" | "signed" | null = signed ? "signed" : tapeEnded ? "tape-end" : null;
   const pendingOther = rows.find((r) => {
     if (r.routeId === selectedId || !scenario) return false;
@@ -540,6 +553,7 @@ export default function Watch() {
                           block: "nearest",
                           behavior: reduced ? "auto" : "smooth",
                         });
+                        document.getElementById("approve-gate")?.focus();
                       });
                     }
                   : undefined
@@ -550,18 +564,36 @@ export default function Watch() {
               onNextCorridor={pendingOther ? () => setSelectedId(pendingOther.routeId) : undefined}
             />
           )}
-          {!compact && headline && selHorizon && (
+          {showStory && selected && headline && overlaySnap && (
             <section
               className="stage-in mb-4 rounded-lg border px-4 py-3"
               style={{ borderColor: "var(--rule)", background: "var(--panel)", ["--stage" as string]: 0 }}
             >
               <p className="max-w-5xl text-base leading-relaxed" style={{ color: "var(--text-body)" }}>
-                <span className="font-semibold" style={{ color: riskColor(selHorizon.label) }}>
-                  {selHorizon.label}
-                </span>{" "}
-                <span className="mono tnum">{selHorizon.score.toFixed(2)}</span>
-                {headline ? ` — ${headline}` : ""}
+                {selected.name} is{" "}
+                <span className="font-semibold" style={{ color: overlayColor }}>
+                  {overlaySnap.label}
+                </span>
+                : {headline}{" "}
+                <span className="mono tnum" style={{ color: overlayColor }}>
+                  {overlaySnap.score.toFixed(2)}
+                </span>
               </p>
+              {chips.length > 0 && (
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {chips.map((c) => (
+                    <li
+                      key={`${c.eventId}-${c.text}`}
+                      className="mono rounded border px-1.5 py-0.5 text-[11px]"
+                      style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+                    >
+                      {KIND_LABEL[c.kind]}
+                      {c.contribution >= 0 ? " +" : " "}
+                      {c.contribution.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
@@ -617,8 +649,9 @@ export default function Watch() {
                   endMs={range.end}
                   beats={mapBeats}
                   revealed={revealed}
+                  revealMs={range.outcome}
                 />
-                {selected && selHorizon && (
+                {selected && overlaySnap && (
                   <div
                     className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg border px-3 py-2"
                     style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
@@ -626,8 +659,8 @@ export default function Watch() {
                     <p className="mt-0.5 text-sm font-medium" style={{ color: "var(--text-strong)" }}>
                       {selected.name}
                     </p>
-                    <p className="mono mt-1 text-xs" style={{ color: selColor }}>
-                      {selHorizon.label} {selHorizon.score.toFixed(2)}
+                    <p className="mono mt-1 text-xs" style={{ color: overlayColor }}>
+                      {overlaySnap.label} {overlaySnap.score.toFixed(2)}
                     </p>
                   </div>
                 )}
@@ -705,13 +738,23 @@ export default function Watch() {
                   playing={playing}
                   onTogglePlay={() => setPlaying((p) => !p)}
                 />
-                {(!compact || revealed) && scenario?.outcomeAt && scenario.outcome && (
+                {scenario?.id === "backtest" && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
                     <span className="mono uppercase tracking-wider" style={{ color: "var(--cursor)" }}>
                       sourced news · beyond the hatch
                     </span>
                     {" — "}
-                    {scenario.outcome}
+                    Reported facts are sourced; modeled signals and timing are labelled so the decision trail stays honest.
+                    {scenario.outcome ? ` ${scenario.outcome}` : ""}{" "}
+                    <a
+                      href={A66_OUTCOME_SOURCE.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                      style={{ color: "var(--cursor)" }}
+                    >
+                      {A66_OUTCOME_SOURCE.name}, {A66_OUTCOME_SOURCE.date}
+                    </a>
                   </p>
                 )}
               </section>
@@ -727,7 +770,7 @@ export default function Watch() {
                   horizon={selHorizon}
                   horizonTime={at(range.horizon)}
                   color={selColor}
-                  cursorSignals={selSnap?.citations.length ?? 0}
+                  cursorCitations={selSnap?.citations ?? []}
                   cursorTime={at(t)}
                   cursorKinds={[...new Set((selSnap?.citations ?? []).map((c) => c.kind))]}
                   assessment={selectedAssessment}
