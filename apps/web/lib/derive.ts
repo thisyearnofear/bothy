@@ -28,9 +28,25 @@ export function byWeight(citations: EvidenceCitation[]): EvidenceCitation[] {
   return [...citations].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
 }
 
+/** Clip on a word boundary — never mid-word on headlines or citation chips. */
+export function clipAtWord(text: string, max: number): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  const budget = Math.max(1, max - 1);
+  const slice = t.slice(0, budget);
+  const sp = slice.lastIndexOf(" ");
+  const cut = sp > Math.floor(budget * 0.4) ? slice.slice(0, sp) : slice;
+  return `${cut.trimEnd()}…`;
+}
+
 export function sourceShort(source: string, max = 28): string {
-  const cut = source.split(/[,(]/)[0].trim();
-  return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+  return clipAtWord(source.split(/[,(]/)[0].trim(), max);
+}
+
+/** Compact rail / rank copy — keep the corridor id, drop parentheticals. */
+export function routeShortName(name: string, max = 20): string {
+  const primary = name.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+  return clipAtWord(primary, max);
 }
 
 /** Share of cited mass by report kind — how the stack is weighted, not a second score. */
@@ -90,8 +106,7 @@ export function inflections(timeline: RiskSnapshot[]): Inflection[] {
 
 /** First clause of a citation — ranking copy, not the full causal stack. */
 export function citationClause(text: string, max = 42): string {
-  const cut = text.split(/[—,(]/)[0].trim();
-  return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+  return clipAtWord(text.split(/[—,(]/)[0].trim(), max);
 }
 
 function terrainClause(route: RouteInfo): string {

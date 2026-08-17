@@ -1,6 +1,6 @@
 "use client";
 
-import { byWeight, citationClause, KIND_LABEL, sourceShort } from "../lib/derive";
+import { byWeight, citationClause, KIND_LABEL, routeShortName, sourceShort } from "../lib/derive";
 import type { EvidenceCitation } from "../../../packages/shared/src/types";
 
 export type RiskRow = {
@@ -49,12 +49,16 @@ export default function RiskList({
                 background: selected ? "var(--panel)" : "transparent",
               }}
             >
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm font-medium" style={{ color: "var(--text-strong)" }}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span
+                  className="min-w-0 text-sm font-medium"
+                  style={{ color: "var(--text-strong)" }}
+                  title={r.name}
+                >
                   <span className="mono mr-2 text-xs" style={{ color: "var(--text-faint)" }}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  {r.name}
+                  {compact ? routeShortName(r.name) : r.name}
                 </span>
                 <span className="mono tnum text-sm" style={{ color: r.color }}>
                   {r.score.toFixed(2)}
@@ -151,13 +155,15 @@ function RankWhy({
         </p>
       )}
       {rank === 0 && runner && (
-        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
-          {gap < 0.005 ? `level with ${runner.name}` : `${gap.toFixed(2)} ahead of ${runner.name}`}
+        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }} title={runner.name}>
+          {gap < 0.005
+            ? `level with ${compact ? routeShortName(runner.name, 16) : runner.name}`
+            : `${gap.toFixed(2)} ahead of ${compact ? routeShortName(runner.name, 16) : runner.name}`}
         </p>
       )}
       {rank > 0 && leader && (
-        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
-          {leader.name} leads at {leader.score.toFixed(2)}
+        <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }} title={leader.name}>
+          {compact ? routeShortName(leader.name, 16) : leader.name} leads at {leader.score.toFixed(2)}
         </p>
       )}
     </div>

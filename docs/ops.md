@@ -37,9 +37,11 @@ the Bothy Postgres runs **on a small VPS over Docker**:
 
 scripts/db-tunnel.sh      # idempotent; reuses an existing tunnel
 cp .env.example .env      # then set DATABASE_URL + real creds
-npm run seed
+npm run seed              # agent loads repo-root .env automatically
 npm run dev
 ```
+
+The agent (`server` / `seed`) reads `.env` from the **repo root** on startup and does not override variables already set in the shell.
 
 > `npm run seed` refreshes **catalogue** data (scenarios, routes, authored signals, risk snapshots). It keeps `assessments`, `audit_log`, `external_observations`, and operator road reports (`op-*`). Signed decisions survive a seed.
 

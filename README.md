@@ -19,7 +19,7 @@ intervention* problem (floods, wildfire evacuation, humanitarian logistics).
 npm install
 cp .env.example .env     # DATABASE_URL defaults to the tunneled remote DB (:5433)
 bash scripts/db-tunnel.sh # SSH tunnel: remote Postgres (Docker + PostGIS) -> localhost:5433
-npm run seed             # refresh catalogue (routes, signals, snapshots); keeps signed ledger
+npm run seed             # agent loads root .env; refresh catalogue; keeps signed ledger
 npm run dev              # agent API :8787 · web :3000
 ```
 

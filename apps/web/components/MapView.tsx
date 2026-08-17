@@ -35,8 +35,8 @@ export const OSM_STYLE = {
       id: "osm",
       type: "raster" as const,
       source: "osm",
-      // same hill as the landing, a step darker so routes and pins stay the instrument
-      paint: { "raster-brightness-max": 0.7, "raster-saturation": -0.5, "raster-contrast": 0.12 },
+      // same hill as the landing, dimmer so routes and pins stay the instrument
+      paint: { "raster-brightness-max": 0.55, "raster-saturation": -0.55, "raster-contrast": 0.14 },
     },
   ],
 };

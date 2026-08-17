@@ -146,8 +146,8 @@ This is an on-thesis visual, not a generic dark background.
 - On the watch room the same hill sits in the gutters behind solid panels, with
   a heavier scrim (product ≈ 0.3). It does not drive time, does not use
   `map-morph` (that name stays on the evidence window), and eases once when the
-  case changes. The operational map is a step brighter than the old void so the
-  window is the same terrain, now with routes and pins.
+  case changes. The operational map is dimmer than the ambient gutters so the
+  window is the evidence instrument on the same hill, with routes and pins.
 - The map uses the same MapLibre language as the watch room, so the visual
   transition into the decision workspace feels earned.
 - Dimming compounds: effective luminance = raster brightness × scrim

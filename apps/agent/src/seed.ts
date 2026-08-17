@@ -1,3 +1,4 @@
+import "./loadEnv";
 import { readFile } from "node:fs/promises";
 import { q } from "./db";
 import { buildBundle } from "./engine/seedData";
