@@ -243,6 +243,80 @@ export async function listRiskSnapshots(scenario: string, routeId: string) {
   });
 }
 
+export async function updateScenarioClock(
+  id: ScenarioId,
+  clock: { start: string; now: string; fullEnd: string; subtitle: string }
+) {
+  await q(`UPDATE scenarios SET start = $2, now = $3, full_end = $4, subtitle = $5 WHERE id = $1`, [
+    id,
+    clock.start,
+    clock.now,
+    clock.fullEnd,
+    clock.subtitle,
+  ]);
+}
+
+export async function updateSignalEvent(
+  scenario: ScenarioId,
+  id: string,
+  at: string,
+  payload: Record<string, unknown>
+) {
+  await q(`UPDATE signal_events SET at = $3, payload = $4 WHERE scenario = $1 AND id = $2`, [
+    scenario,
+    id,
+    at,
+    JSON.stringify(payload),
+  ]);
+}
+
+export async function insertSignalEvent(event: {
+  id: string;
+  scenario: ScenarioId;
+  kind: string;
+  routeId: string | null;
+  at: string;
+  source: string;
+  headline: string;
+  detail: string;
+  payload: Record<string, unknown>;
+}) {
+  await q(
+    `INSERT INTO signal_events (id, scenario, kind, route_id, at, source, headline, detail, payload)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [
+      event.id,
+      event.scenario,
+      event.kind,
+      event.routeId,
+      event.at,
+      event.source,
+      event.headline,
+      event.detail,
+      JSON.stringify(event.payload),
+    ]
+  );
+  return listEvents(event.scenario).then((events) => events.find((e) => e.id === event.id) ?? null);
+}
+
+export async function replaceRiskSnapshots(
+  scenario: ScenarioId,
+  snaps: { routeId: string; at: string; score: number; label: string; citations: unknown }[]
+) {
+  await q(`DELETE FROM risk_snapshots WHERE scenario = $1`, [scenario]);
+  if (!snaps.length) return;
+  const rid = snaps.map((s) => s.routeId);
+  const ats = snaps.map((s) => s.at);
+  const scs = snaps.map((s) => s.score);
+  const lbl = snaps.map((s) => s.label);
+  const cit = snaps.map((s) => JSON.stringify(s.citations));
+  await q(
+    `INSERT INTO risk_snapshots (route_id, scenario, at, score, label, citations)
+     SELECT * FROM unnest($1::text[], $2::text[], $3::timestamptz[], $4::real[], $5::text[], $6::jsonb[])`,
+    [rid, Array(rid.length).fill(scenario), ats, scs, lbl, cit]
+  );
+}
+
 
 
 type LiveWeatherSnapshot = import("../../../packages/shared/src/types").LiveWeatherResponse;

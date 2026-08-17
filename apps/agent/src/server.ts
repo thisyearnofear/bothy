@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
+import { advanceLiveHorizon, rebuildLiveSnapshots } from "./engine/liveHorizon";
 import { scoreAt } from "./engine/risk";
+import { liveDay } from "./engine/seedData";
 import { runAssessment } from "./agent/loop";
 import {
   getScenario,
@@ -13,6 +15,8 @@ import {
   listAudit,
   updateDecision,
   logAudit,
+  insertSignalEvent,
+  getRoute,
 } from "./repo";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
@@ -42,6 +46,7 @@ app.get("/api/scenarios", async (_req, res) => {
 
 app.get("/api/scenario/:scenario", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
+  if (sc === "live") await advanceLiveHorizon();
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
   const [scenario, routes] = await Promise.all([getScenario(sc), listRoutes(sc)]);
@@ -110,12 +115,14 @@ app.post("/api/scenario/:scenario/live-weather/refresh", async (req, res) => {
 
 app.get("/api/scenario/:scenario/route/:routeId/timeline", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
+  if (sc === "live") await advanceLiveHorizon();
   const snaps = await listRiskSnapshots(sc, req.params.routeId);
   res.json(snaps);
 });
 
 app.post("/api/scenario/:scenario/assess", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
+  if (sc === "live") await advanceLiveHorizon();
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
   const at = agentVisibleAt(req.body.at, meta.now);
@@ -134,6 +141,7 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
 // the final assessment. A command must never be hidden behind retryable SSE GET.
 app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
   const sc = req.params.scenario as ScenarioId;
+  if (sc === "live") await advanceLiveHorizon();
   const meta = await getScenario(sc);
   if (!meta) return res.status(404).json({ error: "unknown scenario" });
   res.writeHead(200, {
@@ -168,10 +176,74 @@ app.post("/api/assessments/:id/decision", async (req, res) => {
   if (decision !== "approved" && decision !== "rejected") {
     return res.status(400).json({ error: "decision must be approved|rejected" });
   }
-  const row = await updateDecision(req.params.id, decision, req.body.note);
+  const officer =
+    typeof req.body.actor === "string" ? req.body.actor.trim().slice(0, 120) : "";
+  if (!officer) {
+    return res.status(400).json({ error: "actor is required — name the duty officer who signs" });
+  }
+  const note =
+    typeof req.body.note === "string" && req.body.note.trim()
+      ? req.body.note.trim().slice(0, 500)
+      : undefined;
+  const row = await updateDecision(req.params.id, decision, note ?? `signed by ${officer}`);
   if (!row) return res.status(404).json({ error: "assessment not found" });
-  await logAudit(row.scenario, "duty-officer", `${decision}`, `assessment ${row.id} (${row.routeId})`);
+  await logAudit(row.scenario, officer, `${decision}`, `assessment ${row.id} (${row.routeId})`);
   res.json(row);
+});
+
+const ROAD_KINDS = new Set(["closure", "disruption", "report", "plough-complete"]);
+
+/** Operator road report — lands in the score. Open-Meteo stays off it. */
+app.post("/api/scenario/:scenario/signals/road", async (req, res) => {
+  const sc = req.params.scenario as ScenarioId;
+  if (sc !== "live") {
+    return res.status(409).json({ error: "operator road ingest is only for the live desk" });
+  }
+  await advanceLiveHorizon(true);
+  const meta = await getScenario(sc);
+  if (!meta) return res.status(404).json({ error: "unknown scenario" });
+
+  const routeId = typeof req.body.routeId === "string" ? req.body.routeId : "";
+  const roadKind = typeof req.body.roadKind === "string" ? req.body.roadKind : "";
+  const headline = typeof req.body.headline === "string" ? req.body.headline.trim().slice(0, 200) : "";
+  const source =
+    typeof req.body.source === "string" && req.body.source.trim()
+      ? req.body.source.trim().slice(0, 120)
+      : "Duty officer report";
+  const detail =
+    typeof req.body.detail === "string" && req.body.detail.trim()
+      ? req.body.detail.trim().slice(0, 500)
+      : headline;
+  const actor =
+    typeof req.body.actor === "string" && req.body.actor.trim()
+      ? req.body.actor.trim().slice(0, 120)
+      : "duty-officer";
+
+  if (!routeId || !headline || !ROAD_KINDS.has(roadKind)) {
+    return res.status(400).json({
+      error: "routeId, headline, and roadKind (closure|disruption|report|plough-complete) are required",
+    });
+  }
+  const route = await getRoute(sc, routeId);
+  if (!route) return res.status(404).json({ error: "unknown route" });
+
+  const at = meta.now;
+  const id = `op-road-${Date.now().toString(36)}`;
+  const event = await insertSignalEvent({
+    id,
+    scenario: sc,
+    kind: "road",
+    routeId,
+    at,
+    source,
+    headline,
+    detail,
+    payload: { roadKind },
+  });
+  const day = liveDay();
+  await rebuildLiveSnapshots(day.start, meta.now);
+  await logAudit(sc, actor, "ingest_road", `${route.name}: ${roadKind} — ${headline}`);
+  res.status(201).json({ event, at: meta.now, routeId });
 });
 
 app.get("/api/scenario/:scenario/assessments", async (req, res) => {

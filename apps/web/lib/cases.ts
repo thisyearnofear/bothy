@@ -29,7 +29,7 @@ export const CASES: CaseDef[] = [
     kind: "illustrative replay",
     place: "Stainmore",
     blurb: "ITV reported the snow closure. Rewind modeled signals up to the hatch — hindsight stays out of the draft.",
-    href: "/watch?case=backtest",
+    href: "/watch?replay=1",
     tapeHref: "/watch?replay=1",
   },
   {
@@ -38,28 +38,30 @@ export const CASES: CaseDef[] = [
     short: "Lakes",
     kind: "operator view",
     place: "Borrowdale · Wasdale · Coniston",
-    blurb: "Four corridors, one morning. Rank and sign — Open-Meteo is frozen context, not evidence.",
+    blurb: "The shift tool — same room, today's clock. Open after you sign the A66, or from the desk.",
     href: "/watch?case=live",
   },
 ];
 
-export function caseFromSearch(search: string): { id: CaseId; tape: boolean } {
+export function caseFromSearch(search: string): { id: CaseId; tape: boolean; tMs?: number } {
   const q = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  if (q.get("replay") === "1") return { id: "backtest", tape: true };
+  const rawT = q.get("t");
+  const parsed = rawT != null && rawT !== "" ? Number(rawT) : NaN;
+  const tMs = Number.isFinite(parsed) ? parsed : undefined;
+  if (q.get("replay") === "1") return { id: "backtest", tape: true, tMs };
   const raw = q.get("case");
-  if (raw === "live" || raw === "backtest") return { id: raw, tape: false };
-  return { id: "live", tape: false };
+  if (raw === "live" || raw === "backtest") return { id: raw, tape: false, tMs };
+  return { id: "live", tape: false, tMs };
 }
 
 export function caseDef(id: CaseId): CaseDef {
   return CASES.find((c) => c.id === id) ?? CASES[1];
 }
 
-export function caseUrl(id: CaseId, tape: boolean, currentSearch = ""): string {
-  const q = new URLSearchParams(currentSearch.startsWith("?") ? currentSearch.slice(1) : currentSearch);
+export function caseUrl(id: CaseId, tape: boolean, tMs?: number) {
+  const q = new URLSearchParams();
   q.set("case", id);
   if (tape) q.set("replay", "1");
-  else q.delete("replay");
-  const qs = q.toString();
-  return qs ? `/watch?${qs}` : "/watch";
+  if (tMs != null && Number.isFinite(tMs)) q.set("t", String(Math.round(tMs)));
+  return `/watch?${q.toString()}`;
 }

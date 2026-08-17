@@ -36,9 +36,16 @@ export default function IntakeLegend({
           {clock}
         </p>
       )}
-      <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-        Not ingested — audio · radio · social
-      </p>
+      {caseId === "live" && (
+        <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+          Operator road reports land in the score · audio · radio · social are not ingested
+        </p>
+      )}
+      {caseId !== "live" && (
+        <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+          Not ingested — audio · radio · social
+        </p>
+      )}
     </section>
   );
 }

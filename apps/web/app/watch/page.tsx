@@ -9,6 +9,7 @@ import Detail from "../../components/Detail";
 import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
 import NextDoors from "../../components/NextDoors";
+import RoadIngest from "../../components/RoadIngest";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
@@ -48,6 +49,7 @@ export default function Watch() {
   const [deskOpen, setDeskOpen] = useState(true);
   const [tape, setTape] = useState(false);
   const [coach, setCoach] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
 
   const loadCtl = useRef<AbortController | null>(null);
   const assessCtl = useRef(new AbortController());
@@ -72,9 +74,9 @@ export default function Watch() {
       setDeskOpen(false);
     }
     try {
-      if (sessionStorage.getItem(DESK_KEY) !== "1") setCoach(true);
+      if (q.get("replay") !== "1" && sessionStorage.getItem(DESK_KEY) !== "1") setCoach(true);
     } catch {
-      setCoach(true);
+      if (q.get("replay") !== "1") setCoach(true);
     }
   }, []);
 
@@ -111,7 +113,7 @@ export default function Watch() {
   }, []);
 
   const load = useCallback(
-    async (id: CaseId, opts?: { tape?: boolean }) => {
+    async (id: CaseId, opts?: { tape?: boolean; tMs?: number; selectedId?: string }) => {
       loadCtl.current?.abort();
       const ac = new AbortController();
       loadCtl.current = ac;
@@ -125,7 +127,9 @@ export default function Watch() {
       setAssessments({});
       setAudit([]);
       setPlaying(false);
-      const tape = opts?.tape ?? (id === "backtest" && new URLSearchParams(window.location.search).get("replay") === "1");
+      const fromUrl = caseFromSearch(window.location.search);
+      const tape = opts?.tape ?? (id === "backtest" && fromUrl.tape);
+      const tMs = opts?.tMs ?? fromUrl.tMs;
       if (tape) {
         setTape(true);
         setDeskOpen(false);
@@ -139,23 +143,41 @@ export default function Watch() {
         if (ac.signal.aborted) return;
         const snap: Record<string, RiskSnapshot[]> = {};
         routes.forEach((r: RouteInfo, i: number) => (snap[r.id] = tls[i]));
+        const start = ms(scenario.start);
         const horizon = ms(scenario.now);
         const end = scenario.outcomeAt ? ms(scenario.fullEnd) : horizon;
         const top = [...routes].sort(
           (a, b) => (snapshotAt(snap[b.id], horizon)?.score ?? 0) - (snapshotAt(snap[a.id], horizon)?.score ?? 0)
         )[0];
+        const cursor = tMs != null && tMs >= start && tMs <= end ? tMs : tape ? start : horizon;
+        let listed: Assessment[] = [];
+        try {
+          listed = await api.assessments(id, ac.signal);
+        } catch (e) {
+          if (isAbortError(e) || ac.signal.aborted) return;
+        }
+        if (ac.signal.aborted) return;
+        const prior: Record<string, Assessment> = {};
+        for (const a of listed) {
+          const key = assessmentKey(id, a.routeId);
+          if (prior[key]) continue;
+          prior[key] = a;
+          assessed.current.add(key);
+        }
         startTransition(() => {
           setScenario(scenario);
           setRoutes(routes);
           if (id !== "live") setLiveWeather(null);
           setSnapshots(snap);
-          setRange({ start: ms(scenario.start), end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
-          setT(tape ? ms(scenario.start) : horizon);
-          setSelectedId(top?.id ?? null);
-          setPlaying(tape);
+          setRange({ start, end, horizon, outcome: scenario.outcomeAt ? ms(scenario.outcomeAt) : undefined });
+          setT(cursor);
+          setSelectedId(opts?.selectedId && routes.some((r) => r.id === opts.selectedId) ? opts.selectedId : (top?.id ?? null));
+          setAssessments(prior);
+          setPlaying(tape && cursor <= start);
           setLoading(false);
         });
-        window.history.replaceState(null, "", caseUrl(id, tape, window.location.search));
+        if (top) autoAssess(id, top.id);
+        refreshAudit(id);
         if (id === "live") {
           api
             .liveWeather(ac.signal)
@@ -167,8 +189,6 @@ export default function Watch() {
               setLiveWeather(null);
             });
         }
-        if (top) autoAssess(id, top.id);
-        refreshAudit(id);
       } catch (e) {
         if (isAbortError(e) || ac.signal.aborted) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -185,9 +205,9 @@ export default function Watch() {
       .scenarios(ac.signal)
       .then((list) => {
         if (ac.signal.aborted) return;
-        const { id, tape } = caseFromSearch(window.location.search);
+        const { id, tape, tMs } = caseFromSearch(window.location.search);
         const chosen = list.some((s) => s.id === id) ? id : (list[0]?.id ?? "live");
-        return load(chosen, { tape: tape && chosen === "backtest" });
+        return load(chosen, { tape: tape && chosen === "backtest", tMs });
       })
       .catch((e) => {
         if (isAbortError(e) || ac.signal.aborted) return;
@@ -231,6 +251,14 @@ export default function Watch() {
     }, 80);
     return () => clearInterval(id);
   }, [playing, range.end, range.start]);
+
+  useEffect(() => {
+    if (!scenario) return;
+    const id = window.setTimeout(() => {
+      window.history.replaceState(null, "", caseUrl(scenario.id, tape, t));
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [scenario, tape, t]);
 
   const rows = useMemo<RiskRow[]>(
     () =>
@@ -382,18 +410,44 @@ export default function Watch() {
       if (!ac.signal.aborted) setRunning(false);
     }
   };
-  const decide = async (d: "approved" | "rejected") => {
+  const decide = async (d: "approved" | "rejected", officer: string) => {
     dismissCoach();
-    if (!selectedAssessment || !scenario) return;
+    if (!selectedAssessment || !scenario || !officer.trim()) return;
     const { signal } = assessCtl.current;
     try {
-      const result = await api.decide(selectedAssessment.id, d, undefined, signal);
+      const result = await api.decide(selectedAssessment.id, d, { actor: officer.trim() }, signal);
       if (signal.aborted) return;
       setAssessments((prev) => ({ ...prev, [assessmentKey(scenario.id, result.routeId)]: result }));
       refreshAudit(scenario.id);
+      setDeskOpen(true);
     } catch (e) {
       if (isAbortError(e) || signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const landRoad = async (input: {
+    routeId: string;
+    roadKind: string;
+    headline: string;
+    source: string;
+    actor: string;
+  }) => {
+    if (!scenario || scenario.id !== "live") return;
+    setIngesting(true);
+    setError(null);
+    try {
+      await api.ingestRoad(input);
+      assessed.current.delete(assessmentKey("live", input.routeId));
+      await load("live", { tape: false, selectedId: input.routeId });
+      const fresh = await api.assess("live", { routeId: input.routeId, engine: "scripted", force: true });
+      assessed.current.add(assessmentKey("live", input.routeId));
+      setAssessments((prev) => ({ ...prev, [assessmentKey("live", input.routeId)]: fresh }));
+      refreshAudit("live");
+    } catch (e) {
+      throw e instanceof Error ? e : new Error(String(e));
+    } finally {
+      setIngesting(false);
     }
   };
 
@@ -449,14 +503,16 @@ export default function Watch() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2" aria-label="Watch room controls">
-          <CaseSwitch
-            current={scenario?.id ?? null}
-            compact={compact}
-            onSwitch={(id) => {
-              void load(id, { tape: false });
-            }}
-          />
-          {scenario?.id === "live" && (
+          {!compact && (
+            <CaseSwitch
+              current={scenario?.id ?? null}
+              compact={compact}
+              onSwitch={(id) => {
+                void load(id, { tape: false });
+              }}
+            />
+          )}
+          {scenario?.id === "live" && !compact && (
             <button
               onClick={() => {
                 weatherCtl.current?.abort();
@@ -483,13 +539,22 @@ export default function Watch() {
               {refreshingWeather ? "Refreshing…" : "Refresh live context"}
             </button>
           )}
-          {tape && (
+          {tape && !deskOpen && !playing && (
             <button
-              onClick={() => setDeskOpen((v) => !v)}
+              onClick={() => setDeskOpen(true)}
               className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
             >
-              {deskOpen ? "Demo desk" : "Full desk"}
+              Open desk
+            </button>
+          )}
+          {tape && deskOpen && (
+            <button
+              onClick={() => setDeskOpen(false)}
+              className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              Demo desk
             </button>
           )}
         </div>
@@ -524,7 +589,7 @@ export default function Watch() {
         </div>
       ) : (
         <>
-          {coach && (
+          {coach && !tape && (
             <DeskCoach
               tape={tape}
               backtest={scenario?.id === "backtest"}
@@ -533,6 +598,9 @@ export default function Watch() {
             />
           )}
           <IntakeLegend caseId={scenario?.id ?? null} compact={compact} />
+          {scenario?.id === "live" && !compact && (
+            <RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} />
+          )}
           {nextBeat && (
             <NextDoors
               beat={nextBeat}
@@ -780,8 +848,8 @@ export default function Watch() {
                   llmAvailable={llm.length > 0}
                   compact={compact}
                   onRun={run}
-                  onApprove={() => decide("approved")}
-                  onReject={() => decide("rejected")}
+                  onApprove={(officer) => void decide("approved", officer)}
+                  onReject={(officer) => void decide("rejected", officer)}
                 />
               </section>
             </aside>

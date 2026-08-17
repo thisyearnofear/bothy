@@ -41,9 +41,19 @@ npm run seed
 npm run dev
 ```
 
-> `npm run seed` is a destructive demo reset: it drops and recreates the
-> application tables before loading the bundled scenarios. Do not run it against
-> a database containing data you need to retain.
+> `npm run seed` refreshes **catalogue** data (scenarios, routes, authored signals, risk snapshots). It keeps `assessments`, `audit_log`, `external_observations`, and operator road reports (`op-*`). Signed decisions survive a seed.
+
+## Operator road ingest
+
+The live desk can land a road report into the score (closure / disruption / report / plough-complete). Open-Meteo stays off the score.
+
+```bash
+curl -X POST http://localhost:8787/api/scenario/live/signals/road \
+  -H 'content-type: application/json' \
+  -d '{"routeId":"r-B5311","roadKind":"closure","headline":"Wasdale Head blocked by drifts","actor":"J. Smith"}'
+```
+
+Approve / reject requires a typed duty-officer name; the audit row uses that name.
 
 ## Security checklist
 

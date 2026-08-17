@@ -41,6 +41,8 @@ export const api = {
   refreshLiveWeather: (signal?: AbortSignal) => post<LiveWeatherResponse>("/api/scenario/live/live-weather/refresh", {}, signal),
   risk: (id: ScenarioId, at?: string, signal?: AbortSignal) =>
     get<{ at: string; routes: RouteInfo[] }>(`/api/scenario/${id}/risk${at ? `?at=${encodeURIComponent(at)}` : ""}`, signal),
+  assessments: (id: ScenarioId, signal?: AbortSignal) =>
+    get<Assessment[]>(`/api/scenario/${id}/assessments`, signal),
   assess: (id: ScenarioId, opts: { routeId?: string; engine?: "llm" | "scripted"; force?: boolean } = {}, signal?: AbortSignal) =>
     post<Assessment>(`/api/scenario/${id}/assess`, { ...opts }, signal),
   // Live assessment trace over a one-shot POST stream. Unlike EventSource GET,
@@ -91,8 +93,17 @@ export const api = {
     }
     throw new Error("stream ended before an assessment was returned");
   },
-  decide: (assessmentId: string, decision: "approved" | "rejected", note?: string, signal?: AbortSignal) =>
-    post<Assessment>(`/api/assessments/${assessmentId}/decision`, { decision, note }, signal),
+  decide: (
+    assessmentId: string,
+    decision: "approved" | "rejected",
+    opts?: { note?: string; actor?: string },
+    signal?: AbortSignal
+  ) => post<Assessment>(`/api/assessments/${assessmentId}/decision`, { decision, ...opts }, signal),
+  ingestRoad: (
+    body: { routeId: string; roadKind: string; headline: string; source?: string; detail?: string; actor?: string },
+    signal?: AbortSignal
+  ) =>
+    post<{ event: unknown; at: string; routeId: string }>("/api/scenario/live/signals/road", body, signal),
   audit: (id: ScenarioId, signal?: AbortSignal) => get<AuditEntry[]>(`/api/scenario/${id}/audit`, signal),
   llm: (signal?: AbortSignal) => get<{ providers: { id: string; label: string; model: string }[] }>("/api/llm", signal),
 };

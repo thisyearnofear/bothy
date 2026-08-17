@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Assessment, AuditEntry, EvidenceCitation, EventKind, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
 import { KIND_LABEL, pipelineLines } from "../lib/derive";
+import { copyText, formatCaseRecord, printCaseRecord, readOfficerName, writeOfficerName } from "../lib/caseRecord";
 import AgentBeat from "./AgentBeat";
 import CitationRows from "./CitationRows";
 
@@ -41,14 +42,21 @@ export default function Detail({
   llmAvailable?: boolean;
   compact?: boolean;
   onRun: () => void;
-  onApprove: () => void;
-  onReject: () => void;
+  onApprove: (officer: string) => void;
+  onReject: (officer: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [showAllAudit, setShowAllAudit] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
   const [showCase, setShowCase] = useState(false);
+  const [officer, setOfficer] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setOfficer(readOfficerName());
+  }, []);
+
   if (!route || !horizon) {
     return (
       <div className="rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
@@ -76,6 +84,23 @@ export default function Detail({
   const draftLines = (assessment?.draft ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
   const draftPreview = draftLines.slice(0, 3).join("\n");
   const draftClipped = draftLines.length > 3;
+  const canSign = Boolean(assessment && officer.trim());
+  const signedBy =
+    assessment?.decisionNote?.match(/^signed by (.+)$/i)?.[1] ??
+    audit.find((a) => a.action === "approved" || a.action === "rejected")?.actor;
+
+  const handoff = assessment
+    ? formatCaseRecord({
+        route,
+        label: horizon.label,
+        score: horizon.score,
+        horizonTime,
+        citations: horizon.citations,
+        assessment,
+        officer: signedBy ?? officer.trim() ?? undefined,
+      })
+    : "";
+
   return (
     <div className="space-y-4">
       <div>
@@ -192,6 +217,25 @@ export default function Detail({
             a shelter for the decision — the agent watches, a human owns the call.
           </p>
         )}
+
+        {pending && (
+          <label className="mt-2 block text-xs" style={{ color: "var(--text-faint)" }}>
+            Duty officer name
+            <input
+              id="officer-name"
+              value={officer}
+              onChange={(e) => {
+                setOfficer(e.target.value);
+                writeOfficerName(e.target.value);
+              }}
+              placeholder={route.actor}
+              className="mt-1 w-full rounded border px-2 py-1.5 text-sm"
+              style={{ borderColor: "var(--rule)", background: "var(--page)", color: "var(--text-strong)" }}
+              autoComplete="name"
+            />
+          </label>
+        )}
+
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {expanded && (
             <button
@@ -207,36 +251,64 @@ export default function Detail({
             <>
               <button
                 id="approve-gate"
-                onClick={onApprove}
-                disabled={!assessment}
+                onClick={() => onApprove(officer.trim())}
+                disabled={!canSign}
                 className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
               >
                 Approve
               </button>
               <button
-                onClick={onReject}
-                disabled={!assessment}
+                onClick={() => onReject(officer.trim())}
+                disabled={!canSign}
                 className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
               >
                 Reject
               </button>
               <span className="mono w-full text-xs" style={{ color: "var(--text-faint)" }}>
-                awaiting {route.actor}…
+                {officer.trim() ? `awaiting ${officer.trim()}…` : `type your name to sign for ${route.actor}`}
               </span>
             </>
           )}
         </div>
 
         {decided && assessment && (
-          <p className="receipt-in mono mt-3 border-t pt-3 text-sm" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-            <span className="settle inline-block font-semibold" style={{ color: "var(--text-strong)" }}>
-              {assessment.status === "approved" ? "APPROVED" : "REJECTED"}
-            </span>
-            {" · "}
-            {assessment.decidedAt ? fmtDateTime(assessment.decidedAt) : ""} · {route.actor} — recorded, pending dispatch (demo)
-          </p>
+          <div className="receipt-in mt-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
+            <p className="mono text-sm" style={{ color: "var(--text-body)" }}>
+              <span className="settle inline-block font-semibold" style={{ color: "var(--text-strong)" }}>
+                {assessment.status === "approved" ? "APPROVED" : "REJECTED"}
+              </span>
+              {" · "}
+              {assessment.decidedAt ? fmtDateTime(assessment.decidedAt) : ""} · {signedBy ?? route.actor} — recorded,
+              pending dispatch
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  void copyText(handoff).then((ok) => {
+                    if (ok) {
+                      setCopied(true);
+                      window.setTimeout(() => setCopied(false), 1600);
+                    }
+                  });
+                }}
+                className="mono text-xs underline"
+                style={{ color: "var(--cursor)" }}
+              >
+                {copied ? "Copied" : "Copy case"}
+              </button>
+              <button
+                type="button"
+                onClick={() => printCaseRecord(`${route.name} — Bothy case`, handoff)}
+                className="mono text-xs underline"
+                style={{ color: "var(--cursor)" }}
+              >
+                Print record
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

@@ -1,0 +1,5 @@
+{
+  "name": "@bothy/shared",
+  "private": true,
+  "type": "module"
+}

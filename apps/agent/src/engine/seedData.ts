@@ -7,8 +7,50 @@ export interface SeedEvent {
 export interface ScenarioSeed { id: ScenarioId; title: string; subtitle: string; start: string; now: string; fullEnd: string; outcomeAt?: string; outcome?: string; }
 export interface SeedBundle { scenarios: ScenarioSeed[]; routes: Record<string, RouteInfo[]>; events: SeedEvent[]; incidents: IncidentRecord[]; }
 
-const t = (h: number, m: number) => { const d = new Date(); d.setHours(h, m, 0, 0); return d.toISOString(); };
 const td = (y: number, mo: number, d: number, h: number, m: number) => new Date(Date.UTC(y, mo - 1, d, h, m, 0)).toISOString();
+
+function atToday(h: number, m: number, wall: Date) {
+  const d = new Date(wall);
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
+function midnight(wall: Date) {
+  const d = new Date(wall);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function clockLabel(wall: Date) {
+  return `${String(wall.getHours()).padStart(2, "0")}:${String(wall.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Live desk clock: today 00:00 → wall time. Signals are today's clock, not a frozen 14:30. */
+export function liveDay(wall = new Date()) {
+  const start = midnight(wall).toISOString();
+  const now = wall.toISOString();
+  const t = (h: number, m: number) => atToday(h, m, wall);
+  const E = (id: string, kind: SeedEvent["kind"], routeId: string | null, at: string, source: string, headline: string, detail: string, payload: Record<string, unknown>): SeedEvent =>
+    ({ id, scenario: "live", kind, routeId, at, source, headline, detail, payload });
+  const events: SeedEvent[] = [
+    E("W1", "warning", null, t(3, 10), "Met Office (Weather DataHub)", "AMBER warning - snow & severe blizzards", "Persistent snow, gusts to 70mph. Risk on exposed upland roads.", { level: "amber", hazards: ["snow", "wind"], validFrom: t(3, 10), validTo: t(20, 0) }),
+    E("W2", "warning", null, t(7, 45), "Met Office Weather Warning", "YELLOW snow warning in force", "Further 5-10cm accumulation, icy patches on upland routes.", { level: "yellow", hazards: ["snow"], validFrom: t(7, 45), validTo: t(18, 0) }),
+    E("F1", "forecast", null, t(6, 0), "Met Office forecast", "Overnight low -4C, 8cm fresh snow", "Ice on unsalted surfaces, snow lying to low levels.", { snowCm: 8, minTempC: -4 }),
+    E("R1", "road", "r-A66", t(5, 30), "Cumbria CC road feed", "Plough & salt complete - A66", "Route treated and mostly clear, patrol out.", { roadKind: "plough-complete" }),
+    E("R2", "road", "r-B5311", t(8, 20), "Cumbria CC / traffic feed", "B5311 blocked by deep drifts at Wasdale Head", "No plough scheduled today; traffic unable to pass.", { roadKind: "closure" }),
+    E("R3", "road", "r-A5094", t(11, 5), "Highways patrol report", "Frost & icing on A5094, poor visibility", "Black ice at Sty Head; drivers struggling on gradient.", { roadKind: "report" }),
+    E("I1", "incident", "r-A5094", t(12, 15), "MR incident log", "Walker assisted on Sty Head", "Minor - slipped on ice, no serious injury.", { severity: "minor" }),
+  ];
+  return {
+    start,
+    now,
+    fullEnd: now,
+    subtitle: `Today · desk at ${clockLabel(wall)} · signals since midnight`,
+    events,
+    routes: LIVE,
+    incidents: [{ id: "inc-2018", scenario: "live" as const, at: td(2018, 1, 14, 19, 40), routeId: "r-B5311", lat: 54.48, lng: -2.79, hazard: "snow" as const, severity: "serious" as const, narrative: "Jan 2018 blizzard: three vehicles stranded near Wasdale Head Inn; MR snow recovery (demo).", source: "MR incident archive (demo)" }],
+  };
+}
 
 // --- LIVE routes (Lake District) ---------------------------------------------------
 const LIVE: RouteInfo[] = [
@@ -26,18 +68,13 @@ const BACK: RouteInfo[] = [
 ];
 
 function liveBundle(): SeedBundle {
-  const start = t(0, 0), now = t(14, 30);
-  const E = (id: string, kind: SeedEvent["kind"], routeId: string | null, at: string, source: string, headline: string, detail: string, payload: Record<string, unknown>): SeedEvent => ({ id, scenario: "live", kind, routeId, at, source, headline, detail, payload });
-  const events: SeedEvent[] = [
-    E("W1", "warning", null, t(3, 10), "Met Office (Weather DataHub)", "AMBER warning - snow & severe blizzards", "Persistent snow, gusts to 70mph. Risk on exposed upland roads.", { level: "amber", hazards: ["snow", "wind"], validFrom: t(3, 10), validTo: t(20, 0) }),
-    E("W2", "warning", null, t(7, 45), "Met Office Weather Warning", "YELLOW snow warning in force", "Further 5-10cm accumulation, icy patches on upland routes.", { level: "yellow", hazards: ["snow"], validFrom: t(7, 45), validTo: t(18, 0) }),
-    E("F1", "forecast", null, t(6, 0), "Met Office forecast", "Overnight low -4C, 8cm fresh snow", "Ice on unsalted surfaces, snow lying to low levels.", { snowCm: 8, minTempC: -4 }),
-    E("R1", "road", "r-A66", t(5, 30), "Cumbria CC road feed", "Plough & salt complete - A66", "Route treated and mostly clear, patrol out.", { roadKind: "plough-complete" }),
-    E("R2", "road", "r-B5311", t(8, 20), "Cumbria CC / traffic feed", "B5311 blocked by deep drifts at Wasdale Head", "No plough scheduled today; traffic unable to pass.", { roadKind: "closure" }),
-    E("R3", "road", "r-A5094", t(11, 5), "Highways patrol report", "Frost & icing on A5094, poor visibility", "Black ice at Sty Head; drivers struggling on gradient.", { roadKind: "report" }),
-    E("I1", "incident", "r-A5094", t(12, 15), "MR incident log", "Walker assisted on Sty Head", "Minor - slipped on ice, no serious injury.", { severity: "minor" }),
-  ];
-  return { scenarios: [{ id: "live", title: "Live - Lake District, Winter Watch", subtitle: "Today · signals arriving over the last 14 hours", start, now, fullEnd: now }], routes: { live: LIVE }, events, incidents: [{ id: "inc-2018", scenario: "live", at: td(2018, 1, 14, 19, 40), routeId: "r-B5311", lat: 54.48, lng: -2.79, hazard: "snow", severity: "serious", narrative: "Jan 2018 blizzard: three vehicles stranded near Wasdale Head Inn; MR snow recovery (demo).", source: "MR incident archive (demo)" }] };
+  const day = liveDay();
+  return {
+    scenarios: [{ id: "live", title: "Live - Lake District, Winter Watch", subtitle: day.subtitle, start: day.start, now: day.now, fullEnd: day.fullEnd }],
+    routes: { live: day.routes },
+    events: day.events,
+    incidents: day.incidents,
+  };
 }
 
 function backBundle(): SeedBundle {

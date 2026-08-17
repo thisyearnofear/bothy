@@ -25,7 +25,7 @@ export default function NextDoors({
       ? "The hatch is the agent's view. The day is yours now."
       : pendingName
         ? "Recorded. Other corridors still wait."
-        : "Recorded. Same room, another hill.";
+        : "Recorded. Floods · fires · convoys — same shelter, different hill.";
 
   return (
     <section

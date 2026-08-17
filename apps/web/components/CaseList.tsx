@@ -29,18 +29,6 @@ export default function CaseList({ onOpen }: { onOpen?: () => void }) {
               {c.blurb}
             </p>
           </Link>
-          {c.tapeHref && (
-            <Link
-              href={c.tapeHref}
-              prefetch
-              transitionTypes={["nav-forward"]}
-              onClick={onOpen}
-              className="mono mt-2 inline-block text-xs underline"
-              style={{ color: "var(--text-body)" }}
-            >
-              watch the day happen in 20s
-            </Link>
-          )}
         </li>
       ))}
     </ul>
