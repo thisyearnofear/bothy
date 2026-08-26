@@ -1,12 +1,13 @@
 # Ready, Spec, Ship Hackathon delivery
 
-Bothy is being submitted to the Kiro Ready, Spec, Ship Hackathon. Optimize for a
-judge being able to clone, understand, run, and verify the project without paid
-services or private credentials.
+The Kiro Ready, Spec, Ship Hackathon is complete (submitted Aug 2026). Keep the
+bar it set: a fresh user — judge, collaborator, or future contributor — must be
+able to clone, understand, run, and verify the project without paid services or
+private credentials. Forward-looking direction lives in `docs/roadmap.md`.
 
 ## Submission readiness
 
-- Keep `.kiro/steering/` committed and useful: it is required submission evidence, not generated clutter.
+- Keep `.kiro/steering/` committed and useful: it was required submission evidence and remains project steering.
 - Keep the README accurate: setup, database/tunnel prerequisites, destructive reset warning, runnable commands, and validation steps must match the actual project.
 - When changing a user-visible claim, demo behavior, external integration, or setup path, update the README and relevant `docs/` file in the same change.
 - The demo video and README should explicitly show meaningful Kiro use: these project steering files, the agent-assisted implementation/validation workflow, and the resulting reproducible build.

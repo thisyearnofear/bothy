@@ -1,5 +1,10 @@
 # Alignment brief
 
+> Historical document: this is the brief Bothy was built against for the Kiro
+> Ready, Spec, Ship hackathon (completed Aug 2026). The challenge mapping and
+> guardrails still describe the product contract; for forward-looking direction
+> see [roadmap.md](roadmap.md).
+
 ## Problem
 
 Crisis/community responders act on fragmented public weak signals — a Met Office

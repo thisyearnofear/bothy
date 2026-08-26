@@ -42,7 +42,7 @@ apps/web        Next.js · Tailwind · (MapLibre)      — demo surface
 apps/agent      TypeScript API · hand-rolled 5-phase agent loop
 packages/shared shared domain types + helpers
 scripts/        local Postgres bootstrap · pre-commit secret scan
-docs/           architecture, engineering decisions, hackathon alignment
+docs/           architecture, engineering decisions, alignment, roadmap
 ```
 
 ## Documentation
@@ -54,7 +54,8 @@ Full details live in [`docs/`](docs/):
 - [design.md](docs/design.md) — UI language, tokens, micro‑interactions & motion spec
 - [ops.md](docs/ops.md) — hosting, DB topology/credentials, security & production
 - [decisions.md](docs/decisions.md) — why hand-rolled loop, PostGIS vs pgvector, scripted brain
-- [alignment.md](docs/alignment.md) — how this fits the hackathon challenges
+- [alignment.md](docs/alignment.md) — the original challenge brief and product guardrails
+- [roadmap.md](docs/roadmap.md) — where the project goes next (signals, generalization, reliability)
 
 ## Built with Kiro
 
@@ -72,8 +73,10 @@ the reproducible scripted-agent and validation path.
 
 ## Status
 
-Agent backend, seed data, API, and the interactive decision-replay dashboard are
-implemented and locally verified. The supplied scenarios are demo data; the A66
-backtest distinguishes its sourced closure from illustrative model inputs.
+The Kiro Ready, Spec, Ship hackathon is complete; Bothy continues as an ongoing
+project. The agent backend, seed data, API, and the interactive decision-replay
+dashboard are implemented and locally verified. The supplied scenarios are demo
+data; the A66 backtest distinguishes its sourced closure from illustrative model
+inputs. Next-step direction lives in [`docs/roadmap.md`](docs/roadmap.md).
 
 _See [`docs/architecture.md`](docs/architecture.md) for the deep dive._

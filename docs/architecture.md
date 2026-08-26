@@ -1,8 +1,8 @@
 # Architecture
 
 This is the deep dive. For the two-line pitch see the [README](../README.md);
-for rationale see [decisions.md](decisions.md); for hackathon framing see
-[alignment.md](alignment.md).
+for rationale see [decisions.md](decisions.md); for the original challenge
+framing see [alignment.md](alignment.md).
 
 ## Topology
 
