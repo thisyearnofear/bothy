@@ -44,6 +44,7 @@ export async function scriptedDraft(ctx: AgentCtx, tools: ToolSet): Promise<Scri
   }
   await tools.get_weather_warning();
   await tools.get_road_disruptions({ route_id: ctx.route.id });
+  await tools.get_traffic_speed({ route_id: ctx.route.id });
   await tools.search_incidents({ route_id: ctx.route.id, limit: 3 });
   await tools.get_route_characteristics({ route_id: ctx.route.id });
 

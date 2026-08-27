@@ -10,6 +10,7 @@ import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
 import NextDoors from "../../components/NextDoors";
 import RoadIngest from "../../components/RoadIngest";
+import ReliabilityPanel, { type ChainHealth } from "../../components/ReliabilityPanel";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
@@ -44,6 +45,8 @@ export default function Watch() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [llm, setLlm] = useState<{ id: string; label: string; model: string }[]>([]);
+  const [llmHealth, setLlmHealth] = useState<ChainHealth | null>(null);
+  const [rehearsing, setRehearsing] = useState(false);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherResponse | null>(null);
   const [refreshingWeather, setRefreshingWeather] = useState(false);
   const [deskOpen, setDeskOpen] = useState(true);
@@ -55,6 +58,11 @@ export default function Watch() {
   const assessCtl = useRef(new AbortController());
   const runCtl = useRef<AbortController | null>(null);
   const weatherCtl = useRef<AbortController | null>(null);
+  // Chain health is scenario-independent, so the probe lives outside
+  // assessCtl — a case load must not cancel it. The rehearsal does write
+  // per-case assessments, so it is aborted on case switch like the others.
+  const probeCtl = useRef<AbortController | null>(null);
+  const rehearseCtl = useRef<AbortController | null>(null);
 
   const abortBackground = useCallback(() => {
     assessCtl.current.abort();
@@ -63,7 +71,10 @@ export default function Watch() {
     runCtl.current = null;
     weatherCtl.current?.abort();
     weatherCtl.current = null;
+    rehearseCtl.current?.abort();
+    rehearseCtl.current = null;
     setRunning(false);
+    setRehearsing(false);
     setRefreshingWeather(false);
   }, []);
 
@@ -384,6 +395,56 @@ export default function Watch() {
     if (scenario && selectedId) autoAssess(scenario.id, selectedId);
   }, [scenario, selectedId, autoAssess]);
 
+  // Roadmap §1: probe the provider chain once when the room opens, so the
+  // reliability surface is populated at first paint. The probe survives case
+  // switches (health is not per-case), so it owns its controller.
+  const probeChain = useCallback(() => {
+    probeCtl.current?.abort();
+    const ac = new AbortController();
+    probeCtl.current = ac;
+    const { signal } = ac;
+    api
+      .llmHealth(signal)
+      .then((h) => {
+        if (!signal.aborted) setLlmHealth(h);
+      })
+      .catch((e) => {
+        if (isAbortError(e)) return;
+      });
+  }, []);
+
+  useEffect(() => {
+    probeChain();
+    return () => probeCtl.current?.abort();
+  }, [probeChain]);
+
+  // Roadmap §1: rehearse the scripted fallback — force engine "llm" with
+  // rehearseFallback, which skips the provider chain and runs the scripted
+  // brain, proving the failsafe produces a valid assessment.
+  const rehearseFallback = async () => {
+    if (!scenario || !selected) return;
+    setRehearsing(true);
+    setError(null);
+    const ac = new AbortController();
+    rehearseCtl.current = ac;
+    const key = assessmentKey(scenario.id, selected.id);
+    try {
+      const result = await api.rehearseFallback(scenario.id, { routeId: selected.id }, ac.signal);
+      if (!ac.signal.aborted) {
+        setAssessments((prev) => ({ ...prev, [key]: result }));
+        setTraceLines((result.toolTrace as ToolCall[]) ?? []);
+      }
+    } catch (e) {
+      if (isAbortError(e)) return;
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      if (rehearseCtl.current === ac) {
+        rehearseCtl.current = null;
+        setRehearsing(false);
+      }
+    }
+  };
+
   const run = async () => {
     if (!scenario || !selected) return;
     runCtl.current?.abort();
@@ -457,6 +518,15 @@ export default function Watch() {
       ? `reported closure · modeled lead time ${leadTimeLabel(scenario.now, scenario.outcomeAt)}`
       : undefined;
 
+  // Three cases share the watch room. The swap button cycles to the next wedge:
+  // live → backtest → flood → live, so the generalization proof is one click away.
+  const swapTarget: { id: CaseId; tape: boolean; label: string } =
+    scenario?.id === "live"
+      ? { id: "backtest", tape: true, label: "Rewind the A66" }
+      : scenario?.id === "backtest"
+        ? { id: "flood", tape: false, label: "Open the flood wedge" }
+        : { id: "live", tape: false, label: "Sit the Lake District desk" };
+
   // Scenario data arrives asynchronously, so keep the swap honest and direct rather
   // than animating an unchanged workspace before its new evidence is available.
   const compact = tape && !deskOpen;
@@ -487,11 +557,11 @@ export default function Watch() {
           </p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
-              {scenario ? (scenario.id === "backtest" ? "A66 Brough–Bowes" : "Lake District") : loading ? "Opening…" : "Bothy"}
+              {scenario ? (scenario.id === "backtest" ? "A66 Brough–Bowes" : scenario.id === "flood" ? "Eden Valley flood" : "Lake District") : loading ? "Opening…" : "Bothy"}
             </h1>
             {scenario && (
               <span className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
-                {scenario.id === "backtest" ? "illustrative replay" : "operator view"}
+                {scenario.id === "backtest" ? "illustrative replay" : scenario.id === "flood" ? "generalization proof" : "operator view"}
               </span>
             )}
           </div>
@@ -599,13 +669,21 @@ export default function Watch() {
           )}
           <IntakeLegend caseId={scenario?.id ?? null} compact={compact} />
           {scenario?.id === "live" && !compact && (
+            <ReliabilityPanel
+              health={llmHealth}
+              rehearsing={rehearsing}
+              onProbe={probeChain}
+              onRehearse={() => void rehearseFallback()}
+            />
+          )}
+          {scenario?.id === "live" && !compact && (
             <RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} />
           )}
           {nextBeat && (
             <NextDoors
               beat={nextBeat}
               compact={compact}
-              otherHill={scenario?.id === "live" ? "Rewind the A66" : "Sit the Lake District desk"}
+              otherHill={swapTarget.label}
               pendingName={nextBeat === "signed" ? pendingOther?.name : undefined}
               onRewind={() => {
                 setPlaying(false);
@@ -627,7 +705,7 @@ export default function Watch() {
                   : undefined
               }
               onOtherHill={() => {
-                void load(scenario?.id === "live" ? "backtest" : "live", { tape: scenario?.id === "live" });
+                void load(swapTarget.id, { tape: swapTarget.tape });
               }}
               onNextCorridor={pendingOther ? () => setSelectedId(pendingOther.routeId) : undefined}
             />
@@ -859,16 +937,18 @@ export default function Watch() {
             <span>
               {scenario?.id === "live"
                 ? `live context · map © OpenStreetMap`
-                : "illustrative replay · modeled signals · map © OpenStreetMap"}
+                : scenario?.id === "flood"
+                  ? `generalization proof · EA river gauges · map © OpenStreetMap`
+                  : "illustrative replay · modeled signals · map © OpenStreetMap"}
               {!compact && (llm.length ? ` · ${llm.map((p) => p.id).join(", ")}` : " · scripted")}
             </span>
             <button
               type="button"
-              onClick={() => void load(scenario?.id === "live" ? "backtest" : "live", { tape: scenario?.id === "live" })}
+              onClick={() => void load(swapTarget.id, { tape: swapTarget.tape })}
               className="underline"
               style={{ color: "var(--cursor)" }}
             >
-              {scenario?.id === "live" ? "Rewind the A66" : "Sit the Lake District desk"}
+              {swapTarget.label}
             </button>
           </footer>
         </>

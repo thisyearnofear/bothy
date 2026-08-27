@@ -27,6 +27,11 @@ const ROAD_WEIGHT: Record<string, number> = {
   report: 0.14,
   "plough-complete": -0.25,
 };
+// Roadmap §3: a traffic-speed collapse is a corroborating observation that
+// arrives before the closure report. It moves the score earlier — a genuinely
+// new timeline beat — but is weighted lighter than a closure so it sharpens
+// the lead-time story rather than replacing the sourced report.
+const TRAFFIC_WEIGHT = 0.16;
 
 function asHazard(h: string): Hazard | undefined {
   const known: Hazard[] = ["snow", "ice", "wind", "flood", "rockfall"];
@@ -95,6 +100,42 @@ export function scoreAt(
       let c = 0.12 * ef;
       if (minTemp <= -3) c += 0.06 * ef;
       push(c, fc.id, "forecast", fc.at, fc.source, `low ${minTemp}\u00B0C — icing risk`);
+    }
+  }
+
+  // Roadmap §2: river-gauge level is the flood wedge's forecast-shaped signal.
+  // A rising level above the flood threshold raises risk on flood-prone routes
+  // before any closure is reported — same ledger, different wedge. Scored
+  // per-route: each gauge reports for its own route, so cite only the latest
+  // reading on *this* route, never another route's gauge.
+  if (route.hazards.includes("flood")) {
+    let gauge: SignalEvent | null = null;
+    for (const e of events) {
+      if (e.kind !== "forecast" || e.at > at || e.routeId !== route.id) continue;
+      if ((e.payload as { levelM?: number }).levelM == null) continue;
+      gauge = e;
+    }
+    if (gauge) {
+      const p = gauge.payload as { levelM: number; trend?: string };
+      const over = Math.max(0, p.levelM - 2.0); // 2.0m = typical flood threshold
+      if (over > 0) {
+        const c = (0.08 + 0.05 * Math.min(over, 2)) * ef;
+        const trend = p.trend ? ` (${p.trend})` : "";
+        push(c, gauge.id, "forecast", gauge.at, gauge.source, `river ${p.levelM.toFixed(1)}m above threshold${trend}`);
+      }
+    }
+  }
+
+  // Roadmap §3: traffic-speed collapse — a new timeline beat that arrives before
+  // the closure report. Speeds fall on a pass before anyone files a closure.
+  for (const e of events) {
+    if (e.at > at || e.kind !== "traffic" || e.routeId !== route.id) continue;
+    const p = e.payload as { dropPct?: number; speedKph?: number };
+    const drop = p.dropPct ?? 0;
+    if (drop >= 0.4) {
+      // scale by how far speeds have collapsed; 40%+ drop is the trigger
+      const c = TRAFFIC_WEIGHT * ef * Math.min(1, drop / 0.7);
+      push(c, e.id, "traffic", e.at, e.source, `speeds fell ${Math.round(drop * 100)}% (${p.speedKph ?? "?"} km/h)`);
     }
   }
 

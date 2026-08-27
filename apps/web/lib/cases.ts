@@ -33,6 +33,15 @@ export const CASES: CaseDef[] = [
     tapeHref: "/watch?replay=1",
   },
   {
+    id: "flood",
+    name: "Eden Valley flood",
+    short: "Flood",
+    kind: "generalization proof",
+    place: "Appleby · Osmotherley",
+    blurb: "Same ledger, different wedge. Environment Agency river gauges → flood warning → road closure. The pipeline generalizes.",
+    href: "/watch?case=flood",
+  },
+  {
     id: "live",
     name: "Lake District",
     short: "Lakes",
@@ -50,7 +59,7 @@ export function caseFromSearch(search: string): { id: CaseId; tape: boolean; tMs
   const tMs = Number.isFinite(parsed) ? parsed : undefined;
   if (q.get("replay") === "1") return { id: "backtest", tape: true, tMs };
   const raw = q.get("case");
-  if (raw === "live" || raw === "backtest") return { id: raw, tape: false, tMs };
+  if (raw === "live" || raw === "backtest" || raw === "flood") return { id: raw, tape: false, tMs };
   return { id: "live", tape: false, tMs };
 }
 

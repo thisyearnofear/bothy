@@ -19,9 +19,10 @@ export const KIND_LABEL: Record<EventKind, string> = {
   forecast: "forecast",
   road: "road",
   incident: "incident",
+  traffic: "traffic",
 };
 
-const KIND_ORDER: EventKind[] = ["warning", "forecast", "road", "incident"];
+const KIND_ORDER: EventKind[] = ["warning", "forecast", "road", "traffic", "incident"];
 
 /** Heaviest citations first — the score is a weighted stack of reports. */
 export function byWeight(citations: EvidenceCitation[]): EvidenceCitation[] {
@@ -127,6 +128,9 @@ function citationBit(c: EvidenceCitation): string {
   }
   if (c.kind === "forecast" && text.includes("snow")) return "forecast snow";
   if (c.kind === "forecast" && (text.includes("icing") || text.includes("ice"))) return "icing risk";
+  if (c.kind === "forecast" && text.includes("river")) return "a rising river gauge";
+  if (c.kind === "forecast" && text.includes("flood")) return "a flood forecast";
+  if (c.kind === "traffic" && (text.includes("speed") || text.includes("fell"))) return "a speed collapse";
   if (c.kind === "road" && (text.includes("drift") || text.includes("blocked") || text.includes("closure"))) {
     return "a drifting closure";
   }

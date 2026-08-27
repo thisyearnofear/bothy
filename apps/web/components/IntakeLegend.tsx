@@ -15,7 +15,9 @@ export default function IntakeLegend({
       ? "Beyond the hatch: ITV News — sourced outcome, not in the score"
       : caseId === "live"
         ? "In the room, not the score: Open-Meteo — operator-fetched, frozen"
-        : null;
+        : caseId === "flood"
+          ? "Same ledger, different wedge: Environment Agency river gauges — report-shaped, in the score"
+          : null;
 
   return (
     <section
@@ -29,7 +31,7 @@ export default function IntakeLegend({
       <p className={`mt-1 leading-snug ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--text-body)" }}>
         <span style={{ color: "var(--text-strong)" }}>In the score</span>
         {" — "}
-        warning · forecast · road · incident
+        warning · forecast · road · incident · traffic
       </p>
       {clock && (
         <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
