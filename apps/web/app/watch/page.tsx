@@ -16,7 +16,7 @@ import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
-import { byWeight, causalHeadline, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
+import { causalHeadline, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
 import type {
   Assessment,
   AuditEntry,
@@ -350,7 +350,6 @@ export default function Watch() {
 
   // money shot: a causal sentence from the heaviest reports + terrain, numbers beside it
   const headline = selected && overlaySnap ? causalHeadline(selected, overlaySnap) : null;
-  const chips = overlaySnap ? byWeight(overlaySnap.citations).slice(0, 3) : [];
 
   const dismissCoach = useCallback(() => {
     setCoach(false);
@@ -725,21 +724,8 @@ export default function Watch() {
                   {overlaySnap.score.toFixed(2)}
                 </span>
               </p>
-              {chips.length > 0 && (
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {chips.map((c) => (
-                    <li
-                      key={`${c.eventId}-${c.text}`}
-                      className="mono rounded border px-1.5 py-0.5 text-[11px]"
-                      style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
-                    >
-                      {KIND_LABEL[c.kind]}
-                      {c.contribution >= 0 ? " +" : " "}
-                      {c.contribution.toFixed(2)}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {/* no citation chips here — the sentence names the top signals and
+                  "Why this rank" beside it carries the weights; chips were a repeat */}
             </section>
           )}
 
@@ -797,7 +783,7 @@ export default function Watch() {
                   revealed={revealed}
                   revealMs={range.outcome}
                 />
-                {selected && overlaySnap && (
+                {selected && overlaySnap && !compact && (
                   <div
                     className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg border px-3 py-2"
                     style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
@@ -810,13 +796,15 @@ export default function Watch() {
                     </p>
                   </div>
                 )}
-                {/* severity legend — colour + label, never colour alone */}
+                {/* severity legend — colour + label, never colour alone. The time
+                    lives in the timeline bubble; the corridor + score live in the
+                    headline and the rail — no need to repeat them on the map. */}
                 <div
                   className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded-lg border px-2.5 py-1.5"
                   style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 85%, transparent)" }}
                 >
                   <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
-                    risk at <span style={{ color: "var(--cursor)" }}>{at(t)}</span>
+                    risk
                   </span>
                   {(["LOW", "MODERATE", "ELEVATED", "HIGH"] as const).map((l) => (
                     <span key={l} className="flex items-center gap-1 text-xs" style={{ color: "var(--text-body)" }}>
@@ -882,7 +870,13 @@ export default function Watch() {
                   revealMs={range.outcome}
                   revealText={revealText}
                   playing={playing}
-                  onTogglePlay={() => setPlaying((p) => !p)}
+                  onTogglePlay={() => {
+                    // Playing from the end of the tape restarts it — otherwise a
+                    // cursor parked at fullEnd (the flood case opens there) makes
+                    // play a no-op that reads as a stuck control.
+                    if (!playing && range.end > 0 && t >= range.end) setT(range.start);
+                    setPlaying((p) => !p);
+                  }}
                 />
                 {scenario?.id === "backtest" && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
@@ -918,7 +912,6 @@ export default function Watch() {
                   color={selColor}
                   cursorCitations={selSnap?.citations ?? []}
                   cursorTime={at(t)}
-                  cursorKinds={[...new Set((selSnap?.citations ?? []).map((c) => c.kind))]}
                   assessment={selectedAssessment}
                   audit={audit}
                   running={running}
@@ -934,6 +927,8 @@ export default function Watch() {
           </div>
 
           <footer className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "var(--text-faint)" }}>
+            {/* the case switch lives in the header (CaseSwitch) and NextDoors —
+                a third swap link here only duplicated them */}
             <span>
               {scenario?.id === "live"
                 ? `live context · map © OpenStreetMap`
@@ -942,14 +937,6 @@ export default function Watch() {
                   : "illustrative replay · modeled signals · map © OpenStreetMap"}
               {!compact && (llm.length ? ` · ${llm.map((p) => p.id).join(", ")}` : " · scripted")}
             </span>
-            <button
-              type="button"
-              onClick={() => void load(swapTarget.id, { tape: swapTarget.tape })}
-              className="underline"
-              style={{ color: "var(--cursor)" }}
-            >
-              {swapTarget.label}
-            </button>
           </footer>
         </>
       )}

@@ -151,10 +151,16 @@ export function makeTools(ctx: AgentCtx): ToolSet {
     async draft_public_warning({ route_id } = {}) {
       const route = pickRoute(ctx, route_id);
       const r = ctx.render(route, ctx.now);
-      const plow = route.ploughed
-        ? "This route is being treated by the gritting fleet."
-        : "This route is NOT scheduled for ploughing today.";
-      const body = `[DRAFT — ${route.name}]\nDo not travel on ${route.name} until conditions improve. Risk ${r.label} (score ${r.score.toFixed(2)}). ${plow} Issued ${fmtDateTime(ctx.now)}. Sources: Met Office DataHub, Cumbria CC road feed, MR incident log.`;
+      // Wedge-aware: winter ops copy only for winter hazards; sources come from
+      // the citations that actually moved the score.
+      const winter = route.hazards.some((h) => h === "snow" || h === "ice");
+      const plow = winter
+        ? route.ploughed
+          ? "This route is being treated by the gritting fleet."
+          : "This route is NOT scheduled for ploughing today."
+        : `Travel only until ${route.actor} confirms the route is clear.`;
+      const sources = [...new Set(r.citations.map((c) => c.source))].join(", ");
+      const body = `[DRAFT — ${route.name}]\nDo not travel on ${route.name} until conditions improve. Risk ${r.label} (score ${r.score.toFixed(2)}). ${plow} Issued ${fmtDateTime(ctx.now)}. Sources: ${sources}.`;
       track("draft_public_warning", { route_id }, body);
       return body;
     },

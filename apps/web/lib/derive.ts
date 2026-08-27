@@ -113,7 +113,8 @@ export function citationClause(text: string, max = 42): string {
 function terrainClause(route: RouteInfo): string {
   const bits: string[] = [];
   if (route.exposure >= 0.7) bits.push("exposed");
-  if (!route.ploughed) bits.push("un-ploughed");
+  // "un-ploughed" is winter-ops language — only say it where ploughing is the relevant mitigation.
+  if (!route.ploughed && route.hazards.some((h) => h === "snow" || h === "ice")) bits.push("un-ploughed");
   if (!bits.length) return "this corridor";
   return `${bits[0] === "exposed" ? "an" : "a"} ${bits.join(", ")} road`;
 }
@@ -121,6 +122,7 @@ function terrainClause(route: RouteInfo): string {
 function citationBit(c: EvidenceCitation): string {
   const text = c.text.toLowerCase();
   if (c.kind === "warning") {
+    if (text.includes("flood")) return "a flood warning";
     if (text.includes("amber")) return "an amber warning";
     if (text.includes("yellow")) return "a yellow warning";
     if (text.includes("red")) return "a red warning";
@@ -131,6 +133,9 @@ function citationBit(c: EvidenceCitation): string {
   if (c.kind === "forecast" && text.includes("river")) return "a rising river gauge";
   if (c.kind === "forecast" && text.includes("flood")) return "a flood forecast";
   if (c.kind === "traffic" && (text.includes("speed") || text.includes("fell"))) return "a speed collapse";
+  if (c.kind === "road" && (text.includes("flood") || text.includes("water") || text.includes("overtopping"))) {
+    return "a flood closure";
+  }
   if (c.kind === "road" && (text.includes("drift") || text.includes("blocked") || text.includes("closure"))) {
     return "a drifting closure";
   }

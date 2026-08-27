@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Assessment, AuditEntry, EvidenceCitation, EventKind, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
+import type { Assessment, AuditEntry, EvidenceCitation, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
-import { KIND_LABEL, pipelineLines } from "../lib/derive";
+import { pipelineLines } from "../lib/derive";
 import { copyText, formatCaseRecord, printCaseRecord, readOfficerName, writeOfficerName } from "../lib/caseRecord";
 import AgentBeat from "./AgentBeat";
 import CitationRows from "./CitationRows";
@@ -17,7 +17,6 @@ export default function Detail({
   color,
   cursorCitations,
   cursorTime,
-  cursorKinds = [],
   assessment,
   audit,
   running,
@@ -34,7 +33,6 @@ export default function Detail({
   color: string;
   cursorCitations: EvidenceCitation[];
   cursorTime: string;
-  cursorKinds?: EventKind[];
   assessment: Assessment | null;
   audit: AuditEntry[];
   running?: boolean;
@@ -142,7 +140,6 @@ export default function Detail({
       <div>
         <p className="mb-1.5 text-xs" style={{ color: "var(--text-faint)" }}>
           Known at <span className="mono">{cursorTime}</span>
-          {cursorKinds.length > 0 ? ` · ${cursorKinds.map((k) => KIND_LABEL[k]).join(" · ")}` : ""}
         </p>
         {cursorCitations.length === 0 ? (
           <p className="text-sm leading-snug" style={{ color: "var(--text-body)" }}>
@@ -162,13 +159,18 @@ export default function Detail({
           </p>
         )}
         {expanded && loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
-          <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-            Counterfactual — without the <span className="mono">{t(loadBearing.at)}</span> signal, risk would be{" "}
-            <span className="font-semibold" style={{ color: "var(--text-body)" }}>
-              {withoutLabel}
-            </span>{" "}
-            (<span className="mono tnum">{withoutScore.toFixed(2)}</span>).
-          </p>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs" style={{ color: "var(--text-faint)" }}>
+              Why this number holds
+            </summary>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+              Without the <span className="mono">{t(loadBearing.at)}</span> signal, risk would be{" "}
+              <span className="font-semibold" style={{ color: "var(--text-body)" }}>
+                {withoutLabel}
+              </span>{" "}
+              (<span className="mono tnum">{withoutScore.toFixed(2)}</span>).
+            </p>
+          </details>
         )}
       </div>
 

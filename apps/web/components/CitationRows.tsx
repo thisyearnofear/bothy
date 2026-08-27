@@ -25,7 +25,20 @@ export default function CitationRows({
   return (
     <div>
       {showMix && mix.length > 0 && (
-        <KindMix mix={mix} compact={compact} />
+        // Visual stack-share only — the per-citation rows below carry the numbers.
+        <div
+          className="mb-2 flex h-1.5 overflow-hidden rounded-full"
+          style={{ background: "var(--rule)" }}
+          aria-label={mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)} percent`).join(", ")}
+          title={mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)}%`).join(" · ")}
+        >
+          {mix.map((m, i) => (
+            <span
+              key={m.kind}
+              style={{ width: `${Math.max(2, m.share * 100)}%`, background: "var(--cursor)", opacity: 1 - i * 0.22 }}
+            />
+          ))}
+        </div>
       )}
       <ol className="space-y-1.5">
         {visible.map((c, i) => {
@@ -77,34 +90,6 @@ export default function CitationRows({
           );
         })}
       </ol>
-    </div>
-  );
-}
-
-function KindMix({
-  mix,
-  compact,
-}: {
-  mix: { kind: keyof typeof KIND_LABEL; share: number }[];
-  compact?: boolean;
-}) {
-  return (
-    <div className="mb-2" aria-label={mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)} percent`).join(", ")}>
-      <div className="flex h-1.5 overflow-hidden rounded-full" style={{ background: "var(--rule)" }} aria-hidden="true">
-        {mix.map((m, i) => (
-          <span
-            key={m.kind}
-            style={{
-              width: `${Math.max(2, m.share * 100)}%`,
-              background: "var(--cursor)",
-              opacity: 1 - i * 0.22,
-            }}
-          />
-        ))}
-      </div>
-      <p className={`mono mt-1 ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-        {mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)}%`).join(" · ")}
-      </p>
     </div>
   );
 }

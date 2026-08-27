@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 
-/** Quiet intake contract: reports in the score, live API off it, news beyond the hatch. */
+/** Quiet intake contract, one line by default — the fine print discloses on demand. */
 export default function IntakeLegend({
   caseId,
   compact,
@@ -10,6 +11,7 @@ export default function IntakeLegend({
   caseId: ScenarioId | null;
   compact?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const clock =
     caseId === "backtest"
       ? "Beyond the hatch: ITV News — sourced outcome, not in the score"
@@ -21,32 +23,44 @@ export default function IntakeLegend({
 
   return (
     <section
-      className={`mb-4 rounded-lg border px-4 ${compact ? "py-2" : "py-3"}`}
+      className={`mb-4 rounded-lg border px-4 ${compact ? "py-1.5" : "py-2"}`}
       style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
       aria-label="Intake"
     >
-      <p className={`mono uppercase tracking-widest ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-        Intake
-      </p>
-      <p className={`mt-1 leading-snug ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--text-body)" }}>
-        <span style={{ color: "var(--text-strong)" }}>In the score</span>
-        {" — "}
-        warning · forecast · road · incident · traffic
-      </p>
-      {clock && (
-        <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-          {clock}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <p className={`mono uppercase tracking-widest ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+          Intake
         </p>
-      )}
-      {caseId === "live" && (
-        <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-          Operator road reports land in the score · audio · radio · social are not ingested
+        <p className={`leading-snug ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--text-body)" }}>
+          <span style={{ color: "var(--text-strong)" }}>In the score</span>
+          {" — "}
+          warning · forecast · road · incident · traffic
         </p>
-      )}
-      {caseId !== "live" && (
-        <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
-          Not ingested — audio · radio · social
-        </p>
+        {!compact && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="mono text-xs underline"
+            style={{ color: "var(--cursor)" }}
+            aria-expanded={open}
+          >
+            {open ? "less" : "the clocks"}
+          </button>
+        )}
+      </div>
+      {(open || compact) && (
+        <>
+          {clock && (
+            <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+              {clock}
+            </p>
+          )}
+          <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+            {caseId === "live"
+              ? "Operator road reports land in the score · audio · radio · social are not ingested"
+              : "Not ingested — audio · radio · social"}
+          </p>
+        </>
       )}
     </section>
   );

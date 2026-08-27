@@ -54,15 +54,22 @@ export async function scriptedDraft(ctx: AgentCtx, tools: ToolSet): Promise<Scri
   const confidence = Math.min(0.92, Math.max(0.5, 0.55 + sources * 0.06 + (hasWarning ? 0.05 : 0)));
 
   const priority = labelPriority(r.label);
+  // Wedge-aware draft: winter copy only for winter hazards, sources cited from
+  // the actual ledger — never a hardcoded winter source list on a flood case.
+  const winter = ctx.route.hazards.some((h) => h === "snow" || h === "ice");
+  const title = winter ? "Winter access warning" : "Access risk warning";
+  const opsLine = winter
+    ? ctx.route.ploughed
+      ? "This route is being treated by the gritting fleet."
+      : "This route is NOT scheduled for ploughing today."
+    : `Do not travel on ${ctx.route.name} until ${ctx.route.actor} confirms the route is clear.`;
+  const citedSources = [...new Set(r.citations.map((c) => c.source))].join(", ");
   const draft =
     `[Bothy draft — for duty officer approval]\n` +
-    `Winter access warning — ${ctx.route.name}\n` +
+    `${title} — ${ctx.route.name}\n` +
     `RISK: ${r.label} (score ${r.score.toFixed(2)}, confidence ${confidence.toFixed(2)})\n` +
-    `Do not travel on ${ctx.route.name} until conditions improve. ` +
-    (ctx.route.ploughed
-      ? "This route is being treated by the gritting fleet."
-      : "This route is NOT scheduled for ploughing today.") +
-    `\nIssued ${fmtDateTime(ctx.now)}. Sources: Met Office DataHub, Cumbria CC road feed, MR incident log.`;
+    `Do not travel on ${ctx.route.name} until conditions improve. ${opsLine}` +
+    `\nIssued ${fmtDateTime(ctx.now)}. Sources: ${citedSources}.`;
 
   return {
     causal_chain: buildCausalChain(ctx, ctx.route, r.citations),

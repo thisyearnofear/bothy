@@ -71,7 +71,6 @@ export default function RiskList({
                 >
                   {r.label}
                 </span>
-                {!compact && <span style={{ color: "var(--text-faint)" }}>at {fresh}</span>}
               </div>
               {/* the seismograph tick: the bar eases to the new score as the day scrubs */}
               <span
