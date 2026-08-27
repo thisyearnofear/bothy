@@ -105,5 +105,15 @@ export const api = {
   ) =>
     post<{ event: unknown; at: string; routeId: string }>("/api/scenario/live/signals/road", body, signal),
   audit: (id: ScenarioId, signal?: AbortSignal) => get<AuditEntry[]>(`/api/scenario/${id}/audit`, signal),
-  llm: (signal?: AbortSignal) => get<{ providers: { id: string; label: string; model: string }[] }>("/api/llm", signal),
+  llm: (signal?: AbortSignal) => get<{ providers: { id: string; label: string; model: string }[] } & { scripted: boolean; now: string }>("/api/llm", signal),
+  llmHealth: (signal?: AbortSignal) =>
+    get<{
+      at: string;
+      providers: { id: string; label: string; model: string; outcome: string; status?: number; detail: string; latencyMs?: number }[];
+      firstOkIndex: number | null;
+      fallbackEngaged: boolean;
+      scriptedAvailable: boolean;
+    }>("/api/llm/health", signal),
+  rehearseFallback: (id: ScenarioId, opts: { routeId?: string } = {}, signal?: AbortSignal) =>
+    post<Assessment>(`/api/scenario/${id}/assess`, { ...opts, engine: "llm", rehearseFallback: true, force: true }, signal),
 };

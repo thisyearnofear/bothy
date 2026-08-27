@@ -19,6 +19,10 @@ export interface RunInput {
   at: string;
   engine: "llm" | "scripted";
   force?: boolean; // bypass the short-term assessment cache
+  /** Roadmap §1: rehearse the scripted fallback. When true with engine "llm",
+   *  skip the provider chain entirely and run the scripted brain, marking the
+   *  trace so the failsafe is visibly exercised even when providers are up. */
+  rehearseFallback?: boolean;
   onTrace?: (t: ToolCall) => void; // live trace tap for SSE streaming
 }
 
@@ -82,13 +86,16 @@ export async function runAssessment(input: RunInput): Promise<AssessmentRow> {
   trace.push({ tool: "pipeline:start", args: { scenario: input.scenario, route: route.id, at: input.at }, at: new Date().toISOString(), ok: true, summary: `loop started for ${route.id}` });
 
   // brain: try the LLM provider chain, else deterministic scripted
-  const llmDraftRes = input.engine === "llm" ? await llmDraft(ctx, tools) : null;
+  const llmDraftRes = input.engine === "llm" && !input.rehearseFallback ? await llmDraft(ctx, tools) : null;
   let assessment: AssessmentRow;
   if (llmDraftRes) {
     assessment = await finish(ctx, tools, llmDraftRes, true);
   } else {
     if (input.engine === "llm") {
-      trace.push({ tool: "engine:fallback", args: {}, at: new Date().toISOString(), ok: true, summary: "provider chain unavailable - using scripted brain (deterministic demo)." });
+      const reason = input.rehearseFallback
+        ? "rehearsal: scripted fallback exercised by request (roadmap §1) — provider chain skipped to prove the failsafe."
+        : "provider chain unavailable - using scripted brain (deterministic demo).";
+      trace.push({ tool: "engine:fallback", args: { rehearsed: input.rehearseFallback ?? false }, at: new Date().toISOString(), ok: true, summary: reason });
     }
     const draft = await scriptedDraft(ctx, tools);
     assessment = await finish(ctx, tools, draft, false);

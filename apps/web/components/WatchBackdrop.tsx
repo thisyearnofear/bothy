@@ -8,6 +8,7 @@ import { ambientMapStyle } from "./MapView";
 const PLACES: Record<ScenarioId, { center: [number, number]; zoom: number; pitch: number; bearing: number }> = {
   live: { center: [-3.1, 54.5], zoom: 9.2, pitch: 28, bearing: -14 },
   backtest: { center: [-2.11, 54.51], zoom: 10.1, pitch: 32, bearing: 8 },
+  flood: { center: [-2.4, 54.56], zoom: 10.2, pitch: 30, bearing: 6 },
 };
 
 /**

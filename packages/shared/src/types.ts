@@ -2,8 +2,8 @@
 
 export type Hazard = "snow" | "ice" | "wind" | "flood" | "rockfall";
 export type RiskLabel = "LOW" | "MODERATE" | "ELEVATED" | "HIGH";
-export type ScenarioId = "live" | "backtest";
-export type EventKind = "warning" | "forecast" | "road" | "incident";
+export type ScenarioId = "live" | "backtest" | "flood";
+export type EventKind = "warning" | "forecast" | "road" | "incident" | "traffic";
 
 export interface RouteInfo {
   id: string;
@@ -81,6 +81,13 @@ export type RoadEvent = SignalEvent & {
 export type Incident = SignalEvent & {
   kind: "incident";
   payload: { severity: "minor" | "serious" | "critical" };
+};
+// Roadmap §3: a traffic-speed drop is a new timeline beat that moves the score
+// earlier than the closure report. It is still a report (kind + source + clock),
+// not a firehose — it enters the same ledger as every other signal.
+export type TrafficEvent = SignalEvent & {
+  kind: "traffic";
+  payload: { speedKph: number; dropPct: number; normalKph?: number };
 };
 
 export interface IncidentRecord {

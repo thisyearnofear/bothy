@@ -39,6 +39,7 @@ export interface ToolSet {
   get_road_disruptions: (a?: { route_id?: string }) => Promise<string>;
   search_incidents: (a?: { route_id?: string; hazard?: string; query?: string; limit?: number }) => Promise<string>;
   get_route_characteristics: (a?: { route_id?: string }) => Promise<string>;
+  get_traffic_speed: (a?: { route_id?: string }) => Promise<string>;
   draft_public_warning: (a?: { route_id?: string }) => Promise<string>;
   create_human_review: (a: CreateReviewArgs) => Promise<string>;
 }
@@ -122,6 +123,28 @@ export function makeTools(ctx: AgentCtx): ToolSet {
       const route = pickRoute(ctx, route_id);
       const body = `${route.name} (${route.id}) — ${route.lengthKm}km, max gradient ${route.maxGradientPct}%, max elevation ${route.maxElevationM}m, exposure ${route.exposure.toFixed(2)}, ploughed=${route.ploughed}. Hazards: ${route.hazards.join(", ")}. Actor: ${route.actor}.`;
       track("get_route_characteristics", { route_id }, body);
+      return body;
+    },
+
+    // Roadmap §3: traffic-speed signal — the first new timeline beat. A speed
+    // collapse on a pass precedes the closure report, sharpening the lead-time
+    // story. Read-only, report-shaped, same ledger as every other signal.
+    async get_traffic_speed({ route_id } = {}) {
+      const route = pickRoute(ctx, route_id);
+      const traffic = ctx.events.filter((e) => {
+        if (e.kind !== "traffic" || e.at > ctx.now) return false;
+        return !route_id || e.routeId === route_id;
+      });
+      const body = traffic.length
+        ? traffic
+            .map((e) => {
+              const p = e.payload as { speedKph?: number; dropPct?: number; normalKph?: number };
+              const normal = p.normalKph != null ? ` (normal ${p.normalKph} km/h)` : "";
+              return `[${e.id}] ${fmtDateTime(e.at)} on ${e.routeId ?? "network"}: speeds ${p.speedKph ?? "?"} km/h, down ${Math.round((p.dropPct ?? 0) * 100)}%${normal}. Source: ${e.source}.`;
+            })
+            .join("\n")
+        : `No traffic-speed observations for ${route.name}.`;
+      track("get_traffic_speed", { route_id }, body);
       return body;
     },
 

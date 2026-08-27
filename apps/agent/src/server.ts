@@ -21,7 +21,7 @@ import {
 } from "./repo";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
-import { hasProviders, providerSummary } from "./agent/providers";
+import { hasProviders, providerSummary, rehearseChain } from "./agent/providers";
 
 const app = express();
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
@@ -134,6 +134,7 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
     at,
     engine,
     force: Boolean(req.body.force),
+    rehearseFallback: Boolean(req.body.rehearseFallback),
   });
   res.json(assessment);
 });
@@ -158,6 +159,7 @@ app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
       routeId: req.body.routeId as string | undefined,
       at: meta.now,
       engine: req.body.engine === "llm" ? "llm" : "scripted",
+      rehearseFallback: Boolean(req.body.rehearseFallback),
       onTrace: (t) => send("trace", t),
     });
     send("assessment", assessment);
@@ -170,6 +172,14 @@ app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
 
 app.get("/api/llm", (_req, res) => {
   res.json({ now: new Date().toISOString(), providers: providerSummary(), scripted: true });
+});
+
+// Roadmap §1: exercise the full provider chain end-to-end under realistic
+// conditions (429s, timeouts, dead endpoints) and rehearse the scripted
+// fallback so a degraded demo is a *boring* failure, not a visible one.
+app.get("/api/llm/health", async (_req, res) => {
+  const rehearsal = await rehearseChain();
+  res.json(rehearsal);
 });
 
 app.post("/api/assessments/:id/decision", async (req, res) => {

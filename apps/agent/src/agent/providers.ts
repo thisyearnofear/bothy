@@ -308,3 +308,94 @@ export function hasProviders(): boolean {
 export function providerSummary(): Array<{ id: string; label: string; model: string }> {
   return getProviders().map((d) => ({ id: d.id, label: d.label, model: d.model }));
 }
+
+// --- Reliability hardening (roadmap §1) ---------------------------------------
+// Exercise the live LLM path end-to-end under realistic conditions so a degraded
+// demo is a *boring* failure (scripted fallback), not a visible one. The probe
+// hits each configured provider with a tiny no-tool chat and records the outcome
+// class: ok | rate-limited | timeout | http-error | network-error. It never
+// throws; the caller gets a structured report per provider.
+
+export type ProbeOutcome = "ok" | "rate-limited" | "timeout" | "http-error" | "network-error" | "misconfigured";
+
+export interface ProviderProbe {
+  id: string;
+  label: string;
+  model: string;
+  outcome: ProbeOutcome;
+  /** Status code when the provider responded with an HTTP error. */
+  status?: number;
+  /** Human-readable reason (error message or a short ok summary). */
+  detail: string;
+  /** Round-trip latency in ms for ok/timeout/http-error; undefined otherwise. */
+  latencyMs?: number;
+}
+
+export async function probeProvider(def: ProviderDef): Promise<ProviderProbe> {
+  const rl = new RateLimiter(def.burst, def.reqPerMin);
+  const start = Date.now();
+  try {
+    await rl.acquire();
+    const res = await chat(def, rl, {
+      messages: [{ role: "user", content: "ping" }],
+      maxTokens: 1,
+      temperature: 0,
+    });
+    const latencyMs = Date.now() - start;
+    // A 1-token response may be empty content; that's still a successful round trip.
+    const detail = res.content ? `responded (${res.content.length} chars)` : "responded (empty content, ok)";
+    return { id: def.id, label: def.label, model: def.model, outcome: "ok", detail, latencyMs };
+  } catch (e) {
+    const latencyMs = Date.now() - start;
+    if (e instanceof RateLimitError) {
+      return {
+        id: def.id, label: def.label, model: def.model, outcome: "rate-limited", status: 429,
+        detail: `429 rate limited (retry-after ~${Math.round(e.retryAfterMs / 1000)}s)`, latencyMs,
+      };
+    }
+    if (e instanceof ProviderError) {
+      return {
+        id: def.id, label: def.label, model: def.model, outcome: "http-error", status: e.status,
+        detail: e.message, latencyMs,
+      };
+    }
+    const msg = String((e as Error)?.message ?? e);
+    // AbortSignal.timeout surfaces as a DOMException named "TimeoutError"
+    const isTimeout = (e as Error)?.name === "TimeoutError" || /timeout|aborted/i.test(msg);
+    return {
+      id: def.id, label: def.label, model: def.model,
+      outcome: isTimeout ? "timeout" : "network-error",
+      detail: msg, latencyMs,
+    };
+  }
+}
+
+/**
+ * Rehearse the full provider chain: probe every configured provider in priority
+ * order, then report whether the scripted fallback would have caught a total
+ * failure. This is the "exercise the full provider chain end-to-end under
+ * realistic conditions" rehearsal from roadmap §1.
+ */
+export interface ChainRehearsal {
+  at: string;
+  providers: ProviderProbe[];
+  /** Index of the first provider that responded ok, or null if none. */
+  firstOkIndex: number | null;
+  /** True when no provider responded ok and the scripted brain is the failsafe. */
+  fallbackEngaged: boolean;
+  scriptedAvailable: boolean;
+}
+
+export async function rehearseChain(): Promise<ChainRehearsal> {
+  const defs = getProviders();
+  const probes = await Promise.all(defs.map((d) => probeProvider(d)));
+  const firstOkIndex = probes.findIndex((p) => p.outcome === "ok");
+  return {
+    at: new Date().toISOString(),
+    providers: probes,
+    firstOkIndex: firstOkIndex === -1 ? null : firstOkIndex,
+    fallbackEngaged: firstOkIndex === -1,
+    // The scripted brain is always available — it needs no key and no provider.
+    scriptedAvailable: true,
+  };
+}

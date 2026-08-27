@@ -52,6 +52,7 @@ runAssessment({ scenario, routeId?, at, engine })
 | `get_road_disruptions` | read | closures / disrupts / plough status |
 | `search_incidents` | read | route / hazard / geo filter → semantic rank |
 | `get_route_characteristics` | read | gradient, exposure, ploughing, actors |
+| `get_traffic_speed` | read | traffic-speed / congestion drop (roadmap §3 — a new timeline beat that precedes closures) |
 | `draft_public_warning` | read | template draft from engine score |
 | `create_human_review` | **write** | persist assessment to approval queue |
 
@@ -96,10 +97,11 @@ the front-end **confidence timeline** (risk as a story over time, not a number).
 ## Intake contract
 
 Bothy ingests **reports**, not media. Whatever the origin (duty feed, forecast
-API, news desk), a source only moves a score after it is a timestamped
-`SignalEvent` of kind `warning | forecast | road | incident` with a named
-`source` and a signed `contribution`. The watch room Intake legend, citation
-ledger, and live-weather row make this visible.
+API, news desk, river gauge, traffic sensor), a source only moves a score
+after it is a timestamped `SignalEvent` of kind
+`warning | forecast | road | incident | traffic` with a named `source` and a
+signed `contribution`. The watch room Intake legend, citation ledger, and
+live-weather row make this visible.
 
 Three clocks:
 
@@ -120,6 +122,7 @@ all — never as a waveform, crawl, or firehose in the score.
 |----|---------|------|
 | `live` | today 14:30 | synthetic winter day, real signal shapes |
 | `backtest` | 12-13 Feb 2026 · 21:30 | illustrative replay based on a reported A66 closure; the post-horizon marker is hidden from the agent |
+| `flood` | 12 Feb 2026 · 16:00 | roadmap §2 generalization proof — Environment Agency river-gauge flood scenario; same `SignalEvent` contract, different wedge |
 
 The backtest applies modeled pre-closure signals, then reveals a sourced A66
 snow closure beyond the horizon. Its timestamps, inputs, and computed lead time
@@ -140,6 +143,8 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | POST | `/api/assessments/:id/decision` |
 | GET | `/api/scenario/:id/assessments` · `/api/scenario/:id/audit` |
 | GET | `/api/health` |
+| GET | `/api/llm` |
+| GET | `/api/llm/health` — roadmap §1: probes every configured provider end-to-end and reports whether the scripted fallback is engaged; never throws |
 
 ## Env vars (see `.env.example`)
 

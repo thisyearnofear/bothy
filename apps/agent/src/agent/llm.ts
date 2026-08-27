@@ -24,6 +24,7 @@ const TOOLS: LlmTool[] = [
   { name: "get_road_disruptions", description: "Road closures / disruptions / plough status for a route.", parameters: { type: "object", properties: { route_id: { type: "string" } } } },
   { name: "search_incidents", description: "Search historical incidents by route / hazard / semantic query.", parameters: { type: "object", properties: { route_id: { type: "string" }, hazard: { type: "string" }, query: { type: "string" }, limit: { type: "number" } } } },
   { name: "get_route_characteristics", description: "Route geometry, gradient, exposure, ploughing, hazards.", parameters: { type: "object", properties: { route_id: { type: "string" } } } },
+  { name: "get_traffic_speed", description: "Traffic-speed / congestion drop observations for a route (roadmap §3: a new timeline beat that precedes closure reports).", parameters: { type: "object", properties: { route_id: { type: "string" } } } },
   { name: "draft_public_warning", description: "Generate a draft public warning for a route.", parameters: { type: "object", properties: { route_id: { type: "string" } } } },
   {
     name: "create_human_review",

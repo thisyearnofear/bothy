@@ -11,7 +11,8 @@ score**. Audio, radio, and social are not ingested in this build.
 
 **Demo wedge:** winter access risk on UK upland roads (Lake District). The
 pipeline generalizes to any *time-evolving weak signals → accountable
-intervention* problem (floods, wildfire evacuation, humanitarian logistics).
+intervention* problem — proven with an Environment Agency river-gauge flood
+scenario (see [roadmap.md](docs/roadmap.md) §2).
 
 ## Quick start
 
@@ -77,6 +78,10 @@ The Kiro Ready, Spec, Ship hackathon is complete; Bothy continues as an ongoing
 project. The agent backend, seed data, API, and the interactive decision-replay
 dashboard are implemented and locally verified. The supplied scenarios are demo
 data; the A66 backtest distinguishes its sourced closure from illustrative model
-inputs. Next-step direction lives in [`docs/roadmap.md`](docs/roadmap.md).
+inputs. The post-hackathon [roadmap](docs/roadmap.md) is implemented: live-LLM
+reliability hardening (provider-chain health probe + scripted-fallback
+rehearsal), an Environment Agency flood scenario proving the generalization
+claim, and a traffic-speed signal that moves the score earlier — each scored
+against the intake filter.
 
 _See [`docs/architecture.md`](docs/architecture.md) for the deep dive._
