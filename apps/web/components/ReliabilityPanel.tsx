@@ -26,7 +26,6 @@ const OUTCOME_TONE: Record<string, { color: string; label: string }> = {
   timeout: { color: "oklch(80% 0.14 85)", label: "timeout" },
   "http-error": { color: "oklch(64% 0.21 25)", label: "http" },
   "network-error": { color: "oklch(64% 0.21 25)", label: "down" },
-  misconfigured: { color: "oklch(64% 0.21 25)", label: "bad config" },
 };
 
 /** Roadmap §1: live-LLM reliability surface. Probes the provider chain and

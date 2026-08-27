@@ -58,6 +58,11 @@ export default function Watch() {
   const assessCtl = useRef(new AbortController());
   const runCtl = useRef<AbortController | null>(null);
   const weatherCtl = useRef<AbortController | null>(null);
+  // Chain health is scenario-independent, so the probe lives outside
+  // assessCtl — a case load must not cancel it. The rehearsal does write
+  // per-case assessments, so it is aborted on case switch like the others.
+  const probeCtl = useRef<AbortController | null>(null);
+  const rehearseCtl = useRef<AbortController | null>(null);
 
   const abortBackground = useCallback(() => {
     assessCtl.current.abort();
@@ -66,7 +71,10 @@ export default function Watch() {
     runCtl.current = null;
     weatherCtl.current?.abort();
     weatherCtl.current = null;
+    rehearseCtl.current?.abort();
+    rehearseCtl.current = null;
     setRunning(false);
+    setRehearsing(false);
     setRefreshingWeather(false);
   }, []);
 
@@ -388,9 +396,13 @@ export default function Watch() {
   }, [scenario, selectedId, autoAssess]);
 
   // Roadmap §1: probe the provider chain once when the room opens, so the
-  // reliability surface is populated at first paint.
+  // reliability surface is populated at first paint. The probe survives case
+  // switches (health is not per-case), so it owns its controller.
   const probeChain = useCallback(() => {
-    const { signal } = assessCtl.current;
+    probeCtl.current?.abort();
+    const ac = new AbortController();
+    probeCtl.current = ac;
+    const { signal } = ac;
     api
       .llmHealth(signal)
       .then((h) => {
@@ -403,6 +415,7 @@ export default function Watch() {
 
   useEffect(() => {
     probeChain();
+    return () => probeCtl.current?.abort();
   }, [probeChain]);
 
   // Roadmap §1: rehearse the scripted fallback — force engine "llm" with
@@ -412,16 +425,23 @@ export default function Watch() {
     if (!scenario || !selected) return;
     setRehearsing(true);
     setError(null);
+    const ac = new AbortController();
+    rehearseCtl.current = ac;
     const key = assessmentKey(scenario.id, selected.id);
     try {
-      const result = await api.rehearseFallback(scenario.id, { routeId: selected.id }, assessCtl.current.signal);
-      setAssessments((prev) => ({ ...prev, [key]: result }));
-      setTraceLines((result.toolTrace as ToolCall[]) ?? []);
+      const result = await api.rehearseFallback(scenario.id, { routeId: selected.id }, ac.signal);
+      if (!ac.signal.aborted) {
+        setAssessments((prev) => ({ ...prev, [key]: result }));
+        setTraceLines((result.toolTrace as ToolCall[]) ?? []);
+      }
     } catch (e) {
       if (isAbortError(e)) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setRehearsing(false);
+      if (rehearseCtl.current === ac) {
+        rehearseCtl.current = null;
+        setRehearsing(false);
+      }
     }
   };
 

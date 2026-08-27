@@ -90,7 +90,7 @@ export function scoreAt(
   let fc: SignalEvent | null = null;
   for (const e of events) if (e.kind === "forecast" && e.at <= at) fc = e;
   if (fc) {
-    const p = fc.payload as { snowCm?: number; minTempC?: number; levelM?: number; trend?: string };
+    const p = fc.payload as { snowCm?: number; minTempC?: number };
     const snowCm = p.snowCm ?? 0;
     const minTemp = p.minTempC ?? 0;
     if (snowCm > 0 && route.hazards.includes("snow")) {
@@ -101,16 +101,27 @@ export function scoreAt(
       if (minTemp <= -3) c += 0.06 * ef;
       push(c, fc.id, "forecast", fc.at, fc.source, `low ${minTemp}\u00B0C — icing risk`);
     }
-    // Roadmap §2: river-gauge level is the flood wedge's forecast-shaped signal.
-    // A rising level above the flood threshold raises risk on flood-prone routes
-    // before any closure is reported — same ledger, different wedge.
-    const levelM = p.levelM;
-    if (levelM != null && route.hazards.includes("flood")) {
-      const over = Math.max(0, levelM - 2.0); // 2.0m = typical flood threshold
+  }
+
+  // Roadmap §2: river-gauge level is the flood wedge's forecast-shaped signal.
+  // A rising level above the flood threshold raises risk on flood-prone routes
+  // before any closure is reported — same ledger, different wedge. Scored
+  // per-route: each gauge reports for its own route, so cite only the latest
+  // reading on *this* route, never another route's gauge.
+  if (route.hazards.includes("flood")) {
+    let gauge: SignalEvent | null = null;
+    for (const e of events) {
+      if (e.kind !== "forecast" || e.at > at || e.routeId !== route.id) continue;
+      if ((e.payload as { levelM?: number }).levelM == null) continue;
+      gauge = e;
+    }
+    if (gauge) {
+      const p = gauge.payload as { levelM: number; trend?: string };
+      const over = Math.max(0, p.levelM - 2.0); // 2.0m = typical flood threshold
       if (over > 0) {
         const c = (0.08 + 0.05 * Math.min(over, 2)) * ef;
         const trend = p.trend ? ` (${p.trend})` : "";
-        push(c, fc.id, "forecast", fc.at, fc.source, `river ${levelM.toFixed(1)}m above threshold${trend}`);
+        push(c, gauge.id, "forecast", gauge.at, gauge.source, `river ${p.levelM.toFixed(1)}m above threshold${trend}`);
       }
     }
   }

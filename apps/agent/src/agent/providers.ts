@@ -170,11 +170,20 @@ async function openaiRaw(def: ProviderDef, req: ChatRequest): Promise<ChatResult
   return { content: m.content ?? "", toolCalls, reasoning: m.reasoning, usage: data.usage };
 }
 
-// cached + rate-limited + one 429 backoff retry
-export async function chat(def: ProviderDef, rl: RateLimiter, req: ChatRequest): Promise<ChatResult> {
+// cached + rate-limited + one 429 backoff retry. `noCache` skips both the
+// read and the write side of the TTL cache — health probes must measure real
+// round trips, not replay a cached ok.
+export async function chat(
+  def: ProviderDef,
+  rl: RateLimiter,
+  req: ChatRequest,
+  opts?: { noCache?: boolean },
+): Promise<ChatResult> {
   const key = sha(JSON.stringify({ id: def.id, model: def.model, req }));
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.r;
+  if (!opts?.noCache) {
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.r;
+  }
 
   await rl.acquire();
   let res: ChatResult;
@@ -189,10 +198,12 @@ export async function chat(def: ProviderDef, rl: RateLimiter, req: ChatRequest):
       throw e;
     }
   }
-  cache.set(key, { t: Date.now(), r: res });
-  if (cache.size > 500) {
-    const now = Date.now();
-    for (const [k, v] of cache) if (now - v.t > CACHE_TTL_MS) cache.delete(k);
+  if (!opts?.noCache) {
+    cache.set(key, { t: Date.now(), r: res });
+    if (cache.size > 500) {
+      const now = Date.now();
+      for (const [k, v] of cache) if (now - v.t > CACHE_TTL_MS) cache.delete(k);
+    }
   }
   return res;
 }
@@ -316,7 +327,7 @@ export function providerSummary(): Array<{ id: string; label: string; model: str
 // class: ok | rate-limited | timeout | http-error | network-error. It never
 // throws; the caller gets a structured report per provider.
 
-export type ProbeOutcome = "ok" | "rate-limited" | "timeout" | "http-error" | "network-error" | "misconfigured";
+export type ProbeOutcome = "ok" | "rate-limited" | "timeout" | "http-error" | "network-error";
 
 export interface ProviderProbe {
   id: string;
@@ -336,11 +347,17 @@ export async function probeProvider(def: ProviderDef): Promise<ProviderProbe> {
   const start = Date.now();
   try {
     await rl.acquire();
-    const res = await chat(def, rl, {
-      messages: [{ role: "user", content: "ping" }],
-      maxTokens: 1,
-      temperature: 0,
-    });
+    const res = await chat(
+      def,
+      rl,
+      {
+        messages: [{ role: "user", content: "ping" }],
+        maxTokens: 1,
+        temperature: 0,
+      },
+      // A health check that answers from cache is not a health check.
+      { noCache: true },
+    );
     const latencyMs = Date.now() - start;
     // A 1-token response may be empty content; that's still a successful round trip.
     const detail = res.content ? `responded (${res.content.length} chars)` : "responded (empty content, ok)";
