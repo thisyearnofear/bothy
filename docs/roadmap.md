@@ -8,7 +8,9 @@ invariants: **reports, not media** (every source lands as a timestamped
 contract in [architecture.md](architecture.md)), and **the agent drafts, a
 human approves**.
 
-> **Status (this revision):** priorities 1–3 are implemented; the flood
+> **Status (this revision):** priorities 1–3 are implemented and a cross-app
+> design/UX pass has tightened the scrubber, approval gate, recovery states, and
+> landing/watch-room flows against the locked design language; the flood
 > watch-room browser smoke is still pending a DB-backed run (`npm run seed`
 > against the tunnel, then `/watch?case=flood`). The candidates backlog is now
 > scored against the intake filter below, so a new source earns its place by

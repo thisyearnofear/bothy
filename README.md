@@ -82,6 +82,9 @@ inputs. The post-hackathon [roadmap](docs/roadmap.md) is implemented: live-LLM
 reliability hardening (provider-chain health probe + scripted-fallback
 rehearsal), an Environment Agency flood scenario proving the generalization
 claim, and a traffic-speed signal that moves the score earlier — each scored
-against the intake filter.
+against the intake filter. A design/UX pass also tightened the watch-room
+interactions — custom scrubber with beat ticks and magnetic snap, keyboard
+controls, a self-explanatory approval gate, and clear recovery/landing doors —
+without adding dependencies or drifting the token palette.
 
 _See [`docs/architecture.md`](docs/architecture.md) for the deep dive._
