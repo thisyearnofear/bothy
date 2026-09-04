@@ -41,7 +41,10 @@ export default function Landing() {
             <br />
             The human owns the call.
           </h2>
-          <div className="fade-up mt-8" style={{ animationDelay: "240ms" }}>
+          {/* two doors above the fold — the rewind (the money shot) and the live
+              desk (the shift tool). A judge with ten seconds picks one and lands
+              in a populated room; neither requires scrolling. */}
+          <div className="fade-up mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
             <Link
               href="/watch?replay=1"
               prefetch
@@ -50,6 +53,15 @@ export default function Landing() {
               style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
             >
               Rewind the A66 in 20s
+            </Link>
+            <Link
+              href="/watch?case=live"
+              prefetch
+              transitionTypes={["nav-forward"]}
+              className="inline-block rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
+              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+            >
+              Sit the Lake District desk
             </Link>
           </div>
           <p className="mono fade-up mt-16 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "480ms" }}>
@@ -94,9 +106,15 @@ export default function Landing() {
         </section>
       </div>
 
-      <footer className="mono relative z-10 flex justify-center gap-4 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
+      <footer className="mono relative z-10 flex flex-wrap justify-center gap-x-6 gap-y-2 px-6 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
         <Link href="/watch?replay=1" prefetch transitionTypes={["nav-forward"]} className="underline">
           Rewind the A66
+        </Link>
+        <Link href="/watch?case=flood" prefetch transitionTypes={["nav-forward"]} className="underline">
+          Open the flood wedge
+        </Link>
+        <Link href="/watch?case=live" prefetch transitionTypes={["nav-forward"]} className="underline">
+          Sit the Lake District desk
         </Link>
       </footer>
     </main>

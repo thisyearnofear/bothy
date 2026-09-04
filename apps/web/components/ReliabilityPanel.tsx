@@ -24,8 +24,8 @@ const OUTCOME_TONE: Record<string, { color: string; label: string }> = {
   ok: { color: "oklch(72% 0.16 155)", label: "ok" },
   "rate-limited": { color: "oklch(80% 0.14 85)", label: "429" },
   timeout: { color: "oklch(80% 0.14 85)", label: "timeout" },
-  "http-error": { color: "oklch(64% 0.21 25)", label: "http" },
-  "network-error": { color: "oklch(64% 0.21 25)", label: "down" },
+  "http-error": { color: "oklch(80% 0.14 85)", label: "http" },
+  "network-error": { color: "oklch(80% 0.14 85)", label: "down" },
 };
 
 /** Roadmap §1: live-LLM reliability surface. Probes the provider chain and
@@ -48,11 +48,14 @@ export default function ReliabilityPanel({
   const summary = ok && okProvider
     ? `live LLM ok · ${okProvider.id} responded`
     : "all providers down · scripted brain is the failsafe";
+  // A degraded chain is a boring, covered failure — the scripted brain always
+  // answers — so it reads amber, not risk-red. Risk colour maps only to risk.
+  const degraded = !ok;
 
   return (
     <section
       className="mb-4 rounded-lg border px-4 py-3"
-      style={{ borderColor: ok ? "var(--rule)" : "oklch(64% 0.21 25)", background: "var(--panel)" }}
+      style={{ borderColor: degraded ? "oklch(80% 0.14 85)" : "var(--rule)", background: "var(--panel)" }}
       aria-label="LLM reliability"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -60,7 +63,7 @@ export default function ReliabilityPanel({
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
             Reliability · roadmap §1
           </p>
-          <p className="mt-1 text-sm" style={{ color: ok ? "var(--text-body)" : "oklch(80% 0.08 25)" }}>
+          <p className="mt-1 text-sm" style={{ color: ok ? "var(--text-body)" : "oklch(80% 0.14 85)" }}>
             {summary}
           </p>
         </div>

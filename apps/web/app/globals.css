@@ -61,6 +61,97 @@ body {
   outline-offset: 2px;
 }
 
+/* Selection and scrollbars stay inside the palette — the room is one surface. */
+::selection {
+  background: color-mix(in oklch, var(--cursor) 32%, transparent);
+  color: var(--text-strong);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+
+/* Anchor targets land below the edge, not glued to it. */
+#decision-case {
+  scroll-margin-top: 12px;
+}
+
+/* The scrubber is the narrative controller, so it is built as an instrument:
+   a filled track, beat ticks crossing the rail like a ruler, and a thumb that
+   matches the map cursor. Track visuals render *beneath* a transparent input
+   so the native control keeps all pointer/keyboard behaviour. */
+.bothy-range-wrap {
+  position: relative;
+}
+.bothy-range-layer {
+  position: absolute;
+  inset: 0 6px; /* thumb travel is inset by half the thumb width */
+  pointer-events: none;
+}
+.bothy-range-track,
+.bothy-range-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 3px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+.bothy-range-track {
+  right: 0;
+  background: var(--rule);
+}
+.bothy-range-fill {
+  background: var(--cursor);
+  transition: width var(--dur-micro) var(--ease-base);
+}
+input[type="range"].bothy-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"].bothy-range::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  height: 22px;
+  background: transparent;
+}
+input[type="range"].bothy-range::-moz-range-track {
+  height: 22px;
+  background: transparent;
+}
+input[type="range"].bothy-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 5px; /* (22 - 12) / 2 — centred on the rail */
+  border-radius: 50%;
+  background: var(--cursor);
+  border: 2px solid var(--page);
+  box-shadow: 0 0 0 1px var(--rule);
+  transition: transform var(--dur-micro) var(--ease-base);
+}
+input[type="range"].bothy-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cursor);
+  border: 2px solid var(--page);
+  box-shadow: 0 0 0 1px var(--rule);
+  transition: transform var(--dur-micro) var(--ease-base);
+}
+input[type="range"].bothy-range:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+input[type="range"].bothy-range:active::-moz-range-thumb {
+  transform: scale(1.2);
+}
+
 /* Bordered controls lift their border on hover — one consistent affordance. */
 button:not(:disabled):hover {
   border-color: var(--text-faint);

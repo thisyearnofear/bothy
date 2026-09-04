@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Assessment, AuditEntry, EvidenceCitation, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
 import { pipelineLines } from "../lib/derive";
@@ -50,10 +50,23 @@ export default function Detail({
   const [showCase, setShowCase] = useState(false);
   const [officer, setOfficer] = useState("");
   const [copied, setCopied] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setOfficer(readOfficerName());
   }, []);
+
+  // A disabled Approve/Reject is a dead end until the officer types a name.
+  // Pressing either button when unsigned focuses the name field and shows the
+  // hint, so the gate explains itself instead of sitting inert.
+  const attemptSign = (action: "approve" | "reject") => {
+    if (officer.trim()) {
+      if (action === "approve") onApprove(officer.trim());
+      else onReject(officer.trim());
+    } else {
+      nameRef.current?.focus();
+    }
+  };
 
   if (!route || !horizon) {
     return (
@@ -224,11 +237,18 @@ export default function Detail({
           <label className="mt-2 block text-xs" style={{ color: "var(--text-faint)" }}>
             Duty officer name
             <input
+              ref={nameRef}
               id="officer-name"
               value={officer}
               onChange={(e) => {
                 setOfficer(e.target.value);
                 writeOfficerName(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && officer.trim()) {
+                  e.preventDefault();
+                  onApprove(officer.trim());
+                }
               }}
               placeholder={route.actor}
               className="mt-1 w-full rounded border px-2 py-1.5 text-sm"
@@ -253,22 +273,22 @@ export default function Detail({
             <>
               <button
                 id="approve-gate"
-                onClick={() => onApprove(officer.trim())}
-                disabled={!canSign}
+                onClick={() => attemptSign("approve")}
+                disabled={running}
                 className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
               >
                 Approve
               </button>
               <button
-                onClick={() => onReject(officer.trim())}
-                disabled={!canSign}
+                onClick={() => attemptSign("reject")}
+                disabled={running}
                 className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
               >
                 Reject
               </button>
-              <span className="mono w-full text-xs" style={{ color: "var(--text-faint)" }}>
+              <span className="mono w-full text-xs" style={{ color: officer.trim() ? "var(--text-faint)" : "var(--cursor)" }}>
                 {officer.trim() ? `awaiting ${officer.trim()}…` : `type your name to sign for ${route.actor}`}
               </span>
             </>

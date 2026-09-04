@@ -58,6 +58,8 @@ export default function Watch() {
   const assessCtl = useRef(new AbortController());
   const runCtl = useRef<AbortController | null>(null);
   const weatherCtl = useRef<AbortController | null>(null);
+  // The last case the room tried to open — error/empty states retry against it.
+  const lastCase = useRef<CaseId>("live");
   // Chain health is scenario-independent, so the probe lives outside
   // assessCtl — a case load must not cancel it. The rehearsal does write
   // per-case assessments, so it is aborted on case switch like the others.
@@ -133,6 +135,7 @@ export default function Watch() {
 
       setError(null);
       setLoading(true);
+      lastCase.current = id;
       setScenario(null);
       setRoutes([]);
       setAssessments({});
@@ -375,15 +378,34 @@ export default function Watch() {
     }
   };
 
+  const togglePlay = useCallback(() => {
+    if (range.end <= range.start) return;
+    // Playing from the end of the tape restarts it — otherwise a cursor parked
+    // at fullEnd (the flood case opens there) makes play a no-op that reads as
+    // a stuck control.
+    if (!playing && t >= range.end) setT(range.start);
+    setPlaying((p) => !p);
+  }, [playing, range.end, range.start, t]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) {
-        return;
+      const tag = el?.tagName ?? "";
+      const textLike =
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (tag === "INPUT" && (el as HTMLInputElement).type !== "range") ||
+        Boolean(el?.isContentEditable);
+      if (textLike) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (tag === "INPUT") return; // the rail steps beats itself
+        e.preventDefault();
+        step(e.key === "ArrowRight" ? 1 : -1);
+      } else if (e.key === " ") {
+        if (tag === "BUTTON" || tag === "A") return; // native activation owns space there
+        e.preventDefault();
+        togglePlay();
       }
-      e.preventDefault();
-      step(e.key === "ArrowRight" ? 1 : -1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -544,6 +566,13 @@ export default function Watch() {
     <>
       <WatchBackdrop caseId={scenario?.id ?? (tape ? "backtest" : "live")} />
       <main className={`relative z-10 mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-6 xl:p-8${running ? " reasoning-spotlight" : ""}`}>
+      <a
+        href="#decision-case"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:px-3 focus:py-2 focus:text-sm"
+        style={{ borderColor: "var(--cursor)", background: "var(--panel)", color: "var(--text-strong)" }}
+      >
+        Skip to the decision case
+      </a>
       <header
         className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border px-4 py-3"
         style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
@@ -623,7 +652,7 @@ export default function Watch() {
               className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
             >
-              Demo desk
+              Cinema view
             </button>
           )}
         </div>
@@ -632,10 +661,18 @@ export default function Watch() {
       {error && (
         <div
           role="alert"
-          className="mb-3 rounded border p-2 text-sm"
+          className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded border p-2 text-sm"
           style={{ borderColor: "oklch(64% 0.21 25)", background: "oklch(64% 0.21 25 / 0.1)", color: "oklch(80% 0.06 25)" }}
         >
-          {error}
+          <span className="min-w-0">{error}</span>
+          <button
+            type="button"
+            onClick={() => void load(lastCase.current)}
+            className="mono shrink-0 rounded border px-2.5 py-1 text-xs transition-transform active:scale-[0.96]"
+            style={{ borderColor: "oklch(80% 0.06 25)", color: "oklch(80% 0.06 25)" }}
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -654,6 +691,24 @@ export default function Watch() {
               No scenario answered — is the agent running? Nothing is being watched, and nothing will be decided, until
               it returns.
             </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => void load(lastCase.current)}
+                className="rounded-lg border-2 px-4 py-2 text-sm font-medium transition-transform active:scale-[0.96]"
+                style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
+              >
+                Retry the case
+              </button>
+              <Link
+                href="/"
+                transitionTypes={["nav-back"]}
+                className="rounded-lg border px-4 py-2 text-sm transition-transform active:scale-[0.96]"
+                style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
+              >
+                Back to the shelter
+              </Link>
+            </div>
           </div>
         </div>
       ) : (
@@ -870,13 +925,7 @@ export default function Watch() {
                   revealMs={range.outcome}
                   revealText={revealText}
                   playing={playing}
-                  onTogglePlay={() => {
-                    // Playing from the end of the tape restarts it — otherwise a
-                    // cursor parked at fullEnd (the flood case opens there) makes
-                    // play a no-op that reads as a stuck control.
-                    if (!playing && range.end > 0 && t >= range.end) setT(range.start);
-                    setPlaying((p) => !p);
-                  }}
+                  onTogglePlay={togglePlay}
                 />
                 {scenario?.id === "backtest" && (
                   <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
