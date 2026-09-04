@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type SyntheticEvent } from "react";
 
 export type Series = { id: string; color: string; points: [number, number][] }; // [tMs, score0..1]
 export type Beat = { t: number; label: string; delta: number };
@@ -45,7 +45,37 @@ export default function Timeline({
   const revealed = revealMs != null && t >= revealMs;
   const span = endMs - startMs || 1;
   const pct = ((t - startMs) / span) * 100;
+  const atEnd = t >= endMs;
   const latest = [...snaps].filter((s) => s.t <= t).sort((a, b) => a.t - b.t).at(-1);
+
+  // Magnetic snap (dashboard.md lock #3): the drag stays 1:1 direct, and on
+  // release the cursor lands on the nearest beat — signals, the inevitable
+  // point, the outcome, and the two stops.
+  const snapPoints = [
+    startMs,
+    ...snaps.map((s) => s.t),
+    ...(inevitableMs != null ? [inevitableMs] : []),
+    ...(revealMs != null ? [revealMs] : []),
+    endMs,
+  ];
+  const snapToBeat = (v: number) => {
+    const tol = span * 0.0125;
+    let best = v;
+    let bestDist = tol;
+    for (const p of snapPoints) {
+      const d = Math.abs(p - v);
+      if (d < bestDist) {
+        best = p;
+        bestDist = d;
+      }
+    }
+    return best;
+  };
+  const release = (e: SyntheticEvent<HTMLInputElement>) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    const snapped = snapToBeat(v);
+    if (snapped !== v) onSeek(snapped);
+  };
   const tags = layoutTags([
     ...(past ? [{ key: "horizon", ms: horizonMs, label: "beyond agent's view", tone: "mute" as const }] : []),
     ...(latest
@@ -134,6 +164,7 @@ export default function Timeline({
             <button
               onClick={onPrevStep}
               aria-label="Previous signal"
+              title="Previous signal (←)"
               className="rounded border px-2 py-1 text-xs transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
             >
@@ -141,24 +172,48 @@ export default function Timeline({
             </button>
             <button
               onClick={onTogglePlay}
-              aria-label={playing ? "Pause replay" : "Replay the day"}
+              aria-label={playing ? "Pause the replay" : atEnd ? "Replay the day from the start" : "Play the replay"}
               aria-pressed={playing}
-              className="rounded border px-2.5 py-1 text-xs transition-transform active:scale-[0.96]"
+              className="mono min-w-[5.75rem] rounded border px-2.5 py-1 text-center text-xs transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
             >
-              {playing ? "❙❙" : "▶"}
+              {playing ? "❙❙ Pause" : atEnd ? "↺ Replay" : "▶ Play"}
             </button>
             <button
               onClick={onNextStep}
               aria-label="Next signal"
+              title="Next signal (→)"
               className="rounded border px-2 py-1 text-xs transition-transform active:scale-[0.96]"
               style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
             >
               ›
             </button>
           </div>
-          {/* time bubble tracks the thumb */}
-          <div className="relative flex-1">
+          {/* the rail: filled track + beat ticks under the thumb; bubble tracks it */}
+          <div className="bothy-range-wrap flex-1">
+            <div className="bothy-range-layer" aria-hidden="true">
+              <span className="bothy-range-track" />
+              <span className="bothy-range-fill" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+              {snaps.map((s) => {
+                const landed = s.t <= t;
+                return (
+                  <span
+                    key={`tick-${s.t}`}
+                    style={{
+                      position: "absolute",
+                      left: `${((s.t - startMs) / span) * 100}%`,
+                      top: "50%",
+                      width: 1,
+                      height: 7,
+                      transform: "translate(-50%, -50%)",
+                      background: landed ? "var(--cursor)" : "var(--text-faint)",
+                      opacity: landed ? 0.9 : 0.45,
+                      transition: "background var(--dur-standard) var(--ease-base), opacity var(--dur-standard) var(--ease-base)",
+                    }}
+                  />
+                );
+              })}
+            </div>
             <input
               type="range"
               min={startMs}
@@ -166,6 +221,8 @@ export default function Timeline({
               step={1}
               value={t}
               onChange={(e) => onSeek(Number(e.target.value))}
+              onPointerUp={release}
+              onTouchEnd={release}
               onKeyDown={(e) => {
                 if (e.key === "ArrowLeft") {
                   e.preventDefault();
@@ -176,9 +233,9 @@ export default function Timeline({
                 }
               }}
               aria-label="Time"
+              aria-valuetext={fmt(t)}
               id={uid}
-              className="w-full"
-              style={{ accentColor: "var(--cursor)" }}
+              className="bothy-range w-full"
             />
             <span
               className="mono pointer-events-none absolute -top-6 -translate-x-1/2 rounded border px-1.5 py-0.5 text-xs"
@@ -197,10 +254,14 @@ export default function Timeline({
         <div className="mono mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-body)" }}>
           <span>{fmt(startMs)}</span>
           <span aria-hidden="true">
-            {past ? "drag to rewind · hatch ends the agent's view" : "drag to rewind · ← → jumps between signals"}
+            {past ? "drag to rewind · hatch ends the agent's view" : "drag to rewind · ← → beats · space plays"}
           </span>
           <span>{fmt(endMs)}</span>
         </div>
+        {/* the replay narrates itself while playing — one line per landed beat */}
+        <span aria-live="polite" className="sr-only">
+          {playing && latest ? `${fmt(latest.t)} — ${latest.label}` : ""}
+        </span>
       </div>
     </div>
   );

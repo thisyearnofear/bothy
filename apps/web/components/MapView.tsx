@@ -98,6 +98,12 @@ export default function MapView({
   onSelectRef.current = onSelect;
   const lastFollow = useRef<string | null>(null);
   const hoppedReveal = useRef(false);
+  // Per-route draw cache: the replay ticks every 80ms, but an unselected route's
+  // line is full-length and its colour/width only change on selection or hover —
+  // not on every tick. Remember the last (color, width, opacity, pointCount) we
+  // pushed so identical frames become a no-op instead of N setData/setPaintProperty
+  // calls per tick.
+  const drawCache = useRef<Map<string, { color: string; width: number; opacity: number; n: number }>>(new Map());
   const [ready, setReady] = useState(false);
 
   const fraction = endMs > startMs ? Math.max(0, Math.min(1, (cursorMs - startMs) / (endMs - startMs))) : 1;
@@ -213,17 +219,25 @@ export default function MapView({
         }
 
         if (map.getLayer(progId)) {
-          map.setPaintProperty(progId, "line-color", resolveMapLibreColor(on.color));
-          map.setPaintProperty(progId, "line-width", isSel || isHover ? 4 : 3);
-          map.setPaintProperty(progId, "line-opacity", isSel || isHover ? 1 : 0.55);
-        }
-
-        // self-draw: the polyline grows with the elapsed fraction of the day
-        const src = map.getSource(progressSourceId);
-        if (src) {
+          const width = isSel || isHover ? 4 : 3;
+          const opacity = isSel || isHover ? 1 : 0.55;
+          const colorHex = resolveMapLibreColor(on.color);
+          // self-draw: the selected route grows with the elapsed fraction; the
+          // rest stay full-length. Only push a frame when something actually
+          // changed since the last tick — the replay ticks every 80ms.
           const f = isSel ? fraction : 1;
           const n = Math.max(2, Math.ceil(on.route.coords.length * f));
-          src.setData(pathData(on.route.coords.slice(0, n)));
+          const prev = drawCache.current.get(progId);
+          const changed =
+            !prev || prev.color !== colorHex || prev.width !== width || prev.opacity !== opacity || prev.n !== n;
+          if (changed) {
+            map.setPaintProperty(progId, "line-color", colorHex);
+            map.setPaintProperty(progId, "line-width", width);
+            map.setPaintProperty(progId, "line-opacity", opacity);
+            const src = map.getSource(progressSourceId);
+            if (src) src.setData(pathData(on.route.coords.slice(0, n)));
+            drawCache.current.set(progId, { color: colorHex, width, opacity, n });
+          }
         }
       } catch {
         // One rejected route must not skip the rest of the corridors or the camera.

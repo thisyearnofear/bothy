@@ -29,6 +29,10 @@ export default function WatchBackdrop({ caseId }: { caseId: ScenarioId | null })
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let patrolI = 0;
 
+    // Defer the second WebGL context until the browser is idle so the
+    // operational map (the evidence window) gets first paint. Two MapLibre
+    // contexts competing at load makes both feel slow; the backdrop is
+    // atmosphere, not an instrument.
     const patrolStep = () => {
       if (!alive || !map || document.hidden) return;
       const base = PLACES[placeRef.current];
@@ -62,43 +66,50 @@ export default function WatchBackdrop({ caseId }: { caseId: ScenarioId | null })
       if (drift) clearInterval(drift);
       drift = undefined;
     };
-
-    (async () => {
-      const ml = await import("maplibre-gl");
-      if (!alive || !container.current) return;
-      const here = PLACES[placeRef.current];
-      map = new ml.Map({
-        container: container.current,
-        style: ambientMapStyle(),
-        center: here.center,
-        zoom: here.zoom,
-        pitch: here.pitch,
-        bearing: here.bearing,
-        interactive: false,
-        attributionControl: { compact: true },
-        pixelRatio: 1,
-      });
-      mapRef.current = map;
-      map.on("load", () => {
-        if (!alive) return;
-        const dest = PLACES[placeRef.current];
-        try {
-          map.jumpTo(dest);
-        } catch {
-          /* ignore */
-        }
-        startPatrol();
-      });
-    })();
-
     const onVis = () => {
       if (document.hidden) stopPatrol();
       else startPatrol();
     };
+    const build = () => {
+      if (!alive) return;
+      (async () => {
+        const ml = await import("maplibre-gl");
+        if (!alive || !container.current) return;
+        const here = PLACES[placeRef.current];
+        map = new ml.Map({
+          container: container.current,
+          style: ambientMapStyle(),
+          center: here.center,
+          zoom: here.zoom,
+          pitch: here.pitch,
+          bearing: here.bearing,
+          interactive: false,
+          attributionControl: { compact: true },
+          pixelRatio: 1,
+        });
+        mapRef.current = map;
+        map.on("load", () => {
+          if (!alive) return;
+          const dest = PLACES[placeRef.current];
+          try {
+            map.jumpTo(dest);
+          } catch {
+            /* ignore */
+          }
+          startPatrol();
+        });
+      })();
+    };
+    const ric: number =
+      typeof (window as any).requestIdleCallback === "function"
+        ? (window as any).requestIdleCallback(build, { timeout: 1500 })
+        : window.setTimeout(build, 200);
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
       alive = false;
+      if (typeof (window as any).cancelIdleCallback === "function") (window as any).cancelIdleCallback(ric);
+      else clearTimeout(ric);
       document.removeEventListener("visibilitychange", onVis);
       stopPatrol();
       mapRef.current = null;
