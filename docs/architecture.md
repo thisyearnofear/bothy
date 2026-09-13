@@ -147,6 +147,11 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | GET | `/api/subscriptions?scenario=&routeId=` — list + `count` (put the live count in the demo) |
 | POST | `/api/digest/send` — deliver queued `HIGH/ELEVATED` digests (Resend, or log-only; `x-digest-token` optional) |
 | GET | `/api/health` |
+
+> UI contract: the watch room reads posture at the **scrub cursor** —
+> `awake` when any corridor is `ELEVATED/HIGH` — and the shareable
+> `/case/:id` page reads it from **its own assessment's label**. Same words,
+> same breath, both surfaces (see [design.md](design.md) § "Room posture").
 | GET | `/api/llm` |
 | GET | `/api/llm/health` — roadmap §1: probes every configured provider end-to-end and reports whether the scripted fallback is engaged; never throws |
 

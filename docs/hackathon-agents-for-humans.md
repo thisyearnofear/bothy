@@ -3,6 +3,13 @@
 > Track: **Good Neighbor Agents** — helps groups, not just one: neighborhoods,
 > MRT / highways duty teams, schools, small local orgs.
 > Live demo: `npm run seed && npm run dev` → web `:3000` → `/watch?case=flood`.
+>
+> **What makes us win vs ~9k entries:** the room *behaves* like the brief
+> ("runs quietly, surfaces only on a real decision"). Scrub the A66 tape to
+> dawn and the room **rests**; play the day and **watch it wake** as signals
+> land — no other entry demos restraint as a feature. Every shareable
+> `/case/:id` page speaks the same voice and leads with a computed impact
+> number ("flagged 14h 40m before it happened").
 
 ## 1. Text description (Devpost)
 

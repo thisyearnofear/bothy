@@ -67,10 +67,34 @@ score*. The A66 outcome is labelled sourced news beyond the hatch.
 
 On wide screens, compose these as adjacent rails: priority | map + replay |
 decision record. The map receives the most width. On narrow screens, present the
-map and replay first, then the priority queue, then the decision record; this
-preserves the visual story without forcing horizontal controls or hidden data.
+map and replay first, then the decision record, then the priority queue; this
+keeps the call one swipe under the instrument instead of after two tall rails.
 The header is a compact command bar: scenario identity, replay mode, and only
 operator controls.
+
+## Room posture — the Night Watch
+
+The room is not always awake. Posture is derived from data: run quietly in the
+background, surface only when there is a real decision — at the scrub cursor,
+`awake` when any corridor is `ELEVATED/HIGH`, `resting` otherwise.
+
+- **Awake:** the header carries an attention chip ("N corridors need a hand"),
+  the rest of the room eases back (`awake-spotlight` dims the instrument rails
+  so the decision case holds the light), and the approval gate pulses.
+- **Resting:** a quiet header badge ("all quiet · watching N corridors", slow
+  7s breath) and the decision case withholds the gate for a resting notice —
+  `{time} isn't a decision yet; the agent is watching and will only raise a
+  hand when a call is real`. Evidence and draft stay readable; only the
+  *action* is withheld.
+- The shareable `/case/:id` page speaks the same voice: its posture derives
+  from that assessment's label (needs-a-hand vs resting), its CTA follows
+  ("Open the desk and sign" vs "Open the watch room"), and it leads with the
+  computed impact number — `firstCrossed(timeline) → outcomeAt` rendered as
+  "flagged 4h 20m before it happened". The impact sentence only renders when a
+  sourced outcome genuinely exists.
+
+The tape start on the A66 (before signals) is the canonical rest state; let the
+day wake as beats land. That is the brief rendered as behaviour.
 
 ## Motion and spatial atmosphere
 
@@ -154,7 +178,18 @@ This is an on-thesis visual, not a generic dark background.
   transparency. Keep the product above ~0.3 so the fells read as terrain, not
   void.
 - If terrain tiles are unavailable, retain a flat neutral surface and all copy,
-  controls, and navigation.
+  controls, and navigation. `prefers-reduced-data` takes the same door on
+  purpose: the whole cinematic map (MapLibre JS + OSM tile pyramid) stays
+  unloaded on the landing for data-savers, leaving the flat surface with every
+  word and door intact. The watch-room instrument is never gated — only the
+  ambient cinema.
+- Mobile order below `xl` is map → decision → routes, so the call sits one
+  swipe under the instrument. The map is `h-[300px]` on `xs` (instrument first
+  fold, then the gate), stepping to `sm:h-[58vh]` and `xl:h-[min(66vh,760px)]`.
+- Coarse-pointer only: route rows and the approve gate take a 44px floor and
+  the scrub thumb grows — desktop density is untouched.
+- The head preconnects `tile.openstreetmap.org` so the first OSM pyramid
+  resolves before the map ease begins.
 
 ## Cinematic map primitives
 
