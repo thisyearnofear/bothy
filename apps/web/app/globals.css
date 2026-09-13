@@ -241,6 +241,28 @@ button:not(:disabled):hover {
   filter: saturate(0.75);
 }
 
+/* Room posture — Night Watch. When awake (a real decision exists) the rest of
+   the room eases back so the decision case holds the light; a gentle dim that
+   reads as hierarchy, not a hard spotlight, so it never fights the map. */
+.awake-spotlight .spot-dim {
+  opacity: 0.9;
+  filter: saturate(0.92);
+}
+
+/* Resting badge — a slow, low-amplitude breath, felt rather than watched. */
+@keyframes bothy-resting {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+.resting {
+  animation: bothy-resting 7200ms var(--ease-settle) infinite;
+}
+
 /* Scroll reveal for landing sections — enter lifted, settle flat. */
 .reveal {
   opacity: 0;

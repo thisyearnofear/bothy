@@ -23,6 +23,8 @@ export default function Detail({
   traceLines,
   llmAvailable,
   compact,
+  awake,
+  lead,
   onRun,
   onApprove,
   onReject,
@@ -39,6 +41,10 @@ export default function Detail({
   traceLines?: ToolCall[];
   llmAvailable?: boolean;
   compact?: boolean;
+  /** Room posture: false = quiet, no real decision pending. Restrains the gate. */
+  awake?: boolean;
+  /** Lead-time hero, e.g. "4h 20m" — how early risk was flagged before the outcome. */
+  lead?: string;
   onRun: () => void;
   onApprove: (officer: string) => void;
   onReject: (officer: string) => void;
@@ -51,6 +57,7 @@ export default function Detail({
   const [officer, setOfficer] = useState("");
   const [copied, setCopied] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const vowedAwake = awake !== false; // rest only when explicitly told to be dormant
 
   useEffect(() => {
     setOfficer(readOfficerName());
@@ -132,6 +139,11 @@ export default function Detail({
         {assessment && (
           <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>
             engine: {assessment.engine} · confidence <span className="tnum">{assessment.confidence.toFixed(2)}</span>
+          </p>
+        )}
+        {lead && (
+          <p className="mono mt-2 text-sm leading-snug" style={{ color: "var(--cursor)" }}>
+            flagged <span className="font-semibold tnum">{lead}</span> before it happened
           </p>
         )}
       </div>
@@ -233,7 +245,7 @@ export default function Detail({
           </p>
         )}
 
-        {pending && (
+        {pending && vowedAwake && (
           <label className="mt-2 block text-xs" style={{ color: "var(--text-faint)" }}>
             Duty officer name
             <input
@@ -269,7 +281,7 @@ export default function Detail({
               {running ? "Reasoning…" : llmAvailable ? "Run agent (live LLM)" : "Run agent"}
             </button>
           )}
-          {pending && (
+          {pending && vowedAwake && (
             <>
               <button
                 id="approve-gate"
@@ -293,6 +305,19 @@ export default function Detail({
               </span>
             </>
           )}
+
+        {!vowedAwake && (
+          <div className="resting mt-2 rounded border px-3 py-2" style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 60%, transparent)" }}>
+            <p className="text-xs leading-snug" style={{ color: "var(--text-faint)" }}>
+              <span className="mono uppercase tracking-wider" style={{ color: "var(--cursor)" }}>
+                resting
+              </span>
+              {assessment
+                ? ` — ${cursorTime} isn't a decision yet. The agent is watching ${route.name}; it will only raise a hand when a call is real.`
+                : ` — ${cursorTime} is quiet. The agent watches ${route.name}; it will only raise a hand when a call is real.`}
+            </p>
+          </div>
+        )}
         </div>
 
         {decided && assessment && (

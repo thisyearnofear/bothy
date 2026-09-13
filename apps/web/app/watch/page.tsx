@@ -17,7 +17,7 @@ import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
-import { causalHeadline, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
+import { causalHeadline, firstCrossed, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
 import type {
   Assessment,
   AuditEntry,
@@ -54,6 +54,7 @@ export default function Watch() {
   const [tape, setTape] = useState(false);
   const [coach, setCoach] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [subsCount, setSubsCount] = useState(0);
 
   const loadCtl = useRef<AbortController | null>(null);
   const assessCtl = useRef(new AbortController());
@@ -334,6 +335,22 @@ export default function Watch() {
   const selected = routes.find((r) => r.id === selectedId) ?? null;
   const selectedLiveWeather = liveWeather?.routes.find((weather) => weather.routeId === selectedId) ?? null;
   const selectedAssessment = scenario && selectedId ? assessments[assessmentKey(scenario.id, selectedId)] ?? null : null;
+
+  // Room posture — the Night Watch: the room is *quiet* until a corridor is a
+  // real decision (ELEVATED/HIGH at the scrub cursor), then it wakes. This is
+  // the brief rendered as behaviour ("runs quietly, surfaces on a real call").
+  const wakeRows = rows.filter((r) => r.label === "ELEVATED" || r.label === "HIGH");
+  const awake = wakeRows.length > 0;
+  const wakeCount = wakeRows.length;
+
+  // Lead-time hero: when a sourced outcome exists, "flagged X before the closure"
+  // is the impact number a judge remembers. Data-true from the route's own tape.
+  const leadText = useMemo<string | undefined>(() => {
+    if (!scenario?.outcomeAt || !selected) return undefined;
+    const first = firstCrossed(snapshots[selected.id] ?? [], ms(scenario.start));
+    if (!first || ms(first.at) > ms(scenario.outcomeAt)) return undefined;
+    return leadTimeLabel(first.at, scenario.outcomeAt);
+  }, [scenario, selected, snapshots]);
   const selSnap = selected ? snapshotAt(snapshots[selected.id] ?? [], t) : undefined;
   const selHorizon = selected ? snapshotAt(snapshots[selected.id] ?? [], range.horizon) : undefined;
   const selColor = selHorizon ? riskColor(selHorizon.label) : "var(--text-faint)";
@@ -439,6 +456,19 @@ export default function Watch() {
     probeChain();
     return () => probeCtl.current?.abort();
   }, [probeChain]);
+
+  // Community pulse: how many neighbours are on watch across the room. Puts a
+  // live, honest user count on screen (Good Neighbor proof + video evidence).
+  useEffect(() => {
+    const ac = new AbortController();
+    api
+      .subscriptionCount(ac.signal)
+      .then(({ count }) => {
+        if (!ac.signal.aborted) setSubsCount(count);
+      })
+      .catch(() => undefined);
+    return () => ac.abort();
+  }, [scenario?.id]);
 
   // Roadmap §1: rehearse the scripted fallback — force engine "llm" with
   // rehearseFallback, which skips the provider chain and runs the scripted
@@ -566,7 +596,7 @@ export default function Watch() {
   return (
     <>
       <WatchBackdrop caseId={scenario?.id ?? (tape ? "backtest" : "live")} />
-      <main className={`relative z-10 mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-6 xl:p-8${running ? " reasoning-spotlight" : ""}`}>
+      <main className={`relative z-10 mx-auto min-h-screen max-w-[1800px] p-3 sm:p-4 lg:p-6 xl:p-8${running ? " reasoning-spotlight" : ""}${awake && !running ? " awake-spotlight" : ""}`}>
       <a
         href="#decision-case"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:px-3 focus:py-2 focus:text-sm"
@@ -602,6 +632,26 @@ export default function Watch() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2" aria-label="Watch room controls">
+          {awake ? (
+            <span
+              className="mono rounded-lg border px-2.5 py-1 text-xs uppercase tracking-wider"
+              style={{ borderColor: "oklch(64% 0.21 25)", color: "oklch(80% 0.06 25)", background: "oklch(64% 0.21 25 / 0.12)" }}
+            >
+              {wakeCount} corridor{wakeCount === 1 ? "" : "s"} need{wakeCount === 1 ? "s" : ""} a hand
+            </span>
+          ) : (
+            <span
+              className="mono resting rounded-lg border px-2.5 py-1 text-xs uppercase tracking-wider"
+              style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}
+            >
+              all quiet · watching {rows.length} corridors
+            </span>
+          )}
+          {subsCount > 0 && (
+            <span className="mono rounded-lg border px-2.5 py-1 text-xs uppercase tracking-wider" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
+              {subsCount} neighbour{subsCount === 1 ? "" : "s"} on watch
+            </span>
+          )}
           {!compact && (
             <CaseSwitch
               current={scenario?.id ?? null}
@@ -971,6 +1021,8 @@ export default function Watch() {
                   traceLines={traceLines}
                   llmAvailable={llm.length > 0}
                   compact={compact}
+                  awake={awake}
+                  lead={leadText}
                   onRun={run}
                   onApprove={(officer) => void decide("approved", officer)}
                   onReject={(officer) => void decide("rejected", officer)}

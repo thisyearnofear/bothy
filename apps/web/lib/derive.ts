@@ -1,5 +1,5 @@
 import { riskColor, riskLabel } from "../../../packages/shared/src/lib";
-import type { EventKind, EvidenceCitation, RiskSnapshot, RouteInfo } from "../../../packages/shared/src/types";
+import type { EventKind, EvidenceCitation, RiskLabel, RiskSnapshot, RouteInfo } from "../../../packages/shared/src/types";
 
 export const ms = (iso: string) => new Date(iso).getTime();
 
@@ -27,6 +27,20 @@ const KIND_ORDER: EventKind[] = ["warning", "forecast", "road", "traffic", "inci
 /** Heaviest citations first — the score is a weighted stack of reports. */
 export function byWeight(citations: EvidenceCitation[]): EvidenceCitation[] {
   return [...citations].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+}
+
+const LABEL_RANK: Record<RiskLabel, number> = { LOW: 0, MODERATE: 1, ELEVATED: 2, HIGH: 3 };
+
+/** First snapshot at/after the start where the corridor crosses a threshold
+ *  rank (default ELEVATED). Returns that snapshot, or null if never crossed.
+ *  Used for the lead-time hero: between this cross and the sourced outcome. */
+export function firstCrossed(timeline: RiskSnapshot[], atOrAfterMs: number, min: RiskLabel = "ELEVATED"): RiskSnapshot | null {
+  const floor = LABEL_RANK[min];
+  for (const s of timeline) {
+    if (ms(s.at) < atOrAfterMs) continue;
+    if ((LABEL_RANK[s.label] ?? 0) >= floor) return s;
+  }
+  return null;
 }
 
 /** Clip on a word boundary — never mid-word on headlines or citation chips. */
