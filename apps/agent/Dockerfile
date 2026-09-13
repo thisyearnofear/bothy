@@ -6,7 +6,7 @@ ENV HUSKY=0
 COPY package.json package-lock.json ./
 COPY apps/agent/package.json apps/agent/package.json
 COPY apps/web/package.json apps/web/package.json
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY packages/shared packages/shared
 COPY apps/agent apps/agent
