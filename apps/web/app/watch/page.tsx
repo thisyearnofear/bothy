@@ -11,6 +11,7 @@ import IntakeLegend from "../../components/IntakeLegend";
 import NextDoors from "../../components/NextDoors";
 import RoadIngest from "../../components/RoadIngest";
 import ReliabilityPanel, { type ChainHealth } from "../../components/ReliabilityPanel";
+import WatchMyRoad from "../../components/WatchMyRoad";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
@@ -732,6 +733,9 @@ export default function Watch() {
           )}
           {scenario?.id === "live" && !compact && (
             <RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} />
+          )}
+          {selected && !compact && (
+            <WatchMyRoad routeId={selected.id} routeName={selected.name} scenario={scenario?.id ?? "live"} />
           )}
           {nextBeat && (
             <NextDoors

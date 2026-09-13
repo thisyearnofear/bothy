@@ -99,6 +99,12 @@ export const api = {
     opts?: { note?: string; actor?: string },
     signal?: AbortSignal
   ) => post<Assessment>(`/api/assessments/${assessmentId}/decision`, { decision, ...opts }, signal),
+  assessment: (id: string, signal?: AbortSignal) =>
+    get<Assessment & { notifications?: { id: number; route_id: string; label: string; status: string; target: string }[] }>(`/api/assessments/${id}`, signal),
+  subscribe: (body: { routeId: string; email: string; scenario?: string }, signal?: AbortSignal) =>
+    post<{ id: number; routeId: string; routeName: string; count: number }>(`/api/subscriptions`, body, signal),
+  subscriptionCount: (signal?: AbortSignal) =>
+    get<{ subscriptions: unknown[]; count: number }>(`/api/subscriptions`, signal),
   ingestRoad: (
     body: { routeId: string; roadKind: string; headline: string; source?: string; detail?: string; actor?: string },
     signal?: AbortSignal

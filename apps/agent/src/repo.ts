@@ -209,6 +209,77 @@ export async function logAudit(scenario: string, actor: string, action: string, 
   ]);
 }
 
+export interface Subscription {
+  id: number;
+  routeId: string;
+  scenario: string;
+  email: string;
+  channel: string;
+  minLabel: string;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+export function isValidEmail(v: unknown): v is string {
+  return typeof v === "string" && v.length <= 254 && EMAIL_RE.test(v.trim());
+}
+
+export async function createSubscription(routeId: string, email: string, scenario = "live"): Promise<Subscription> {
+  const clean = email.trim().toLowerCase();
+  const { rows } = await q(
+    `INSERT INTO subscriptions (route_id, scenario, email, confirmed_at)
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (route_id, scenario, email)
+     DO UPDATE SET unsubscribed_at = NULL, confirmed_at = COALESCE(subscriptions.confirmed_at, now())
+     RETURNING id, route_id, scenario, email, channel, min_label`,
+    [routeId, scenario, clean]
+  );
+  const r = rows[0] as Row;
+  return { id: r.id as number, routeId: r.route_id as string, scenario: r.scenario as string, email: r.email as string, channel: r.channel as string, minLabel: r.min_label as string };
+}
+
+export async function listSubscriptions(scenario: string, routeId?: string): Promise<Subscription[]> {
+  const { rows } = routeId
+    ? await q(`SELECT id, route_id, scenario, email, channel, min_label FROM subscriptions WHERE scenario = $1 AND route_id = $2 AND unsubscribed_at IS NULL`, [scenario, routeId])
+    : await q(`SELECT id, route_id, scenario, email, channel, min_label FROM subscriptions WHERE scenario = $1 AND unsubscribed_at IS NULL`, [scenario]);
+  return rows.map((x) => {
+    const r = x as Row;
+    return { id: r.id as number, routeId: r.route_id as string, scenario: r.scenario as string, email: r.email as string, channel: r.channel as string, minLabel: r.min_label as string };
+  });
+}
+
+export async function countSubscriptions(): Promise<number> {
+  const { rows } = await q(`SELECT COUNT(*)::int AS n FROM subscriptions WHERE unsubscribed_at IS NULL`);
+  return (rows[0] as Row).n as number;
+}
+
+const LABEL_RANK: Record<string, number> = { LOW: 0, MODERATE: 1, ELEVATED: 2, HIGH: 3 };
+
+/** Queue notifications for subscribers whose threshold the assessment meets. */
+export async function notifySubscribers(a: AssessmentRow): Promise<number> {
+  if ((LABEL_RANK[a.label] ?? 0) < LABEL_RANK.ELEVATED) return 0;
+  const subs = await listSubscriptions(a.scenario, a.routeId);
+  let queued = 0;
+  for (const s of subs) {
+    if ((LABEL_RANK[a.label] ?? 0) < (LABEL_RANK[s.minLabel] ?? LABEL_RANK.ELEVATED)) continue;
+    const { rowCount } = await q(
+      `INSERT INTO notifications (subscription_id, assessment_id, route_id, scenario, label, channel, target)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (subscription_id, assessment_id) DO NOTHING`,
+      [s.id, a.id, a.routeId, a.scenario, a.label, s.channel, s.email]
+    );
+    if ((rowCount ?? 0) > 0) queued++;
+  }
+  if (queued) await logAudit(a.scenario, "bothy-agent", "notify_queued", `${a.routeId} ${a.label}: ${queued} subscriber(s) queued for ${a.id}`);
+  return queued;
+}
+
+export async function listNotifications(assessmentId: string) {
+  const { rows } = await q(`SELECT id, route_id, scenario, label, channel, target, status, created_at, sent_at FROM notifications WHERE assessment_id = $1 ORDER BY id`, [assessmentId]);
+  return rows;
+}
+
+
 export async function listAudit(scenario: string): Promise<AuditEntry[]> {
   const { rows } = await q(`SELECT * FROM audit_log WHERE scenario = $1 ORDER BY at DESC LIMIT 200`, [
     scenario,

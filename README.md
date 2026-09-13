@@ -28,11 +28,15 @@ npm run dev              # agent API :8787 · web :3000
 > Homebrew (downloads ~GBs — not the default on a disk-constrained machine).
 > See [`docs/ops.md`](docs/ops.md) for hosting, production, and security.
 
-No API key needed. The agent's **LLM provider chain** is free-first and
-OpenAI-compatible: a public Qwen HF endpoint → optional Venice AI / OpenRouter /
-any OpenAI-compatible URL / local Ollama — each rate-limited, cached, and tried
-in order, falling back to the deterministic **scripted** brain if none respond.
-Configure providers in `.env` (copy `.env.example`); provider keys are
+No API key needed. The agent loop runs on the **Strands Agents SDK
+(TypeScript)** — `apps/agent/src/agent/strands.ts` wraps the 8 narrow tools as
+Strands `tool({ name, inputSchema: zod, callback })`, points Strands
+`OpenAIModel` at the free-first OpenAI-compatible provider chain (public Qwen HF
+endpoint → optional Venice AI / OpenRouter / any OpenAI-compatible URL / local
+Ollama), and enforces cited sources with a `BeforeToolCallEvent` provenance
+hook. Each provider is tried in order with the trace marked `strands:<provider>`
++ `engine:strands`, falling back to the deterministic **scripted** brain if none
+respond. Configure providers in `.env` (copy `.env.example`); provider keys are
 server-only and must never be committed or exposed to the browser. See
 [`docs/architecture.md`](docs/architecture.md).
 
@@ -40,11 +44,17 @@ server-only and must never be committed or exposed to the browser. See
 
 ```
 apps/web        Next.js · Tailwind · (MapLibre)      — demo surface
-apps/agent      TypeScript API · hand-rolled 5-phase agent loop
+apps/agent      TypeScript API · Strands 5-phase agent loop
 packages/shared shared domain types + helpers
 scripts/        local Postgres bootstrap · pre-commit secret scan
 docs/           architecture, engineering decisions, alignment, roadmap
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE). Required for the Agents for Humans hackathon
+submission (Good Neighbor Agents track); full pack in
+[`docs/hackathon-agents-for-humans.md`](docs/hackathon-agents-for-humans.md).
 
 ## Documentation
 

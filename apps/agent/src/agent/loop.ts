@@ -2,6 +2,7 @@ import { scoreAt } from "../engine/risk";
 import { makeTools, type AgentCtx } from "./tools";
 import { scriptedDraft } from "./scripted";
 import { llmDraft } from "./llm";
+import { strandsDraft } from "./strands";
 import {
   getAssessment,
   listEvents,
@@ -85,10 +86,14 @@ export async function runAssessment(input: RunInput): Promise<AssessmentRow> {
   const tools = makeTools(ctx);
   trace.push({ tool: "pipeline:start", args: { scenario: input.scenario, route: route.id, at: input.at }, at: new Date().toISOString(), ok: true, summary: `loop started for ${route.id}` });
 
-  // brain: try the LLM provider chain, else deterministic scripted
-  const llmDraftRes = input.engine === "llm" && !input.rehearseFallback ? await llmDraft(ctx, tools) : null;
+  // brain: Strands agent first (hackathon track), then provider chain, else scripted
+  const strandsRes = input.engine === "llm" && !input.rehearseFallback ? await strandsDraft(ctx, tools) : null;
+  const llmDraftRes = !strandsRes && input.engine === "llm" && !input.rehearseFallback ? await llmDraft(ctx, tools) : null;
   let assessment: AssessmentRow;
-  if (llmDraftRes) {
+  if (strandsRes) {
+    trace.push({ tool: "engine:strands", args: { provider: strandsRes.providerId }, at: new Date().toISOString(), ok: true, summary: `Strands agent completed via ${strandsRes.providerId}.` });
+    assessment = await finish(ctx, tools, strandsRes.draft, true);
+  } else if (llmDraftRes) {
     assessment = await finish(ctx, tools, llmDraftRes, true);
   } else {
     if (input.engine === "llm") {
@@ -121,6 +126,18 @@ async function finish(ctx: AgentCtx, tools: ReturnType<typeof makeTools>, draft:
   if (!assessment) throw new Error(`assessment ${id} not persisted`);
   assessment.engine = llmUsed ? "llm" : "scripted";
   assessment.phases = ["detect", "retrieve", "reason", "recommend", "act"];
+  // Watch-my-road: queue pings for subscribers when the label is real.
+  // Best-effort — a notify failure must never fail the assessment.
+  try {
+    const { notifySubscribers } = await import("../repo");
+    const queued = await notifySubscribers(assessment);
+    if (queued) {
+      const t = Array.isArray(assessment.toolTrace) ? (assessment.toolTrace as import("../../../../packages/shared/src/types").ToolCall[]) : [];
+      t.push({ tool: "notify:queued", args: { count: queued }, at: new Date().toISOString(), ok: true, summary: `${queued} subscriber(s) queued for digest.` });
+    }
+  } catch (e) {
+    ctx.trace.push({ tool: "notify:queued", args: { error: String((e as Error)?.message ?? e) }, at: new Date().toISOString(), ok: false, summary: "notify queue failed (non-fatal)." });
+  }
   return assessment;
 }
 

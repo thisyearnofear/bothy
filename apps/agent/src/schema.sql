@@ -128,3 +128,38 @@ CREATE INDEX IF NOT EXISTS idx_external_observations_scenario_route_ingested
   ON external_observations (scenario, route_id, ingested_at DESC);
 CREATE INDEX IF NOT EXISTS idx_external_observations_snapshot
   ON external_observations (snapshot_id);
+
+-- Watch-my-road subscriptions (AgentCore Memory pattern: durable
+-- per-community preferences the agent reads before deciding who to notify).
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id           bigserial PRIMARY KEY,
+  route_id     text NOT NULL,
+  scenario     text NOT NULL DEFAULT 'live',
+  email        text NOT NULL,
+  channel      text NOT NULL DEFAULT 'email',
+  min_label    text NOT NULL DEFAULT 'ELEVATED',
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  confirmed_at timestamptz,
+  unsubscribed_at timestamptz,
+  UNIQUE (route_id, scenario, email)
+);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_route ON subscriptions (scenario, route_id);
+
+-- Notification ledger: every ping the agent sends, with the causing assessment.
+CREATE TABLE IF NOT EXISTS notifications (
+  id            bigserial PRIMARY KEY,
+  subscription_id bigint REFERENCES subscriptions (id) ON DELETE CASCADE,
+  assessment_id text NOT NULL REFERENCES assessments (id) ON DELETE CASCADE,
+  route_id      text NOT NULL,
+  scenario      text NOT NULL,
+  label         text NOT NULL,
+  channel       text NOT NULL DEFAULT 'email',
+  target        text NOT NULL,
+  status        text NOT NULL DEFAULT 'queued',
+  error         text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  sent_at       timestamptz,
+  UNIQUE (subscription_id, assessment_id)
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_assessment ON notifications (assessment_id);
+

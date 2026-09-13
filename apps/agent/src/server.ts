@@ -18,7 +18,14 @@ import {
   logAudit,
   insertSignalEvent,
   getRoute,
+  getAssessment,
+  createSubscription,
+  listSubscriptions,
+  countSubscriptions,
+  listNotifications,
+  isValidEmail,
 } from "./repo";
+import { sendDigest } from "./digest";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
 import { hasProviders, providerSummary, rehearseChain } from "./agent/providers";
@@ -261,8 +268,46 @@ app.get("/api/scenario/:scenario/assessments", async (req, res) => {
   res.json(await listAssessments(req.params.scenario));
 });
 
+app.get("/api/assessments/:id", async (req, res) => {
+  const row = await getAssessment(req.params.id);
+  if (!row) return res.status(404).json({ error: "assessment not found" });
+  const notifications = await listNotifications(row.id);
+  res.json({ ...row, notifications });
+});
+
 app.get("/api/scenario/:scenario/audit", async (req, res) => {
   res.json(await listAudit(req.params.scenario));
+});
+
+// Watch-my-road: subscribe an email to one route. Validates route + email,
+// idempotent per (route, scenario, email). This is the marketing funnel AND
+// the Good Neighbor proof: groups get pinged only on real decisions.
+app.post("/api/subscriptions", async (req, res) => {
+  const routeId = typeof req.body.routeId === "string" ? req.body.routeId.trim() : "";
+  const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+  const scenario = req.body.scenario === "flood" || req.body.scenario === "backtest" ? req.body.scenario : "live";
+  if (!routeId) return res.status(400).json({ error: "routeId is required" });
+  if (!isValidEmail(email)) return res.status(400).json({ error: "valid email is required" });
+  const route = await getRoute(scenario, routeId);
+  if (!route) return res.status(404).json({ error: "unknown route for scenario" });
+  const sub = await createSubscription(routeId, email, scenario);
+  await logAudit(scenario, email, "subscribe", `${route.name} (${routeId})`);
+  res.status(201).json({ ...sub, routeName: route.name, count: await countSubscriptions() });
+});
+
+app.get("/api/subscriptions", async (req, res) => {
+  const scenario = typeof req.query.scenario === "string" ? req.query.scenario : "live";
+  const routeId = typeof req.query.routeId === "string" ? req.query.routeId : undefined;
+  res.json({ subscriptions: await listSubscriptions(scenario, routeId), count: await countSubscriptions() });
+});
+
+// Digest trigger: send queued HIGH/ELEVATED notifications. Protect with
+// DIGEST_TOKEN in production (cron + Coolify scheduled job call it).
+app.post("/api/digest/send", async (req, res) => {
+  const token = process.env.DIGEST_TOKEN;
+  const provided = req.headers["x-digest-token"] ?? req.body.token;
+  if (token && provided !== token) return res.status(401).json({ error: "unauthorized" });
+  res.json({ ...(await sendDigest()), at: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
