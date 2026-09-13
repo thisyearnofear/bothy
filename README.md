@@ -84,6 +84,17 @@ the reproducible scripted-agent and validation path.
 
 ## Status
 
+Bothy is an active submission to the **Agents for Humans** hackathon (AWS,
+Good Neighbor Agents track — full pack in
+[`docs/hackathon-agents-for-humans.md`](docs/hackathon-agents-for-humans.md)).
+The agent loop now runs on the **Strands Agents SDK**: 8 narrow tools wrapped
+as zod `tool()`s, a `BeforeToolCallEvent` provenance hook that blocks any
+`create_human_review` without timestamped cited sources, and `OpenAIModel`
+pointed at the free-first provider chain. **Watch-my-road** turns the demo into
+a product: an email input per route, `subscriptions` + `notifications` tables
+(AgentCore Memory pattern), notify-on-`HIGH` digest queue, and shareable
+`/case/:id` pages a stakeholder can forward and sign.
+
 The Kiro Ready, Spec, Ship hackathon is complete; Bothy continues as an ongoing
 project. The agent backend, seed data, API, and the interactive decision-replay
 dashboard are implemented and locally verified. The supplied scenarios are demo

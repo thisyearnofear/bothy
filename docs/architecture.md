@@ -142,6 +142,10 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | POST | `/api/scenario/:id/assess` |
 | POST | `/api/assessments/:id/decision` |
 | GET | `/api/scenario/:id/assessments` · `/api/scenario/:id/audit` |
+| GET | `/api/assessments/:id` — one assessment + its notification ledger (feed for shareable `/case/:id`) |
+| POST | `/api/subscriptions` — watch-my-road signup `{ routeId, email, scenario }`, idempotent, returns subscriber count |
+| GET | `/api/subscriptions?scenario=&routeId=` — list + `count` (put the live count in the demo) |
+| POST | `/api/digest/send` — deliver queued `HIGH/ELEVATED` digests (Resend, or log-only; `x-digest-token` optional) |
 | GET | `/api/health` |
 | GET | `/api/llm` |
 | GET | `/api/llm/health` — roadmap §1: probes every configured provider end-to-end and reports whether the scripted fallback is engaged; never throws |

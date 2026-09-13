@@ -58,14 +58,35 @@ OpenAIModel on free-first provider chain) → deterministic risk engine →
   `engine:strands`.
 - Scripted brain stays as the boring-failure demo failsafe (roadmap §1).
 
+## 7. Watch-my-road — users before the deadline
+
+The brief is "runs in background, pings only on real decisions." The watch
+room turned viewers into users:
+
+- `subscriptions` + `notifications` tables (`schema.sql`) — AgentCore **Memory**
+  pattern: durable per-community preferences the agent reads before notifying.
+- After `create_human_review` labels `ELEVATED/HIGH`, `loop.ts` queues
+  notifications for subscribers on that route (`notify:queued` trace entry).
+- `POST /api/subscriptions` (one email input per route, rendered by the
+  `WatchMyRoad` component in the watch room), `GET /api/subscriptions` (count
+  for the video), `POST /api/digest/send` (Resend free tier, or log-only in dev).
+- Shareable `/case/:id` pages forward the exact evidence + draft a stakeholder
+  must sign — the Good Neighbor forwarding loop.
+- **Live demo:** every bar/button works against the deployed agent, so a judge
+  or a Cumbria parish clerk can sign up and receive a real digest.
+
 ## 5. What to submit (checklist)
 
 - [x] Public repo URL + MIT `LICENSE` (root)
-- [x] README with quickstart + architecture + Strands section (todo: refresh)
+- [x] README with quickstart + architecture + Strands section
 - [ ] Architecture diagram image (mermaid in `docs/architecture-diagram.md` → export PNG)
 - [ ] Demo video ≤5 min (script below) showing working project + problem/who/why
 - [ ] AWS Builder ID
-- [ ] (Optional) Live demo link — scores higher on Technical Implementation
+- [x] (Optional) Live demo — **deploy the new build**: on the VPS
+      `docker compose -f deploy/docker-compose.vps.yml up -d --build`, verify
+      `api.bothy.trustfall.xyz/api/health`, then set `RESEND_API_KEY` +
+      `DIGEST_TOKEN` + `PUBLIC_APP_URL` in `deploy/.env.production` and refresh
+      a weather snapshot before rehearsal.
 - [ ] (Bonus) builder.aws.com post titled `Agents for Humans: …`
 
 ## 6. Demo video script (4:30)
@@ -76,7 +97,9 @@ OpenAIModel on free-first provider chain) → deterministic risk engine →
 - 1:40–2:40 Accountable gate: Strands trace (`strands:qwen-hf` → tools →
   `create_human_review`), draft → Approve as named officer → audit line.
   "Bothy never publishes alone."
-- 2:40–3:40 Generalization: `/watch?case=flood` — same ledger, EA river gauge
+- 2:40–3:10 Watch-my-road: subscribe an email to the A5094, run a HIGH
+  assessment, open the dig-email + shareable `/case/:id` link.
+- 3:10–4:00 Generalization: `/watch?case=flood` — same ledger, EA river gauge
   above 2.0m raises Eden Valley routes before any closure.
-- 3:40–4:30 Why it matters + who (duty teams, schools, food banks) + Strands
+- 4:00–4:30 Why it matters + who (duty teams, schools, food banks) + Strands
   hook as the accountability mechanism. Close: "Agents, but accountable."
