@@ -842,7 +842,10 @@ export default function Watch() {
             key={scenario?.id}
             className={`grid items-start gap-4 ${compact ? "xl:grid-cols-[minmax(160px,0.46fr)_minmax(0,2fr)_minmax(240px,0.78fr)]" : "xl:grid-cols-[minmax(220px,0.66fr)_minmax(0,1.8fr)_minmax(300px,0.88fr)]"}`}
           >
-            <aside className="stage-in spot-dim order-2 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
+          {/* Mobile below xl: map -> decision -> routes, so the call-to-action
+              sits one swipe under the instrument instead of after two tall rails.
+              Desktop xl keeps priority | map+replay | decision (docs/design.md). */}
+            <aside className="stage-in spot-dim order-3 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
               <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
@@ -871,7 +874,7 @@ export default function Watch() {
 
             <section className="stage-in spot-dim order-1 min-w-0 space-y-4 xl:order-2" style={{ ["--stage" as string]: 0 }}>
               <section
-                className="relative h-[470px] overflow-hidden rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)]"
+                className="relative h-[300px] overflow-hidden rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)]"
                 style={{ borderColor: "var(--rule)" }}
                 aria-label="Route risk map"
               >
@@ -1004,7 +1007,7 @@ export default function Watch() {
             </section>
 
             <aside
-              className="stage-in order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
+              className="stage-in order-2 xl:order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
               style={{ ["--stage" as string]: 3 }}
             >
               <section id="decision-case" className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>

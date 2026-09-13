@@ -249,6 +249,26 @@ button:not(:disabled):hover {
   filter: saturate(0.92);
 }
 
+/* Coarse-pointer touch targets: route rows, the gate, and the timeline thumb
+   grow to the 44px floor on touch devices only — desktop keeps its density. */
+@media (pointer: coarse) {
+  .bothy-range {
+    height: 34px;
+  }
+  input[type="range"].bothy-range::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: 6px;
+  }
+  input[type="range"].bothy-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  .coarse-target {
+    min-height: 44px;
+  }
+}
+
 /* Resting badge — a slow, low-amplitude breath, felt rather than watched. */
 @keyframes bothy-resting {
   0%,

@@ -43,7 +43,7 @@ export default function RiskList({
               onFocus={() => onHover?.(r.routeId)}
               onBlur={() => onHover?.(null)}
               aria-pressed={selected}
-              className="w-full rounded-lg border px-3 py-2 text-left transition-colors"
+              className="coarse-target w-full rounded-lg border px-3 py-2 text-left transition-colors"
               style={{
                 borderColor: selected ? "var(--text-faint)" : "var(--rule)",
                 background: selected ? "var(--panel)" : "transparent",

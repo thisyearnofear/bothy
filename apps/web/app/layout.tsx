@@ -5,6 +5,9 @@ import "./globals.css";
 export const viewport: Viewport = {
   colorScheme: "dark",
   themeColor: "#1d1f26",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -54,6 +57,12 @@ const structuredData = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Tile host + fonts-free pipeline: preconnect once so the first OSM
+            pyramid resolves before the map ease begins (measured win on mobile). */}
+        <link rel="preconnect" href="https://tile.openstreetmap.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
+      </head>
       <body>
         {children}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />

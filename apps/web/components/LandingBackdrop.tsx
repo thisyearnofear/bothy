@@ -33,6 +33,11 @@ export default function LandingBackdrop() {
     let map: any;
     let drift: ReturnType<typeof setInterval> | undefined;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Mobile data-saver: skip the cinematic map + tile pyramid entirely. The
+    // flat scrim surface is the documented fallback (docs/design.md) — copy,
+    // controls, and navigation stay; only the tiles leave.
+    const dataSaver = window.matchMedia("(prefers-reduced-data: reduce)").matches;
+    if (dataSaver) return;
 
     const HERO: CamKey = { id: "hero", center: [-3.1, 54.5], zoom: 9.0, pitch: 35, bearing: -18 };
     // a slow patrol: long eases between neighbouring fells — the camera while the reader is still

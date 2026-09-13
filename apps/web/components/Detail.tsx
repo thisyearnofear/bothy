@@ -287,7 +287,7 @@ export default function Detail({
                 id="approve-gate"
                 onClick={() => attemptSign("approve")}
                 disabled={running}
-                className="awaiting-pulse rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96] disabled:opacity-50"
+                className="awaiting-pulse coarse-target rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-transform active:scale-[0.96] disabled:opacity-50"
                 style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
               >
                 Approve
