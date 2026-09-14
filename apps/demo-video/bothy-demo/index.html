@@ -531,10 +531,10 @@
             // Use CSS vars for the position so GSAP doesn't fight inline transform
             pin.style.cssText = `position:absolute; left:${xpct}%; top:${ypct}%; transform:translate(-50%,-50%) scale(0.4); pointer-events:none; opacity:0; will-change:transform, opacity;`;
             pin.innerHTML = `
-              <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:60px; height:60px; border-radius:50%; background:${color}; opacity:0.18;"></div>
-              <div class="pin-halo" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:36px; height:36px; border-radius:50%; background:${color}; opacity:0.45;"></div>
-              <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:18px; height:18px; border-radius:50%; background:${color}; box-shadow:0 0 12px ${color};"></div>
-              <div style="position:absolute; left:50%; top:-18px; transform:translate(-50%,-100%); font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:700; letter-spacing:2px; color:${color}; white-space:nowrap; text-shadow:0 2px 8px rgba(0,0,0,0.9);">${b.clock}</div>
+              <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:90px; height:90px; border-radius:50%; background:${color}; opacity:0.16;"></div>
+              <div class="pin-halo" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:54px; height:54px; border-radius:50%; background:${color}; opacity:0.45;"></div>
+              <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:26px; height:26px; border-radius:50%; background:${color}; box-shadow:0 0 18px ${color};"></div>
+              <div style="position:absolute; left:50%; top:-22px; transform:translate(-50%,-100%); font-family:'JetBrains Mono', monospace; font-size:24px; font-weight:700; letter-spacing:2px; color:${color}; white-space:nowrap; text-shadow:0 2px 10px rgba(0,0,0,0.95);">${b.clock}</div>
             `;
             container.appendChild(pin);
             // Use a tween on the pin directly (single channel: transform)
