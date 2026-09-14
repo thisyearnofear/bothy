@@ -1,9 +1,0 @@
-node_modules/
-.DS_Store
-*.log
-.env
-.env.local
-# HyperFrames generated artifacts (large; regenerable)
-snapshots/
-*.mp4
-.contact-sheet-*.jpg

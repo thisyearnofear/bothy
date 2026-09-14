@@ -7,3 +7,15 @@ dist/
 .env.production
 .DS_Store
 *.tsbuildinfo
+
+# Screenshots / video frames at the repo root (not part of the app)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.mp4
+/*.mov
+
+# Demo video pipeline — local-only, not part of the app
+apps/demo-video/
