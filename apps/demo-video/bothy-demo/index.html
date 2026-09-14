@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Bothy — Agents, but accountable</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/MorphSVGPlugin.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --bg: #07080b;
+        --bg-2: #0d1016;
+        --ink: #e8eaf0;
+        --ink-2: #a4abb9;
+        --ink-3: #6b7280;
+        --line: rgba(255,255,255,0.08);
+        --line-2: rgba(255,255,255,0.16);
+        --accent: #f4d35e;          /* winter amber */
+        --accent-2: #ee964b;        /* orange */
+        --high: #ef4444;            /* HIGH red */
+        --elev: #f59e0b;            /* ELEVATED amber */
+        --mod: #eab308;             /* MODERATE yellow */
+        --low: #64748b;             /* LOW grey */
+        --good: #4ade80;            /* signed/green */
+      }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px; overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        font-feature-settings: 'cv11','ss01','ss03';
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        width: 100%; height: 100%;
+        position: relative;
+      }
+
+      /* ---------- Shared clip frame ---------- */
+      .clip {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        overflow: hidden;
+      }
+
+      /* ---------- Typography ---------- */
+      .display {
+        font-weight: 700; letter-spacing: -0.035em; line-height: 0.96;
+      }
+      .h1 { font-size: 144px; }
+      .h2 { font-size: 96px; }
+      .h3 { font-size: 64px; }
+      .h4 { font-size: 38px; line-height: 1.05; }
+      .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: 'zero','ss02'; }
+      .eyebrow {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 18px; letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .uppercase { text-transform: uppercase; letter-spacing: 0.12em; }
+
+      /* ---------- Scene: Pre-rest (room monitor) ---------- */
+      #pre-rest { background: radial-gradient(ellipse at 50% 60%, #0d1016 0%, #050608 70%); }
+      #breath {
+        position: absolute; left: 50%; top: 50%; width: 14px; height: 14px;
+        margin: -7px 0 0 -7px; border-radius: 50%;
+        background: var(--good); opacity: 0.85;
+        box-shadow: 0 0 32px rgba(74, 222, 128, 0.6);
+      }
+      #breath-ring {
+        position: absolute; left: 50%; top: 50%; width: 14px; height: 14px;
+        margin: -7px 0 0 -7px; border-radius: 50%;
+        border: 1px solid rgba(74, 222, 128, 0.4);
+      }
+      #room-line {
+        position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%);
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 22px; letter-spacing: 0.18em; text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      #room-meta {
+        position: absolute; right: 80px; top: 80px; text-align: right;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 16px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--ink-3);
+      }
+
+      /* ---------- Scene: Problem (landing hero) ---------- */
+      #problem { background: var(--bg); }
+      #problem-bg {
+        position: absolute; inset: 0;
+        background-image: url('assets/stills/06-landing.png');
+        background-size: cover; background-position: center;
+        opacity: 0.18; filter: blur(0.4px) saturate(0.8);
+      }
+      #problem-vignette {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 40% 55%, transparent 30%, rgba(7,8,11,0.85) 100%);
+      }
+      .problem-line { position: absolute; left: 96px; color: var(--ink); }
+      #problem-eyebrow { top: 120px; }
+      #problem-headline { top: 175px; max-width: 1300px; }
+      #problem-headline .accent { color: var(--accent); }
+      #problem-subhead { top: 600px; max-width: 1200px; color: var(--ink-2); font-size: 34px; line-height: 1.25; font-weight: 400; letter-spacing: -0.01em; }
+      #problem-tag { position: absolute; right: 96px; top: 120px; text-align: right; }
+      #problem-tag .pill {
+        display: inline-block; padding: 8px 14px; border: 1px solid var(--line-2);
+        border-radius: 999px; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--ink-2); font-family: 'JetBrains Mono', monospace;
+        margin-left: 8px;
+      }
+      #problem-tag .pill.live {
+        border-color: rgba(74, 222, 128, 0.5); color: var(--good);
+      }
+      #problem-doors {
+        position: absolute; left: 96px; bottom: 96px;
+        display: flex; gap: 14px;
+      }
+      .door {
+        padding: 14px 20px; border: 1px solid var(--line-2); border-radius: 12px;
+        font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 0.16em;
+        text-transform: uppercase; color: var(--ink-2);
+        background: rgba(255,255,255,0.02);
+      }
+      .door .arrow { color: var(--accent); margin-right: 8px; }
+
+      /* ---------- Scene: Rest→Wake scrub ---------- */
+      #wake { background: var(--bg); }
+      .wake-stage {
+        position: absolute; left: 96px; right: 96px; top: 96px; bottom: 96px;
+        border-radius: 14px; overflow: hidden;
+        background: var(--bg-2); border: 1px solid var(--line);
+        box-shadow: inset 0 0 0 2px rgba(244,211,94,0.0);
+        transition: box-shadow 0.6s ease;
+      }
+      .wake-stage.woke { box-shadow: inset 0 0 0 2px rgba(244,211,94,0.45); }
+      .wake-stage img {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+        opacity: 0;
+        filter: brightness(1.18) contrast(1.06) saturate(1.1);
+      }
+      #wake-fade {
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(7,8,11,0.0) 60%, rgba(7,8,11,0.85) 100%);
+        pointer-events: none;
+      }
+      .wake-overlay {
+        position: absolute; inset: 0; pointer-events: none;
+      }
+      .wake-topbar {
+        position: absolute; left: 0; right: 0; top: 0;
+        padding: 22px 32px; display: flex; justify-content: space-between; align-items: center;
+        background: linear-gradient(180deg, rgba(7,8,11,0.85) 0%, transparent 100%);
+      }
+      .wake-topbar .label {
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--ink-3);
+      }
+      .wake-topbar .label.live { color: var(--good); }
+      .wake-topbar .label .dot {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        background: currentColor; margin-right: 8px;
+        box-shadow: 0 0 12px currentColor;
+      }
+      .wake-tl {
+        position: absolute; left: 32px; right: 32px; bottom: 28px; height: 6px;
+        background: rgba(255,255,255,0.06); border-radius: 999px;
+      }
+      .wake-tl-fill {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+        background: linear-gradient(90deg, var(--good) 0%, var(--elev) 60%, var(--high) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 18px rgba(245,158,11,0.5);
+      }
+      .wake-tl-beats {
+        position: absolute; left: 32px; right: 32px; bottom: 50px; height: 28px;
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      .beat {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: rgba(255,255,255,0.18);
+        transition: background 0.4s, transform 0.4s, box-shadow 0.4s;
+      }
+      .beat.on {
+        background: var(--accent); transform: scale(1.8);
+        box-shadow: 0 0 24px var(--accent);
+      }
+      .beat.on.high { background: var(--high); box-shadow: 0 0 24px var(--high); }
+      .beat.on.mod { background: var(--mod); box-shadow: 0 0 24px var(--mod); }
+      .beat.on.elev { background: var(--elev); box-shadow: 0 0 24px var(--elev); }
+      .wake-label {
+        position: absolute; left: 32px; bottom: 96px;
+        font-family: 'JetBrains Mono', monospace; font-size: 28px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--ink);
+        text-shadow: 0 2px 16px rgba(0,0,0,0.7);
+      }
+      .wake-label .score {
+        font-weight: 700; margin-left: 18px; font-size: 32px;
+      }
+      .wake-label .score.low { color: var(--low); }
+      .wake-label .score.mod { color: var(--mod); }
+      .wake-label .score.elev { color: var(--elev); }
+      .wake-label .score.high { color: var(--high); }
+
+      /* The rest-state breath overlay (drawn over the dashboard during rest→wake first 8s) */
+      #wake-breath-veil {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 50% 60%, rgba(7,8,11,0.3) 0%, rgba(7,8,11,0.85) 100%);
+      }
+      /* Vertical scrub line that sweeps across the stage as time advances */
+      #wake-scrub-line {
+        position: absolute; top: 0; bottom: 0; width: 2px;
+        background: linear-gradient(180deg, transparent 0%, var(--accent) 30%, var(--accent) 70%, transparent 100%);
+        box-shadow: 0 0 16px var(--accent), 0 0 32px rgba(244,211,94,0.4);
+        left: 0%;
+        opacity: 0;
+      }
+      /* The big "now" clock over the dashboard */
+      #wake-clock {
+        position: absolute; left: 32px; top: 80px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 96px; font-weight: 700; letter-spacing: -0.04em;
+        color: var(--ink);
+        text-shadow: 0 4px 28px rgba(0,0,0,0.7);
+        line-height: 1;
+      }
+      #wake-clock .sub {
+        display: block; font-size: 16px; font-weight: 400;
+        letter-spacing: 0.18em; text-transform: uppercase;
+        color: var(--ink-2); margin-top: 10px;
+      }
+
+      /* Caption strip (used for silent-cut subtitle overlay) */
+      .caption-strip {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        padding: 28px 96px 56px;
+        background: linear-gradient(180deg, transparent 0%, rgba(7,8,11,0.92) 60%);
+      }
+      .caption-strip .speaker {
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+      }
+      .caption-strip .line {
+        font-size: 32px; line-height: 1.18; font-weight: 400; color: var(--ink); max-width: 1500px;
+      }
+
+      /* ---------- Scene: Approve gate ---------- */
+      #approve { background: var(--bg); }
+      #approve-stage {
+        position: absolute; left: 96px; right: 96px; top: 96px; bottom: 200px;
+        border-radius: 14px; overflow: hidden;
+        background: var(--bg-2); border: 1px solid var(--line);
+      }
+      #approve-stage img {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+      }
+      #approve-stage .scan {
+        position: absolute; inset: 0;
+        background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 4px);
+        pointer-events: none;
+      }
+      #approve-hl {
+        position: absolute; left: 96px; right: 96px; bottom: 220px;
+        padding: 24px 32px;
+        border: 1px solid var(--good); border-radius: 14px;
+        background: rgba(74,222,128,0.06);
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      #approve-hl .left { display: flex; align-items: center; gap: 18px; }
+      #approve-hl .seal {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: var(--good); color: var(--bg);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px; font-weight: 700;
+      }
+      #approve-hl .who { font-size: 22px; color: var(--ink); font-weight: 600; }
+      #approve-hl .who .role { color: var(--ink-2); font-weight: 400; font-size: 16px; margin-left: 12px; }
+      #approve-hl .time { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--ink-3); }
+
+      /* Strands trace overlay (slides up briefly over the approve) */
+      #strands {
+        position: absolute; left: 96px; right: 96px; bottom: 220px;
+        padding: 24px 32px;
+        background: rgba(13,16,22,0.96); border: 1px solid var(--line-2); border-radius: 14px;
+        font-family: 'JetBrains Mono', monospace; font-size: 16px; line-height: 1.6;
+        color: var(--ink-2);
+      }
+      #strands .step { display: flex; gap: 14px; }
+      #strands .step .ix { color: var(--ink-3); width: 28px; }
+      #strands .step .nm { color: var(--accent); }
+      #strands .step .tools { color: var(--ink); }
+      #strands .step .tools .t { color: var(--ink-2); margin-right: 10px; }
+      #strands .step .guard { color: var(--good); font-weight: 600; }
+
+      /* ---------- Scene: Case page ---------- */
+      #case-share { background: var(--bg); }
+      #case-stage {
+        position: absolute; left: 96px; right: 700px; top: 96px; bottom: 200px;
+        border-radius: 14px; overflow: hidden;
+        background: var(--bg-2); border: 1px solid var(--line);
+      }
+      #case-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      #case-card {
+        position: absolute; right: 96px; top: 96px; width: 580px; bottom: 200px;
+        padding: 32px;
+        background: rgba(13,16,22,0.96); border: 1px solid var(--line-2); border-radius: 14px;
+        display: flex; flex-direction: column; gap: 18px;
+      }
+      #case-card .label { font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }
+      #case-card .lead { font-size: 76px; line-height: 0.95; font-weight: 800; color: var(--high); letter-spacing: -0.025em; }
+      #case-card .lead .small { font-size: 0.45em; color: var(--ink-2); font-weight: 400; display: block; margin: 12px 0 0; letter-spacing: 0; }
+      #case-card .lead .small.tiny { font-size: 0.32em; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 16px; }
+      #case-card .sub { font-size: 22px; line-height: 1.25; color: var(--ink); }
+      #case-card .pill {
+        display: inline-block; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      #case-card .pill.live { border-color: rgba(74,222,128,0.4); color: var(--good); }
+      #case-card .meta { display: grid; grid-template-columns: auto 1fr; column-gap: 18px; row-gap: 8px; font-size: 16px; color: var(--ink-2); }
+      #case-card .meta .k { color: var(--ink-3); font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+      #case-card .subscribe {
+        margin-top: auto;
+        padding: 14px 18px; border: 1px solid var(--line-2); border-radius: 12px;
+        display: flex; align-items: center; gap: 14px;
+      }
+      #case-card .subscribe input {
+        flex: 1; background: transparent; border: none; outline: none;
+        color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 16px;
+      }
+      #case-card .subscribe .count {
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--good);
+      }
+
+      /* ---------- Scene: Flood generalization ---------- */
+      #flood { background: var(--bg); }
+      #flood-stage {
+        position: absolute; left: 96px; right: 96px; top: 96px; bottom: 96px;
+        border-radius: 14px; overflow: hidden; background: var(--bg-2); border: 1px solid var(--line);
+      }
+      #flood-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      #flood-legend {
+        position: absolute; left: 96px; top: 96px; padding: 16px 22px;
+        background: rgba(13,16,22,0.92); border: 1px solid var(--line-2); border-radius: 12px;
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      #flood-compare {
+        position: absolute; right: 96px; top: 96px; padding: 18px 22px;
+        background: rgba(13,16,22,0.92); border: 1px solid var(--line-2); border-radius: 12px;
+        font-size: 18px; line-height: 1.4; color: var(--ink); max-width: 520px;
+      }
+      #flood-compare .key { color: var(--accent); }
+
+      /* ---------- Scene: Closer ---------- */
+      #closer { background: radial-gradient(ellipse at 50% 50%, #0d1016 0%, #050608 70%); }
+      #closer-frame {
+        position: absolute; left: 96px; right: 96px; top: 96px; bottom: 96px;
+        border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+      }
+      #closer-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
+      #closer-frame .scrim {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 50% 55%, transparent 0%, rgba(7,8,11,0.7) 90%);
+      }
+      #closer-line {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        text-align: center;
+      }
+      #closer-line .label {
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.4em;
+        text-transform: uppercase; color: var(--accent); margin-bottom: 24px;
+      }
+      #closer-line .words {
+        font-size: 168px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95;
+        color: var(--ink);
+      }
+      #closer-line .words .accent { color: var(--accent); }
+      #closer-sub {
+        position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%);
+        font-size: 26px; color: var(--ink-2); text-align: center; max-width: 1100px; line-height: 1.35;
+      }
+      #closer-credits {
+        position: absolute; left: 96px; bottom: 56px;
+        font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--ink-3);
+      }
+      #closer-cta {
+        position: absolute; right: 96px; bottom: 56px;
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.16em;
+        text-transform: uppercase; color: var(--ink-2);
+      }
+      #closer-cta .pill {
+        display: inline-block; padding: 8px 14px; border: 1px solid var(--accent); border-radius: 999px;
+        color: var(--accent); margin-left: 10px;
+      }
+
+      /* CRT scanline vignette used in some scenes */
+      .scanlines {
+        position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+        mix-blend-mode: multiply;
+      }
+      .vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="bothy-demo" data-start="0" data-duration="270" data-width="1920" data-height="1080">
+
+      <!-- ============================================================== -->
+      <!-- SCENE 0a · Pre-rest (room monitor, 0:00–0:15) -->
+      <!-- ============================================================== -->
+      <div id="pre-rest" class="clip" data-start="0" data-duration="15" data-track-index="0">
+        <div id="room-meta">
+          <div>Bothy · Watch Room</div>
+          <div style="margin-top:6px;">2026-02-12 · 00:00</div>
+        </div>
+        <div id="breath"></div>
+        <div id="breath-ring"></div>
+        <div id="room-line">all quiet · watching 3 corridors</div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 0b · Problem (landing hero, 0:15–0:45) -->
+      <!-- ============================================================== -->
+      <div id="problem" class="clip" data-start="15" data-duration="30" data-track-index="0">
+        <div id="problem-bg"></div>
+        <div id="problem-vignette"></div>
+        <div id="problem-tag">
+          <div style="margin-bottom:8px;">
+            <span class="pill live">● LIVE</span>
+            <span class="pill">AWS · AGENTS-FOR-HUMANS</span>
+          </div>
+          <div style="margin-top:14px; font-family: 'JetBrains Mono', monospace; font-size:16px; letter-spacing:0.18em; color:var(--ink-3);">BOTHY · v0.4</div>
+        </div>
+        <div id="problem-eyebrow" class="problem-line eyebrow">The hill is loud. The duty desk is alone.</div>
+        <div id="problem-headline" class="problem-line display h1">
+          The agent watches the hill.<br>
+          <span class="accent">The human owns the call.</span>
+        </div>
+        <div id="problem-subhead" class="problem-line">
+          Noise tools broadcast. Autonomous tools over-promise.<br>
+          Bothy sits in the accountable middle.
+        </div>
+        <div id="problem-doors">
+          <div class="door"><span class="arrow">→</span> Live desk</div>
+          <div class="door"><span class="arrow">→</span> Winter replay</div>
+        </div>
+        <div class="vignette"></div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 1 · Rest→Wake scrub (0:45–2:00 = 75s) -->
+      <!-- ============================================================== -->
+      <div id="wake" class="clip" data-start="45" data-duration="75" data-track-index="0">
+        <div class="wake-stage">
+          <img id="wake-img-1" src="assets/stills/01-dawn.png" alt="">
+          <img id="wake-img-2" src="assets/stills/02-yellow.png" alt="">
+          <img id="wake-img-3" src="assets/stills/03-elevated.png" alt="">
+          <img id="wake-img-4" src="assets/stills/04-high.png" alt="">
+          <img id="wake-img-5" src="assets/stills/05-closure.png" alt="">
+          <div id="wake-breath-veil"></div>
+          <div id="wake-clock">00:00<span class="sub">▍ 12 Feb 2026 · A66 Brough–Bowes</span></div>
+          <div id="wake-scrub-line"></div>
+          <div class="wake-overlay">
+            <div class="wake-topbar">
+              <div class="label"><span class="dot"></span> Winter Watch · A66 Brough–Bowes</div>
+              <div class="label live"><span class="dot"></span> agent running</div>
+              <div class="label">12 Feb 2026 · 00:00 → 23:40</div>
+            </div>
+            <div id="wake-label" class="wake-label">
+              <span id="wake-label-text">scrub · press play · watch the room wake</span>
+              <span id="wake-label-score" class="score low">LOW · 0.18</span>
+            </div>
+            <div class="wake-tl-beats">
+              <div class="beat" data-ix="0"></div>
+              <div class="beat" data-ix="1"></div>
+              <div class="beat" data-ix="2"></div>
+              <div class="beat" data-ix="3"></div>
+              <div class="beat" data-ix="4"></div>
+            </div>
+            <div class="wake-tl"><div id="wake-tl-fill" class="wake-tl-fill"></div></div>
+          </div>
+        </div>
+        <div class="caption-strip">
+          <div class="speaker">▍ VO — Bothy (1/6) · Rest → Wake</div>
+          <div class="line" id="wake-caption">At dawn, nothing is a decision. The agent runs quietly, watching three corridors. Press play — and watch the room wake.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 2 · Approve gate (2:00–2:55 = 55s) -->
+      <!-- ============================================================== -->
+      <div id="approve" class="clip" data-start="120" data-duration="55" data-track-index="0">
+        <div id="approve-stage">
+          <img src="assets/stills/11-watch-approved.png" alt="">
+          <div class="scan"></div>
+          <div class="vignette"></div>
+        </div>
+        <div id="strands">
+          <div class="step"><span class="ix">01</span><span class="nm">strands:qwen-hf</span> · invoke retrieve_weather()</div>
+          <div class="step"><span class="ix">02</span><span class="tools"><span class="t">fetch_national_highways</span><span class="t">fetch_ea_gauges</span><span class="t">read_past_incidents</span></span></div>
+          <div class="step"><span class="ix">03</span><span>causal chain · 6 cited signals · 0.97 confidence</span></div>
+          <div class="step"><span class="ix">04</span><span class="guard">provenanceGuard: ✓ every claim has source + timestamp — blocking create_human_review otherwise</span></div>
+          <div class="step"><span class="ix">05</span><span class="nm">create_human_review()</span> · queues <span class="tools">A66 Brough–Bowes · HIGH · needs officer sign-off</span></div>
+        </div>
+        <div id="approve-hl">
+          <div class="left">
+            <div class="seal">✓</div>
+            <div>
+              <div class="who">Demo Officer · Hackathon Take<span class="role">— Duty Officer</span></div>
+              <div style="font-size:16px; color:var(--ink-2); margin-top:4px;">Confirmed via Bothy Approve · A66 closure risk verified · nothing publishes alone</div>
+            </div>
+          </div>
+          <div class="time">2026-02-12 · 21:30 UTC · audit · signed</div>
+        </div>
+        <div class="caption-strip">
+          <div class="speaker">▍ VO — Bothy (2/6) · The accountable gate</div>
+          <div class="line">The agent drafts. A named officer signs. Nothing publishes alone — the Strands hook blocks any review without cited sources.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 3 · Watch-my-road + case page (2:55–3:35 = 40s) -->
+      <!-- ============================================================== -->
+      <div id="case-share" class="clip" data-start="175" data-duration="40" data-track-index="0">
+        <div id="case-stage">
+          <img src="assets/stills/11-watch-approved.png" alt="">
+          <div class="vignette"></div>
+        </div>
+        <div id="case-card">
+          <div class="label">▍ SHAREABLE CASE · /case/a-backtest-r-A66…</div>
+          <div class="lead">flagged<span class="small">14h 40m</span><span class="small tiny">before it happened</span></div>
+          <div>
+            <span class="pill live">● APPROVED</span>
+            <span class="pill" style="margin-left:8px;">A66 · HIGH 0.97</span>
+          </div>
+          <div class="meta">
+            <div class="k">Raised</div><div>2026-02-12 · 09:00</div>
+            <div class="k">Outcome</div><div>2026-02-12 · 23:40 (A66 closed)</div>
+            <div class="k">Cited</div><div>6 sources · 5 timestamps</div>
+            <div class="k">Signed</div><div>Demo Officer · Hackathon Take</div>
+            <div class="k">Action</div><div>needs a hand — forward to parish desk</div>
+          </div>
+          <div class="subscribe">
+            <input value="parish.clerk@appleby.cumbria.example" readonly>
+            <span class="count">▍ 2 neighbours on watch</span>
+          </div>
+        </div>
+        <div class="caption-strip">
+          <div class="speaker">▍ VO — Bothy (3/6) · Watch my road</div>
+          <div class="line">For the parish clerk, the school office, the food bank — one email, pinged only on a real decision, forwardable as a signed case.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 4 · Flood generalization (3:35–4:05 = 30s) -->
+      <!-- ============================================================== -->
+      <div id="flood" class="clip" data-start="215" data-duration="30" data-track-index="0">
+        <div id="flood-stage">
+          <img src="assets/stills/08-flood.png" alt="">
+          <div class="vignette"></div>
+        </div>
+        <div id="flood-legend">EDEN VALLEY · EA RIVER GAUGES · 16:00</div>
+        <div id="flood-compare">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;">same ledger · different wedge</div>
+          <div><span class="key">Snow → closure</span> on the A66</div>
+          <div style="margin-top:6px;"><span class="key">Rain → river 2.0m</span> → flood warning → Eden Valley roads</div>
+          <div style="margin-top:14px; color:var(--ink-2); font-size:16px;">One pipeline generalizes. That's the Good Neighbor story.</div>
+        </div>
+        <div class="caption-strip">
+          <div class="speaker">▍ VO — Bothy (4/6) · Generalize</div>
+          <div class="line">River gauges instead of snow. Same agent, same ledger, same gate — no new contract.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCENE 5 · Closer (4:05–4:30 = 25s) -->
+      <!-- ============================================================== -->
+      <div id="closer" class="clip" data-start="245" data-duration="25" data-track-index="0">
+        <div id="closer-frame">
+          <img src="assets/stills/07-live-desk.png" alt="">
+          <div class="scrim"></div>
+        </div>
+        <div id="closer-line">
+          <div class="label">▍ bothy.trustfall.xyz</div>
+          <div class="words">Agents, but <span class="accent">accountable.</span></div>
+        </div>
+        <div id="closer-sub">A missed closure strands families on the A66. A missed river rise floods the valley.<br>Hours of monitoring become one signed decision — with receipts.</div>
+        <div id="closer-credits">AWS · AGENTS-FOR-HUMANS · 2026</div>
+        <div id="closer-cta">DEMO<span class="pill">bothy.trustfall.xyz</span></div>
+      </div>
+
+    </div>
+
+    <script>
+      // ----------------------------------------------------------------
+      // Build the single paused timeline with all scene choreography.
+      // The HyperFrames renderer seeks this timeline; every tween that
+      // animates "live" content during render must live on it.
+      // ----------------------------------------------------------------
+      const tl = gsap.timeline({ paused: true });
+
+      // ---- Initial states (so seek(0) renders correctly) ----
+      gsap.set(['#wake-img-1','#wake-img-2','#wake-img-3','#wake-img-4','#wake-img-5'], { opacity: 0 });
+      gsap.set('#wake-breath-veil', { opacity: 1 });
+      gsap.set('#wake-tl-fill', { width: '0%' });
+      gsap.set('#wake-label-score', { color: '#64748b' });
+      gsap.set('.beat', { opacity: 0.4, scale: 1 });
+
+      // ---- Pre-rest (0–15s) — gentle room breath ----
+      // Breath dot pulses; the ring expands and fades, repeated twice.
+      tl.to('#breath', { scale: 1.0, opacity: 0.85, duration: 3.2, yoyo: true, repeat: 2, ease: 'sine.inOut' }, 0);
+      tl.to('#breath-ring', { scale: 14, opacity: 0, duration: 3.2, repeat: 3, ease: 'sine.out' }, 0);
+
+      // ---- Scene 0b — Problem (15–45s) ----
+      tl.fromTo('#problem-eyebrow', { opacity: 0 }, { opacity: 1, duration: 1.0, ease: 'power2.out' }, 16);
+      tl.fromTo('#problem-headline', { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 1.4, ease: 'power3.out' }, 17);
+      tl.fromTo('#problem-subhead', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' }, 19);
+      tl.fromTo('#problem-doors .door', { opacity: 0, y: 14 }, { opacity: 1, y: 0, stagger: 0.2, duration: 0.8, ease: 'power3.out' }, 22);
+      tl.fromTo('#problem-tag .pill', { opacity: 0, x: 14 }, { opacity: 1, x: 0, stagger: 0.18, duration: 0.7, ease: 'power3.out' }, 21);
+
+      // ---- Scene 1 — Rest→Wake (45–120s) ----
+      // Timeline fill sweeps across the duration of the scene
+      tl.to('#wake-tl-fill', { width: '100%', duration: 75, ease: 'none' }, 45);
+
+      // Scrub line sweeps from left to right (the desk's eye tracking the day)
+      tl.to('#wake-scrub-line', { opacity: 1, duration: 0.8, ease: 'power2.out' }, 50);
+      // Stage width is 1728px (1920 - 96*2). Animate from x=0 to x=1728 via transform.
+      tl.fromTo('#wake-scrub-line', { x: 0 }, { x: 1728, duration: 70, ease: 'none' }, 50);
+      tl.to('#wake-scrub-line', { opacity: 0, duration: 1.2, ease: 'power2.in' }, 117);
+
+      // Rest veil clears as we "press play"; the stage edges light up
+      tl.to('#wake-breath-veil', { opacity: 0, duration: 2.5, ease: 'power2.inOut' }, 50);
+      tl.add(() => document.querySelector('.wake-stage').classList.add('woke'), 52);
+
+      // Big clock over the dashboard animates 00:00 → 23:40 across the scene
+      tl.to({}, {
+        duration: 70, ease: 'none',
+        onUpdate: function() {
+          const totalSec = (this.progress() * 23 * 3600) + (this.progress() * 40 * 60);
+          const h = Math.floor(totalSec / 3600);
+          const m = Math.floor((totalSec % 3600) / 60);
+          const s = Math.floor(totalSec % 60);
+          const pad = (n) => String(n).padStart(2, '0');
+          document.getElementById('wake-clock').firstChild.textContent = `${pad(h)}:${pad(m)}`;
+        }
+      }, 50);
+
+      // Five beat moments: dawn → YELLOW → ELEVATED → HIGH → CLOSURE
+      const beats = [
+        { ix: 0, img: '#wake-img-1', at: 48, clock: '00:00', label: 'scrub · press play · watch the room wake', score: 'LOW · 0.18', cls: 'low' },
+        { ix: 1, img: '#wake-img-2', at: 60, clock: '04:00', label: '04:00 · Met Office YELLOW warning', score: 'MODERATE · 0.32', cls: 'mod' },
+        { ix: 2, img: '#wake-img-3', at: 76, clock: '09:00', label: '09:00 · 18 cm snow forecast', score: 'ELEVATED · 0.71', cls: 'elev' },
+        { ix: 3, img: '#wake-img-4', at: 95, clock: '19:00', label: '19:00 · speeds fell 70% on the A66', score: 'HIGH · 0.86', cls: 'high' },
+        { ix: 4, img: '#wake-img-5', at: 108, clock: '19:30', label: '19:30 · A66 Stainmore — drifting snow', score: 'HIGH · 0.97', cls: 'high' }
+      ];
+      beats.forEach((b) => {
+        // Pre-set fade-in for the stills
+        tl.to(b.img, { opacity: 1, duration: 1.6, ease: 'power2.inOut' }, b.at);
+        // The previous beat fades out so the latest one dominates
+        if (b.ix > 0) {
+          tl.to(`#wake-img-${b.ix}`, { opacity: 0.0, duration: 1.6, ease: 'power2.inOut' }, b.at);
+        }
+        // The timeline beat dot lights up
+        tl.to(`.beat[data-ix="${b.ix}"]`, {
+          opacity: 1, scale: 2.0, duration: 0.6, ease: 'power2.out',
+          backgroundColor: b.cls === 'high' ? '#ef4444' : b.cls === 'elev' ? '#f59e0b' : b.cls === 'mod' ? '#eab308' : '#64748b'
+        }, b.at);
+        // Label + score swap
+        tl.call(() => {
+          document.getElementById('wake-label-text').textContent = b.label;
+          const s = document.getElementById('wake-label-score');
+          s.textContent = b.score;
+          s.className = 'score ' + b.cls;
+        }, [], b.at);
+      });
+      // After the last beat, set the final outcome label
+      tl.call(() => {
+        document.getElementById('wake-label-text').textContent = '23:40 · A66 closed · drift + recovery';
+        const s = document.getElementById('wake-label-score');
+        s.textContent = 'OUTCOME · 14h 40m';
+        s.className = 'score high';
+      }, [], 118);
+
+      // ---- Scene 2 — Approve gate (120–175s) ----
+      // Strands overlay slides up, then yields to the audit line
+      tl.fromTo('#strands', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, ease: 'power3.out' }, 121);
+      tl.to('#strands', { opacity: 0, y: -10, duration: 0.8, ease: 'power2.in' }, 140);
+      tl.fromTo('#approve-hl', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0, ease: 'power3.out' }, 142);
+      // Subtle scanline pulse so the screen feels "monitor on"
+      tl.to('#approve-stage .scan', { opacity: 0.35, duration: 1.4, yoyo: true, repeat: 4, ease: 'sine.inOut' }, 120);
+
+      // ---- Scene 3 — Case share (175–215s) ----
+      tl.fromTo('#case-stage', { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 1.2, ease: 'power3.out' }, 176);
+      tl.fromTo('#case-card', { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 1.2, ease: 'power3.out' }, 178);
+      tl.to('#case-card .subscribe .count', { opacity: 0.4, duration: 0.8, yoyo: true, repeat: 4, ease: 'sine.inOut' }, 188);
+
+      // ---- Scene 4 — Flood (215–245s) ----
+      tl.fromTo('#flood-stage', { scale: 1.04, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 2.0, ease: 'power2.out' }, 215);
+      tl.fromTo('#flood-legend', { y: -14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }, 216);
+      tl.fromTo('#flood-compare', { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 1.0, ease: 'power3.out' }, 218);
+
+      // ---- Scene 5 — Closer (245–270s) ----
+      tl.fromTo('#closer-line .label', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0, ease: 'power3.out' }, 246);
+      tl.fromTo('#closer-line .words', { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 1.4, ease: 'power3.out' }, 247);
+      tl.fromTo('#closer-sub', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0, ease: 'power3.out' }, 250);
+      tl.fromTo('#closer-credits', { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 254);
+      tl.fromTo('#closer-cta', { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 254);
+      tl.to('#closer-line .accent', {
+        textShadow: '0 0 28px #f4d35e', duration: 0.4, yoyo: true, repeat: 3, ease: 'sine.inOut'
+      }, 258);
+
+      // ----------------------------------------------------------------
+      // Register the master timeline for the HyperFrames renderer to seek
+      // ----------------------------------------------------------------
+      window.__timelines["bothy-demo"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
