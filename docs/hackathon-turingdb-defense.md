@@ -300,7 +300,7 @@ worth continuing after the weekend.
 ### Weekend-scope bright line (for "what did you achieve during the hackathon?")
 
 Pre-existing (do NOT claim as weekend work): Bothy Postgres ledger, 5-source fusion, risk scoring, timeline scrubber UX, approval gate, A66 backtest.
-Weekend-built (the claim): TuringDB import of the ledger, `DEPENDS_ON`/`SUPPLIES`/`NEAR` edges from `logistics_risk` (+ optionally `power_plants`), `get_blast_radius` Cypher tool, replay-at-T + simulate-branch + diff, updated scrubber reading snapshots, EDTH deck + demo video.
+Weekend-built (the claim): `supply_chain_deep` + `logistics_risk` + `power_plants` wired as the defense graph; 8-scenario catalogue with verified Cypher; `get_blast_radius` + `replay_at` agent tools (Strands-wrapped); `/api/graph/*` (query/history/simulate/diff/witness/bench/scenarios); watch-room GraphPanel with guided Blast→Replay→Simulate + witness export; public `/witness/:hash` share links; no-DB `/api/loop/*` digest loop + `/digest` wall; pilot funnel (`/pilot` + counter) + one-pager; EY talk-track + pitch script + jury crib.
 Mentor check (Friday): validate the logistics-resilience wedge + data sensitivity with a mentor before building; keep everything within legal/ethical/export-control bounds; flag anything unclear to organizers.
 
 ## GTM motion + EY engagement plan
