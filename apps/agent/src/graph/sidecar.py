@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -6,8 +7,8 @@ from urllib.parse import urlparse, parse_qs
 
 from turingdb import TuringDB
 
-TURING_HOST = "http://localhost:6677"
-PORT = 6777
+TURING_HOST = os.environ.get("TURING_HOST", "http://localhost:6677")
+PORT = int(os.environ.get("PORT", "6777"))
 
 client = TuringDB(host=TURING_HOST)
 

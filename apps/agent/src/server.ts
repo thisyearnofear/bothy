@@ -251,13 +251,41 @@ app.post("/api/graph/simulate", async (req, res) => {
 });
 
 // ---- Defense scenario catalogue + bench + witness-pack -------------------------
-// In-memory witness chain (hash-linked evidence packs, last 100). Postgres
-// follow-up: persist to a witness_packs(hash, prev, at, pack) table so the
-// chain survives restarts; the API shape already matches that migration.
+// Durable state: witness chain, loop subs/digests, and pilot counter persist in
+// a local SQLite file (DATA_DIR/bothy-loop.db, default ./data/). Postgres
+// remains the system of record when reachable (best-effort mirrors); SQLite is
+// what survives restarts on venue floors with no tunnel. No new npm deps —
+// better-sqlite3 would be nicer but this ships via node:sqlite-free SQL using
+// the zero-dep `node:sqlite` module on Node 22+.
 import { createHash } from "crypto";
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 interface WitnessEntry { hash: string; prev: string | null; at: string; pack: unknown }
-const witnessChain: WitnessEntry[] = [];
-const witnessByHash = new Map<string, WitnessEntry>();
+// Cwd-independent: resolve next to the agent package (apps/agent/data) so the
+// same SQLite file is used whether the agent is launched from the repo root or
+// the package dir — durability must not depend on how you started it.
+const DATA_DIR = process.env.BOTHY_DATA_DIR ?? fileURLToPath(new URL("../data/", import.meta.url));
+mkdirSync(DATA_DIR, { recursive: true });
+const loopDb = new DatabaseSync(join(DATA_DIR, "bothy-loop.db"));
+loopDb.exec(`CREATE TABLE IF NOT EXISTS witness (hash TEXT PRIMARY KEY, prev TEXT, at TEXT, pack TEXT);
+CREATE TABLE IF NOT EXISTS loop_subs (email TEXT, route_id TEXT, scenario TEXT, at TEXT, PRIMARY KEY (email, route_id));
+CREATE TABLE IF NOT EXISTS loop_digests (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient TEXT, subject TEXT, body TEXT, case_href TEXT, at TEXT);
+CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, n INTEGER);
+INSERT OR IGNORE INTO counters (name, n) VALUES ('pilot_fallback', 0);`);
+const witnessByHash = new Map<string, WitnessEntry>(
+  (loopDb.prepare(`SELECT hash, prev, at, pack FROM witness ORDER BY rowid`).all() as { hash: string; prev: string | null; at: string; pack: string }[])
+    .map((r) => [r.hash, { hash: r.hash, prev: r.prev, at: r.at, pack: JSON.parse(r.pack) } as WitnessEntry]),
+);
+const witnessPrev = (): string | null => {
+  const row = loopDb.prepare(`SELECT hash FROM witness ORDER BY rowid DESC LIMIT 1`).get() as { hash: string } | undefined;
+  return row?.hash ?? null;
+};
+const saveWitness = (e: WitnessEntry) => {
+  loopDb.prepare(`INSERT OR IGNORE INTO witness (hash, prev, at, pack) VALUES (?, ?, ?, ?)`).run(e.hash, e.prev, e.at, JSON.stringify(e.pack));
+  witnessByHash.set(e.hash, e);
+};
 
 app.get("/api/graph/scenarios", async (_req, res) => {
   try {
@@ -351,15 +379,10 @@ app.post("/api/graph/witness", async (req, res) => {
       rows: Array.isArray(req.body.rows) ? (req.body.rows as unknown[]).slice(0, 50) : [],
       at: new Date().toISOString(),
     };
-    const prev = witnessChain.length ? witnessChain[witnessChain.length - 1].hash : null;
+    const prev = witnessPrev();
     const hash = createHash("sha256").update(JSON.stringify({ prev, pack })).digest("hex");
     const entry: WitnessEntry = { hash, prev, at: pack.at, pack };
-    witnessChain.push(entry);
-    witnessByHash.set(hash, entry);
-    while (witnessChain.length > 100) {
-      const dropped = witnessChain.shift();
-      if (dropped) witnessByHash.delete(dropped.hash);
-    }
+    saveWitness(entry);
     res.status(201).json({ hash, prev, at: pack.at, pack });
   } catch (e) {
     res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
@@ -375,15 +398,14 @@ app.get("/api/graph/witness/:hash", async (req, res) => {
   res.json({ ...entry, links: { page: `/witness/${entry.hash}`, rerun: pack.scenarioId ? `/watch?scenario=${pack.scenarioId}` : "/watch" } });
 });
 
-// ---- No-DB digest loop (venue-proof distribution) ---------------------------
-// In-memory subscriptions + digest queue + rendered digest view. Postgres
-// remains the system of record when reachable; every write below is mirrored
-// best-effort into subscriptions/notifications tables and degrades silently.
+// ---- Digest loop (SQLite-durable; Postgres mirror best-effort) ----------------
 interface LoopSub { email: string; routeId: string; scenario: string; at: string }
-interface LoopDigest { id: string; to: string; subject: string; body: string; caseHref: string; at: string }
-const loopSubs: LoopSub[] = [];
-const loopDigests: LoopDigest[] = [];
-let loopDigestId = 0;
+const getSubs = (routeId?: string): LoopSub[] => {
+  const rows = (routeId
+    ? loopDb.prepare(`SELECT email, route_id AS routeId, scenario, at FROM loop_subs WHERE route_id = ?`).all(routeId)
+    : loopDb.prepare(`SELECT email, route_id AS routeId, scenario, at FROM loop_subs`).all()) as unknown as LoopSub[];
+  return rows;
+};
 
 app.post("/api/loop/subscribe", async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
@@ -391,14 +413,16 @@ app.post("/api/loop/subscribe", async (req, res) => {
   const scenario = typeof req.body.scenario === "string" ? req.body.scenario.trim().slice(0, 40) : "defense";
   if (!isValidEmail(email)) return res.status(400).json({ error: "valid email is required" });
   if (!routeId) return res.status(400).json({ error: "routeId (lane / scenario id) is required" });
-  if (!loopSubs.some((s) => s.email === email && s.routeId === routeId)) {
-    loopSubs.push({ email, routeId, scenario, at: new Date().toISOString() });
+  if (!getSubs(routeId).some((s) => s.email === email)) {
+    loopDb.prepare(`INSERT OR IGNORE INTO loop_subs (email, route_id, scenario, at) VALUES (?, ?, ?, ?)`)
+      .run(email, routeId, scenario, new Date().toISOString());
   }
   try {
     const { q } = await import("./db");
     await q(`INSERT INTO subscriptions (route_id, email, scenario) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [routeId, email, scenario]);
-  } catch { /* venue has no tunnel — memory is the record */ }
-  res.status(201).json({ ok: true, count: loopSubs.filter((s) => s.routeId === routeId).length, total: loopSubs.length });
+  } catch { /* venue has no tunnel — SQLite is the record */ }
+  const lane = getSubs(routeId);
+  res.status(201).json({ ok: true, count: lane.length, total: getSubs().length });
 });
 
 app.post("/api/loop/notify", async (req, res) => {
@@ -409,30 +433,45 @@ app.post("/api/loop/notify", async (req, res) => {
   const summary = typeof req.body.summary === "string" ? req.body.summary.trim().slice(0, 500) : "";
   const caseHref = typeof req.body.caseHref === "string" ? req.body.caseHref.trim().slice(0, 300) : "/watch";
   if (!routeId) return res.status(400).json({ error: "routeId is required" });
-  const targets = loopSubs.filter((s) => s.routeId === routeId);
+  const targets = getSubs(routeId);
+  const ins = loopDb.prepare(`INSERT INTO loop_digests (recipient, subject, body, case_href, at) VALUES (?, ?, ?, ?, ?)`);
+  const at = new Date().toISOString();
   for (const t of targets) {
-    loopDigestId += 1;
-    loopDigests.push({
-      id: `d-${loopDigestId}`,
-      to: t.email,
-      subject: `Bothy: ${routeId} is ${label}`,
-      body: `${summary}\n\nReview and forward: ${caseHref}\n\nBothy drafts; a duty officer approves.`,
+    ins.run(
+      t.email,
+      `Bothy: ${routeId} is ${label}`,
+      `${summary}\n\nReview and forward: ${caseHref}\n\nBothy drafts; a duty officer approves.`,
       caseHref,
-      at: new Date().toISOString(),
-    });
+      at
+    );
   }
   res.status(201).json({ ok: true, queued: targets.length });
 });
 
 app.get("/api/loop/digest", async (_req, res) => {
   // Public log-only digest wall: proves the loop fires without email infra.
-  res.json({ digests: loopDigests.slice(-20).reverse(), subs: loopSubs.length });
+  const digests = loopDb
+    .prepare(`SELECT id, recipient AS "to", subject, body, case_href AS caseHref, at FROM loop_digests ORDER BY id DESC LIMIT 20`)
+    .all();
+  const { n } = loopDb.prepare(`SELECT COUNT(*) AS n FROM loop_subs`).get() as { n: number };
+  res.json({ digests, subs: n });
 });
 
-// Pilot-interest funnel: validated email + audit-log count. Postgres-backed,
-// with an in-memory fallback counter so the GTM funnel survives without a DB
-// (hackathon floors have no tunnels). The audit write is best-effort.
-let pilotFallbackCount = 0;
+// Pilot-interest funnel: Postgres audit-log when reachable, SQLite counter
+// otherwise (merged), so the GTM number never resets on a venue floor.
+const bumpPilot = () => {
+  loopDb.exec(`UPDATE counters SET n = n + 1 WHERE name = 'pilot_fallback'`);
+  return (loopDb.prepare(`SELECT n FROM counters WHERE name = 'pilot_fallback'`).get() as { n: number }).n;
+};
+const pilotPgCount = async (): Promise<number | null> => {
+  try {
+    const { q } = await import("./db");
+    const { rows } = await q(`SELECT COUNT(*)::int AS n FROM audit_log WHERE action = 'pilot_interest'`);
+    return (rows[0] as { n: number }).n;
+  } catch {
+    return null;
+  }
+};
 app.post("/api/pilot-interest", async (req, res) => {
   const name = typeof req.body.name === "string" ? req.body.name.trim().slice(0, 120) : "";
   const org = typeof req.body.org === "string" ? req.body.org.trim().slice(0, 160) : "";
@@ -442,25 +481,21 @@ app.post("/api/pilot-interest", async (req, res) => {
   if (!isValidEmail(email)) return res.status(400).json({ error: "valid email is required" });
   const role = typeof req.body.role === "string" ? req.body.role.trim().slice(0, 120) : "";
   const note = typeof req.body.note === "string" ? req.body.note.trim().slice(0, 500) : "";
-  try {
-    await logAudit("live", email.toLowerCase(), "pilot_interest", `${name} <${email}> @ ${org}${role ? ` (${role})` : ""}${note ? ` — ${note}` : ""}`);
-    const { q } = await import("./db");
-    const { rows } = await q(`SELECT COUNT(*)::int AS n FROM audit_log WHERE action = 'pilot_interest'`);
-    return res.status(201).json({ ok: true, count: (rows[0] as { n: number }).n });
-  } catch {
-    pilotFallbackCount += 1;
-    return res.status(201).json({ ok: true, count: pilotFallbackCount, degraded: true });
+  const pg = await pilotPgCount();
+  if (pg != null) {
+    try {
+      await logAudit("live", email.toLowerCase(), "pilot_interest", `${name} <${email}> @ ${org}${role ? ` (${role})` : ""}${note ? ` — ${note}` : ""}`);
+      const after = (await pilotPgCount()) ?? pg;
+      return res.status(201).json({ ok: true, count: after, degraded: false });
+    } catch { /* mirror failed — fall through */ }
   }
+  return res.status(201).json({ ok: true, count: bumpPilot(), degraded: true });
 });
 
 app.get("/api/pilot-interest/count", async (_req, res) => {
-  try {
-    const { q } = await import("./db");
-    const { rows } = await q(`SELECT COUNT(*)::int AS n FROM audit_log WHERE action = 'pilot_interest'`);
-    return res.json({ count: (rows[0] as { n: number }).n });
-  } catch {
-    return res.json({ count: pilotFallbackCount, degraded: true });
-  }
+  const pg = await pilotPgCount();
+  const { n } = loopDb.prepare(`SELECT n FROM counters WHERE name = 'pilot_fallback'`).get() as { n: number };
+  return res.json({ count: Math.max(n, pg ?? 0), degraded: pg == null });
 });
 
 app.get("/api/llm", (_req, res) => {

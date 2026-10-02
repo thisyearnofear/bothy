@@ -12,6 +12,12 @@ dist/
 graphs/
 !graphs/README.md
 
+# Local durable loop state (SQLite: witness chain, digests, counters)
+apps/agent/data/
+
+# Python bytecode
+__pycache__/
+
 # Screenshots / video frames at the repo root (not part of the app)
 /*.png
 /*.jpg

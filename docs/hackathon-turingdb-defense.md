@@ -5,6 +5,8 @@
 > Status: **built & verified (venue floor)** — Postgres + PostGIS ledger intact;
 > TuringDB graph layer wired alongside it and curl-verified live. See
 > "What shipped" below. Graphs are runtime data (`graphs/README.md`), not committed.
+> Venue start/health: `bash scripts/venue.sh`. Follow-on prize track:
+> [hackathon-nebius-nvidia.md](hackathon-nebius-nvidia.md) (30 Oct deadline, after EDTH).
 
 ## What shipped (verified live, Oct 2026 — venue floor, no Postgres tunnel)
 
@@ -25,11 +27,43 @@ Primary wedge: `supply_chain_deep` (133k nodes / 764k edges) + `logistics_risk`
 | GTM: EY talk-tracks, 5 discovery Qs, pipeline tracker, pitch script, jury crib | this doc + one-pager | written, numbers sourced |
 
 Distribution loop (Thiel): blast → witness link → QR scan → re-run → pilot form
-→ digest lane → forward. Print QRs per hero scenario at the desk (packs live in
-server memory — regenerate Saturday morning, don't restart the agent mid-day).
+→ digest lane → forward. Generate the printable QR targets with
+`bash scripts/witness-qr.sh` → `apps/agent/data/witness-sheet.html`.
 
-Known limits: witness/digest/pilot-counter are in-memory (restart wipes);
-Postgres ledger needs its tunnel (graph half runs standalone — lead with defense).
+Known limits: Postgres ledger needs its tunnel (graph half runs standalone —
+lead with defense). Witness chain, digests, pilot counter are **SQLite-durable**
+(`apps/agent/data/bothy-loop.db`, verified across a full agent restart).
+
+## Venue runbook (the unbreakable starting state)
+
+One command brings all four services up, idempotent, with health gates:
+
+```bash
+bash scripts/venue.sh          # start (TuringDB → sidecar → agent → web) + warm graphs
+bash scripts/venue.sh status   # health of all four, colour-coded
+bash scripts/venue.sh stop     # stop agent/sidecar; TuringDB left running
+bash scripts/witness-qr.sh     # fresh witness packs + printable QR sheet
+```
+
+- **Detached, not fragile.** Services are launched through
+  `scripts/daemonize.py` (`os.setsid`) so they survive Ctrl-C, terminal close,
+  and process-group kills — `nohup` alone does not, because macOS `nohup` children
+  share the launching process group.
+- **Durable state.** Witness chain, loop digests, and the pilot counter live in
+  SQLite keyed beside the agent (`DATA_DIR` resolves from `import.meta.url`, so it
+  is the same file regardless of cwd). Verified: write → `venue.sh stop` → start →
+  all three still read back.
+- **Warm graphs.** Startup runs a count query per graph so the first demo query
+  is not the cold one (bench ~265ms warm vs ~450ms cold).
+- **Failure modes and fallbacks:**
+
+| Symptom | Likely cause | Fallback |
+|---|---|---|
+| sidecar fail | `graphs/supply_chain_deep` missing | see `graphs/README.md` (clone the pack) |
+| agent fail | Postgres tunnel down on a floor | graph routes never depend on it; pilot/digest degrade to SQLite (they report `degraded:true`) |
+| web fail | Next still compiling | `status` again after ~10s; check `/tmp/web-venue.log` |
+| QR page 404 | agent restarted **and** SQLite wiped | re-run `witness-qr.sh` (regenerates packs) |
+| bench slow (>500ms) | cold graph | `venue.sh start` re-warms, or `status` then re-run |
 
 ## Thesis
 
