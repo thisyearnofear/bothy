@@ -26,6 +26,8 @@ const SearchSchema = z.object({
   limit: z.number().optional(),
 });
 const AreaSchema = z.object({ area: z.string().optional() });
+const BlastSchema = z.object({ kind: z.string().optional(), target: z.string().optional() });
+const ReplaySchema = z.object({ commit: z.string().optional(), query: z.string().optional() });
 const ReviewSchema = z.object({
   route_id: z.string(),
   causal_chain: z.array(z.string()),
@@ -72,6 +74,18 @@ export function toStrandsTools(tools: ToolSet) {
       name: "get_live_weather_snapshot",
       description: "Frozen operator-persisted Open-Meteo context. Non-evidentiary.",
       callback: async () => tools.get_live_weather_snapshot(),
+    }),
+    tool({
+      name: "get_blast_radius",
+      description: "Multi-hop blast radius on the versioned TuringDB defense graph. kind: bom|material|ownership|chokepoint|risk. target: archetype, material name, HQ country, chokepoint name, or product id.",
+      inputSchema: BlastSchema,
+      callback: async (input) => tools.get_blast_radius(input ?? {}),
+    }),
+    tool({
+      name: "replay_at",
+      description: "Time-travel read: run a Cypher query pinned at a past graph commit hash.",
+      inputSchema: ReplaySchema,
+      callback: async (input) => tools.replay_at(input ?? {}),
     }),
     tool({
       name: "draft_public_warning",

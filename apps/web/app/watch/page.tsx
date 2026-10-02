@@ -15,6 +15,8 @@ import WatchMyRoad from "../../components/WatchMyRoad";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import { CaseSwitch } from "../../components/CaseList";
+import GraphPanel from "../../components/GraphPanel";
+import EyPilotBand from "../../components/EyPilotBand";
 import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
 import { causalHeadline, firstCrossed, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
@@ -1030,6 +1032,12 @@ export default function Watch() {
                   onApprove={(officer) => void decide("approved", officer)}
                   onReject={(officer) => void decide("rejected", officer)}
                 />
+              </section>
+              <section className="mt-4" aria-label="Defense graph">
+                <GraphPanel compact={compact} />
+              </section>
+              <section className="mt-4" aria-label="EY pilot">
+                <EyPilotBand />
               </section>
             </aside>
           </div>

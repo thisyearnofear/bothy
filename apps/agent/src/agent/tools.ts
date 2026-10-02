@@ -1,4 +1,5 @@
 import { cosine, fmtDateTime, pseudoEmbed } from "../../../../packages/shared/src/lib";
+import { BLAST_QUERIES, graphAvailable, graphQuery } from "../graph/turing";
 import type {
   EvidenceCitation,
   IncidentRecord,
@@ -40,6 +41,10 @@ export interface ToolSet {
   search_incidents: (a?: { route_id?: string; hazard?: string; query?: string; limit?: number }) => Promise<string>;
   get_route_characteristics: (a?: { route_id?: string }) => Promise<string>;
   get_traffic_speed: (a?: { route_id?: string }) => Promise<string>;
+  /** Defense track: multi-hop blast-radius reasoning on the TuringDB graph. */
+  get_blast_radius: (a?: { kind?: string; target?: string }) => Promise<string>;
+  /** Defense track: replay a past graph commit (time-travel read). */
+  replay_at: (a?: { commit?: string; query?: string }) => Promise<string>;
   draft_public_warning: (a?: { route_id?: string }) => Promise<string>;
   create_human_review: (a: CreateReviewArgs) => Promise<string>;
 }
@@ -146,6 +151,55 @@ export function makeTools(ctx: AgentCtx): ToolSet {
         : `No traffic-speed observations for ${route.name}.`;
       track("get_traffic_speed", { route_id }, body);
       return body;
+    },
+
+    // Defense track: multi-hop blast radius on the versioned TuringDB graph.
+    // kind selects a pre-built Cypher shape; target fills its parameter.
+    // Degrades to a reported "graph unavailable" line — never throws — so the
+    // assessment still completes on Postgres when the sidecar is down.
+    async get_blast_radius({ kind = "bom", target = "Loitering munition" } = {}) {
+      const avail = await graphAvailable();
+      if (!avail.ok) {
+        const body = `Graph unavailable (TuringDB sidecar down: ${avail.error}). Blast-radius reasoning skipped; Postgres evidence stands.`;
+        track("get_blast_radius", { kind, target }, body);
+        return body;
+      }
+      const shape = kind === "material" ? BLAST_QUERIES.materialExposure(target)
+        : kind === "ownership" ? BLAST_QUERIES.ownership(target)
+        : kind === "chokepoint" ? BLAST_QUERIES.chokepoint(target)
+        : kind === "risk" ? BLAST_QUERIES.riskyShipments(target)
+        : BLAST_QUERIES.bom8(target);
+      const graph = kind === "risk" ? "logistics_risk" : "supply_chain_deep";
+      try {
+        const res = await graphQuery(graph, shape);
+        const lines = res.rows.slice(0, 12).map((r) => Object.values(r).join(" ← "));
+        const body = `Blast radius [${kind} :: ${target}] on ${graph}: ${res.count} affected, ${res.ms}ms.\n${lines.join("\n")}${res.count > 12 ? `\n… +${res.count - 12} more` : ""}`;
+        track("get_blast_radius", { kind, target }, body);
+        return body;
+      } catch (e) {
+        const body = `Graph query failed: ${String((e as Error)?.message ?? e)}. Postgres evidence stands.`;
+        track("get_blast_radius", { kind, target }, body);
+        return body;
+      }
+    },
+
+    // Defense track: time-travel read — run a query pinned at a past commit.
+    // `commit` may be a full hash or "HEAD~1" style is NOT supported — pass the
+    // hash from `CALL db.history()` (served via GET /api/graph/history).
+    async replay_at({ commit, query: cypher } = {}) {
+      const q = cypher ?? BLAST_QUERIES.bom8("Loitering munition");
+      const graph = "supply_chain_deep";
+      try {
+        const res = await graphQuery(graph, q, commit);
+        const lines = res.rows.slice(0, 8).map((r) => Object.values(r).join(" ← "));
+        const body = `Replay at ${commit ?? "HEAD"} on ${graph}: ${res.count} rows, ${res.ms}ms.\n${lines.join("\n")}`;
+        track("replay_at", { commit }, body);
+        return body;
+      } catch (e) {
+        const body = `Replay failed: ${String((e as Error)?.message ?? e)}.`;
+        track("replay_at", { commit }, body);
+        return body;
+      }
     },
 
     async draft_public_warning({ route_id } = {}) {

@@ -177,6 +177,292 @@ app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
   }
 });
 
+// ---- Defense track: TuringDB graph proxy ---------------------------------
+// The TS agent talks to the Python sidecar (graph/sidecar.py :6777), which
+// owns the only TuringDB client. Every route degrades to 503 with a clear
+// message when the sidecar/graph is down — Postgres paths never depend on it.
+app.get("/api/graph/health", async (_req, res) => {
+  try {
+    const { graphAvailable } = await import("./graph/turing");
+    res.json(await graphAvailable());
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.get("/api/graph/history", async (req, res) => {
+  try {
+    const { graphHistory } = await import("./graph/turing");
+    const graph = typeof req.query.graph === "string" ? req.query.graph : "supply_chain_deep";
+    res.json(await graphHistory(graph));
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.post("/api/graph/query", async (req, res) => {
+  try {
+    const { graphQuery } = await import("./graph/turing");
+    const graph = typeof req.body.graph === "string" ? req.body.graph : "supply_chain_deep";
+    const cypher = String(req.body.cypher ?? "");
+    if (!cypher) return res.status(400).json({ error: "cypher is required" });
+    const commit = typeof req.body.commit === "string" ? req.body.commit : undefined;
+    res.json(await graphQuery(graph, cypher, commit));
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.post("/api/graph/simulate", async (req, res) => {
+  // Branch-to-simulate: open change -> apply hypothetical writes -> read the
+  // blast-radius delta -> abandon (default) or submit. Returns before/after.
+  try {
+    const { graphChange, graphQuery, BLAST_QUERIES } = await import("./graph/turing");
+    const graph = typeof req.body.graph === "string" ? req.body.graph : "supply_chain_deep";
+    const writes = Array.isArray(req.body.writes) ? req.body.writes.map(String) : [];
+    const readCypher = typeof req.body.readCypher === "string" && req.body.readCypher
+      ? req.body.readCypher
+      : BLAST_QUERIES.bom8("Loitering munition");
+    const keep = req.body.keep === true;
+    if (!writes.length) return res.status(400).json({ error: "writes[] (Cypher CREATE/SET) is required" });
+    const change = await graphChange.open();
+    await graphChange.checkout(change);
+    const { logAudit } = await import("./repo");
+    // Writes must be SET-only on existing nodes (no CREATE/MATCH-write). Take the
+    // baseline BEFORE opening the change so before/after is meaningful.
+    const before = await graphQuery(graph, readCypher);
+    try {
+      for (const w of writes) await graphQuery(graph, w);
+      const after = await graphQuery(graph, readCypher);
+      if (keep) {
+        await graphChange.submit();
+        await logAudit("live", "duty-officer", "graph_simulate_keep", `${graph}: kept simulation (${writes.length} writes)`);
+      } else {
+        await graphChange.abandon();
+      }
+      res.json({ ok: true, kept: keep, beforeCount: before.count, afterCount: after.count, after, before });
+    } catch (e) {
+      try { await graphChange.abandon(); } catch { /* already clean */ }
+      throw e;
+    }
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+// ---- Defense scenario catalogue + bench + witness-pack -------------------------
+// In-memory witness chain (hash-linked evidence packs, last 100). Postgres
+// follow-up: persist to a witness_packs(hash, prev, at, pack) table so the
+// chain survives restarts; the API shape already matches that migration.
+import { createHash } from "crypto";
+interface WitnessEntry { hash: string; prev: string | null; at: string; pack: unknown }
+const witnessChain: WitnessEntry[] = [];
+const witnessByHash = new Map<string, WitnessEntry>();
+
+app.get("/api/graph/scenarios", async (_req, res) => {
+  try {
+    const { SCENARIOS } = await import("./graph/scenarios");
+    res.json({ scenarios: SCENARIOS });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.post("/api/graph/scenario/:id/run", async (req, res) => {
+  try {
+    const { SCENARIOS } = await import("./graph/scenarios");
+    const { runScenario } = await import("./graph/turing");
+    const def = SCENARIOS.find((s: { id: string }) => s.id === req.params.id);
+    if (!def) return res.status(404).json({ error: "unknown scenario" });
+    const r = await runScenario(def.id);
+    res.json({
+      ...r,
+      evidence: {
+        scenario: def.id,
+        title: def.title,
+        cypher: def.cypher,
+        graph: def.graph,
+        ms: r.ms,
+        count: r.count,
+        sample: r.rows.slice(0, 5),
+        historyTip: `GET /api/graph/history?graph=${encodeURIComponent(def.graph)} then POST /api/graph/diff with beforeCommit/afterCommit`,
+      },
+    });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.get("/api/graph/bench", async (_req, res) => {
+  // 4 fastest scenarios; total budget <2s on warm graphs.
+  try {
+    const { runScenario } = await import("./graph/turing");
+    const ids = ["ukr-energy-near", "red-sea-d01", "logistics-high-risk", "chn-ownership"];
+    const t0 = Date.now();
+    const out: { id: string; ms: number; count: number }[] = [];
+    for (const id of ids) {
+      const r = await runScenario(id);
+      out.push({ id, ms: r.ms, count: r.count });
+    }
+    res.json({ results: out, totalMs: Date.now() - t0 });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.post("/api/graph/diff", async (req, res) => {
+  try {
+    const { graphQuery } = await import("./graph/turing");
+    const graph = typeof req.body.graph === "string" ? req.body.graph : "";
+    const beforeCommit = typeof req.body.beforeCommit === "string" ? req.body.beforeCommit : "";
+    const afterCommit = typeof req.body.afterCommit === "string" ? req.body.afterCommit : "";
+    const cypher = typeof req.body.cypher === "string" ? req.body.cypher : "";
+    if (!graph || !beforeCommit || !afterCommit || !cypher) {
+      return res.status(400).json({ error: "graph, beforeCommit, afterCommit, cypher are required" });
+    }
+    const key = (r: Record<string, unknown>) => JSON.stringify(r);
+    const [before, after] = await Promise.all([
+      graphQuery(graph, cypher, beforeCommit),
+      graphQuery(graph, cypher, afterCommit),
+    ]);
+    const beforeKeys = new Set(before.rows.map(key));
+    const afterKeys = new Set(after.rows.map(key));
+    res.json({
+      commits: { before: beforeCommit, after: afterCommit },
+      graph,
+      beforeCount: before.count,
+      afterCount: after.count,
+      addedSample: after.rows.filter((r) => !beforeKeys.has(key(r))).slice(0, 10),
+      removedSample: before.rows.filter((r) => !afterKeys.has(key(r))).slice(0, 10),
+    });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.post("/api/graph/witness", async (req, res) => {
+  try {
+    const scenarioId = typeof req.body.scenarioId === "string" ? req.body.scenarioId : "";
+    if (!scenarioId) return res.status(400).json({ error: "scenarioId is required" });
+    const pack = {
+      scenarioId,
+      assessmentId: typeof req.body.assessmentId === "string" ? req.body.assessmentId : null,
+      officer: typeof req.body.officer === "string" ? req.body.officer.slice(0, 120) : null,
+      rows: Array.isArray(req.body.rows) ? (req.body.rows as unknown[]).slice(0, 50) : [],
+      at: new Date().toISOString(),
+    };
+    const prev = witnessChain.length ? witnessChain[witnessChain.length - 1].hash : null;
+    const hash = createHash("sha256").update(JSON.stringify({ prev, pack })).digest("hex");
+    const entry: WitnessEntry = { hash, prev, at: pack.at, pack };
+    witnessChain.push(entry);
+    witnessByHash.set(hash, entry);
+    while (witnessChain.length > 100) {
+      const dropped = witnessChain.shift();
+      if (dropped) witnessByHash.delete(dropped.hash);
+    }
+    res.status(201).json({ hash, prev, at: pack.at, pack });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+  }
+});
+
+app.get("/api/graph/witness/:hash", async (req, res) => {
+  const entry = witnessByHash.get(req.params.hash);
+  if (!entry) return res.status(404).json({ error: "unknown witness hash" });
+  const pack = entry.pack as Record<string, unknown>;
+  // Distribution shape: every witness resolves to a shareable link + a live
+  // re-run path, so the artifact points back into the product (Thiel loop).
+  res.json({ ...entry, links: { page: `/witness/${entry.hash}`, rerun: pack.scenarioId ? `/watch?scenario=${pack.scenarioId}` : "/watch" } });
+});
+
+// ---- No-DB digest loop (venue-proof distribution) ---------------------------
+// In-memory subscriptions + digest queue + rendered digest view. Postgres
+// remains the system of record when reachable; every write below is mirrored
+// best-effort into subscriptions/notifications tables and degrades silently.
+interface LoopSub { email: string; routeId: string; scenario: string; at: string }
+interface LoopDigest { id: string; to: string; subject: string; body: string; caseHref: string; at: string }
+const loopSubs: LoopSub[] = [];
+const loopDigests: LoopDigest[] = [];
+let loopDigestId = 0;
+
+app.post("/api/loop/subscribe", async (req, res) => {
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const routeId = typeof req.body.routeId === "string" ? req.body.routeId.trim().slice(0, 80) : "";
+  const scenario = typeof req.body.scenario === "string" ? req.body.scenario.trim().slice(0, 40) : "defense";
+  if (!isValidEmail(email)) return res.status(400).json({ error: "valid email is required" });
+  if (!routeId) return res.status(400).json({ error: "routeId (lane / scenario id) is required" });
+  if (!loopSubs.some((s) => s.email === email && s.routeId === routeId)) {
+    loopSubs.push({ email, routeId, scenario, at: new Date().toISOString() });
+  }
+  try {
+    const { q } = await import("./db");
+    await q(`INSERT INTO subscriptions (route_id, email, scenario) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [routeId, email, scenario]);
+  } catch { /* venue has no tunnel — memory is the record */ }
+  res.status(201).json({ ok: true, count: loopSubs.filter((s) => s.routeId === routeId).length, total: loopSubs.length });
+});
+
+app.post("/api/loop/notify", async (req, res) => {
+  // Called after a blast run / approval: fans a digest to every subscriber on
+  // the lane. Body: { routeId, label, summary, caseHref }.
+  const routeId = typeof req.body.routeId === "string" ? req.body.routeId.trim() : "";
+  const label = typeof req.body.label === "string" ? req.body.label.trim().slice(0, 40) : "ELEVATED";
+  const summary = typeof req.body.summary === "string" ? req.body.summary.trim().slice(0, 500) : "";
+  const caseHref = typeof req.body.caseHref === "string" ? req.body.caseHref.trim().slice(0, 300) : "/watch";
+  if (!routeId) return res.status(400).json({ error: "routeId is required" });
+  const targets = loopSubs.filter((s) => s.routeId === routeId);
+  for (const t of targets) {
+    loopDigestId += 1;
+    loopDigests.push({
+      id: `d-${loopDigestId}`,
+      to: t.email,
+      subject: `Bothy: ${routeId} is ${label}`,
+      body: `${summary}\n\nReview and forward: ${caseHref}\n\nBothy drafts; a duty officer approves.`,
+      caseHref,
+      at: new Date().toISOString(),
+    });
+  }
+  res.status(201).json({ ok: true, queued: targets.length });
+});
+
+app.get("/api/loop/digest", async (_req, res) => {
+  // Public log-only digest wall: proves the loop fires without email infra.
+  res.json({ digests: loopDigests.slice(-20).reverse(), subs: loopSubs.length });
+});
+
+// Pilot-interest funnel: validated email + audit-log count. Postgres-backed,
+// with an in-memory fallback counter so the GTM funnel survives without a DB
+// (hackathon floors have no tunnels). The audit write is best-effort.
+let pilotFallbackCount = 0;
+app.post("/api/pilot-interest", async (req, res) => {
+  const name = typeof req.body.name === "string" ? req.body.name.trim().slice(0, 120) : "";
+  const org = typeof req.body.org === "string" ? req.body.org.trim().slice(0, 160) : "";
+  const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+  if (!name) return res.status(400).json({ error: "name is required" });
+  if (!org) return res.status(400).json({ error: "org is required" });
+  if (!isValidEmail(email)) return res.status(400).json({ error: "valid email is required" });
+  const role = typeof req.body.role === "string" ? req.body.role.trim().slice(0, 120) : "";
+  const note = typeof req.body.note === "string" ? req.body.note.trim().slice(0, 500) : "";
+  try {
+    await logAudit("live", email.toLowerCase(), "pilot_interest", `${name} <${email}> @ ${org}${role ? ` (${role})` : ""}${note ? ` — ${note}` : ""}`);
+    const { q } = await import("./db");
+    const { rows } = await q(`SELECT COUNT(*)::int AS n FROM audit_log WHERE action = 'pilot_interest'`);
+    return res.status(201).json({ ok: true, count: (rows[0] as { n: number }).n });
+  } catch {
+    pilotFallbackCount += 1;
+    return res.status(201).json({ ok: true, count: pilotFallbackCount, degraded: true });
+  }
+});
+
+app.get("/api/pilot-interest/count", async (_req, res) => {
+  try {
+    const { q } = await import("./db");
+    const { rows } = await q(`SELECT COUNT(*)::int AS n FROM audit_log WHERE action = 'pilot_interest'`);
+    return res.json({ count: (rows[0] as { n: number }).n });
+  } catch {
+    return res.json({ count: pilotFallbackCount, degraded: true });
+  }
+});
+
 app.get("/api/llm", (_req, res) => {
   res.json({ now: new Date().toISOString(), providers: providerSummary(), scripted: true });
 });

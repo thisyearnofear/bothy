@@ -9,6 +9,55 @@ import type {
   ToolCall,
 } from "../../../packages/shared/src/types";
 
+export interface GraphScenario {
+  id: string;
+  title: string;
+  stakes: string;
+  graph: string;
+  kind: string;
+  howToRead: string;
+  eyAngle?: string;
+}
+
+export interface GraphRows {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  count: number;
+  ms: number;
+}
+
+export interface GraphBenchRow {
+  id: string;
+  ms: number;
+  count: number;
+}
+
+export interface GraphDiffBody {
+  graph: string;
+  beforeCommit?: string;
+  afterCommit?: string;
+  cypher: string;
+}
+
+export interface GraphDiff {
+  beforeCount: number;
+  afterCount: number;
+  addedSample: Record<string, unknown>[];
+  removedSample: Record<string, unknown>[];
+}
+
+export interface GraphWitness {
+  hash: string;
+  prev: string;
+  at: string;
+}
+
+export interface PilotInterestBody {
+  name: string;
+  org: string;
+  email: string;
+}
+
 export const isAbortError = (error: unknown) =>
   typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "AbortError";
 
@@ -111,6 +160,47 @@ export const api = {
   ) =>
     post<{ event: unknown; at: string; routeId: string }>("/api/scenario/live/signals/road", body, signal),
   audit: (id: ScenarioId, signal?: AbortSignal) => get<AuditEntry[]>(`/api/scenario/${id}/audit`, signal),
+  // ---- Watch-room defense track (TuringDB graph, proxied /api -> agent :8787) ----
+  graphHealth: (signal?: AbortSignal) =>
+    get<{ ok: boolean; graphs?: string[]; error?: string }>(`/api/graph/health`, signal),
+  graphScenarios: (signal?: AbortSignal) =>
+    get<GraphScenario[]>(`/api/graph/scenarios`, signal),
+  runScenario: (id: string, signal?: AbortSignal) =>
+    post<GraphRows>(`/api/graph/scenario/${encodeURIComponent(id)}/run`, {}, signal),
+  graphQuery: (
+    body: { graph: string; cypher: string; commit?: string },
+    signal?: AbortSignal
+  ) => post<GraphRows>(`/api/graph/query`, body, signal),
+  graphHistory: (graph: string, signal?: AbortSignal) =>
+    get<GraphRows>(`/api/graph/history?graph=${encodeURIComponent(graph)}`, signal),
+  graphBench: (signal?: AbortSignal) =>
+    get<GraphBenchRow[]>(`/api/graph/bench`, signal),
+  graphDiff: (body: GraphDiffBody, signal?: AbortSignal) =>
+    post<GraphDiff>(`/api/graph/diff`, body, signal),
+  graphSimulate: (
+    body: { graph: string; writes: string[]; readCypher: string; keep?: boolean },
+    signal?: AbortSignal
+  ) =>
+    post<{ ok: boolean; beforeCount: number; afterCount: number; error?: string }>(
+      `/api/graph/simulate`,
+      body,
+      signal
+    ),
+  graphWitness: (body: { rows?: unknown; graph?: string; scenario?: string }, signal?: AbortSignal) =>
+    post<GraphWitness>(`/api/graph/witness`, body, signal),
+  witness: (hash: string, signal?: AbortSignal) =>
+    get<GraphWitness & { pack: { scenarioId?: string; rows?: Record<string, unknown>[]; at?: string }; links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
+  // ---- No-DB digest loop (venue-proof; memory is the record, Postgres mirror best-effort)
+  loopSubscribe: (body: { email: string; routeId: string; scenario?: string }, signal?: AbortSignal) =>
+    post<{ ok: boolean; count: number; total: number }>(`/api/loop/subscribe`, body, signal),
+  loopNotify: (body: { routeId: string; label?: string; summary?: string; caseHref?: string }, signal?: AbortSignal) =>
+    post<{ ok: boolean; queued: number }>(`/api/loop/notify`, body, signal),
+  loopDigest: (signal?: AbortSignal) =>
+    get<{ digests: { id: string; to: string; subject: string; body: string; caseHref: string; at: string }[]; subs: number }>(`/api/loop/digest`, signal),
+  pilotInterest: (body: PilotInterestBody, signal?: AbortSignal) =>
+    post<{ ok: boolean; count: number }>(`/api/pilot-interest`, body, signal),
+  pilotCount: (signal?: AbortSignal) =>
+    get<{ count: number }>(`/api/pilot-interest`, signal),
   llm: (signal?: AbortSignal) => get<{ providers: { id: string; label: string; model: string }[] } & { scripted: boolean; now: string }>("/api/llm", signal),
   llmHealth: (signal?: AbortSignal) =>
     get<{

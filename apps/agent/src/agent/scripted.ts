@@ -47,6 +47,9 @@ export async function scriptedDraft(ctx: AgentCtx, tools: ToolSet): Promise<Scri
   await tools.get_traffic_speed({ route_id: ctx.route.id });
   await tools.search_incidents({ route_id: ctx.route.id, limit: 3 });
   await tools.get_route_characteristics({ route_id: ctx.route.id });
+  // Defense track: graph blast radius rides along so the Strands trace shows
+  // Postgres retrieval AND graph retrieval before the cited draft.
+  await tools.get_blast_radius({ kind: "bom", target: "Loitering munition" });
 
   const r = ctx.render(ctx.route, ctx.now);
   const sources = new Set(r.citations.map((c) => c.source)).size;

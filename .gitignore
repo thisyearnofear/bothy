@@ -8,6 +8,10 @@ dist/
 .DS_Store
 *.tsbuildinfo
 
+# Graphs (TuringDB defense track — large versioned stores, not app code)
+graphs/
+!graphs/README.md
+
 # Screenshots / video frames at the repo root (not part of the app)
 /*.png
 /*.jpg
