@@ -50,13 +50,17 @@ export default async function DefensePage({ searchParams }: { searchParams: Prom
       <PageHero
         eyebrow="Defence supply-chain analysis"
         title={mode === "workspace" ? "A supply disruption. A defensible next decision." : mode === "onboarding" ? "Try the workflow with your team." : mode === "case" ? "Evidence, decision, and responsibility in one case." : "Investigate a disruption. Prepare the next decision."}
-        lede="Establish what might be exposed, why the evidence supports it, and who checks it. Synthetic dependencies; not live intelligence."
+        lede={mode === "onboarding" ? "Four roles. One verification. Nothing real." : "What might be exposed, why we think so, and who checks it."}
         image={mode === "workspace" ? "5-material" : mode === "onboarding" ? "3-assembly" : mode === "case" ? "4-component" : "2-system"}
       />
       <div className="enter mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : mode === "onboarding" ? <DefenseOnboarding /> : mode === "investigation" ? <><p className="mb-4 text-sm"><Link href="/defense" className="underline">Back to workspace</Link> · New investigation · public/synthetic evidence</p><GraphPanel initialSession={session} /></> : <DefenseWorkspace initialSession={session} />}
-      <footer className="mt-8 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
-        Prototype boundary: synthetic/public evidence and deterministic briefs. Review and owned-action APIs fail closed unless OIDC and the SSO session bridge are configured. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.
+      <footer className="mt-12 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
+        <p>Prototype · synthetic/public evidence · not live intelligence.</p>
+        <details className="mt-2">
+          <summary className="cursor-pointer underline underline-offset-4">Prototype boundary</summary>
+          <p className="mt-2 max-w-3xl">Briefs are deterministic. Review and owned-action APIs fail closed unless OIDC and the SSO session bridge are configured. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.</p>
+        </details>
       </footer>
       </div>
     </main>

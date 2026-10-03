@@ -529,3 +529,52 @@ button:not(:disabled):hover {
 .enter > :nth-child(3) { --i: 2; }
 .enter > :nth-child(4) { --i: 3; }
 .enter > :nth-child(5) { --i: 4; }
+
+/* ---- Guided exercise: step track + stage ---- */
+.ob-track { display: flex; list-style: none; margin: 2.75rem 0 0; padding: 0; max-width: 46rem; }
+.ob-track li { flex: 1; position: relative; }
+.ob-track li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1.1rem;
+  left: calc(1.1rem + 0.5rem);
+  right: -0.5rem;
+  height: 1px;
+  background: var(--rule);
+}
+.ob-track li[data-state="done"]::after { background: var(--cursor); }
+.ob-track button { display: grid; justify-items: start; gap: 0.6rem; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
+.ob-node {
+  display: grid; place-items: center;
+  width: 2.2rem; height: 2.2rem; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--page);
+  font-size: 0.8rem; color: var(--text-faint);
+  position: relative; z-index: 1;
+  transition: border-color var(--dur-standard) var(--ease-base), color var(--dur-standard) var(--ease-base), background var(--dur-standard) var(--ease-base);
+}
+.ob-role { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); }
+.ob-track li[data-state="on"] .ob-node { border-color: var(--cursor); color: var(--page); background: var(--cursor); }
+.ob-track li[data-state="on"] .ob-role { color: var(--text-strong); }
+.ob-track li[data-state="done"] .ob-node { border-color: var(--cursor); color: var(--cursor); }
+.ob-stage { animation: enter-up 500ms var(--ease-expo) both; }
+.ob-num {
+  font-size: clamp(4rem, 12vw, 8rem);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--rule);
+}
+
+.ob-notes { border-top: 1px solid var(--rule); max-width: 46rem; }
+.ob-notes details { border-bottom: 1px solid var(--rule); }
+.ob-notes summary {
+  list-style: none; cursor: pointer; padding: 1rem 0;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.95rem; color: var(--text-strong);
+}
+.ob-notes summary::-webkit-details-marker { display: none; }
+.ob-notes summary::after { content: "+"; font-family: ui-monospace, monospace; color: var(--cursor); }
+.ob-notes details[open] summary::after { content: "−"; }
+.ob-notes details > :not(summary) { font-size: 0.875rem; line-height: 1.6; margin: 0 0 1rem; max-width: 40rem; }
+.ob-notes ul { padding-left: 1.1rem; display: grid; gap: 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .ob-stage { animation: none; } }
