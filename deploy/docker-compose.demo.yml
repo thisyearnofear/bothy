@@ -1,25 +1,7 @@
-# Self-contained demo stack: Caddy (auto-HTTPS) -> web -> agent -> PostGIS.
+# Self-contained demo stack: Caddy (auto-HTTPS) -> web -> agent -> Neon Postgres (external).
 # Only Caddy publishes ports (80/443); nothing else is reachable from outside.
 # Run from deploy/:  docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
 services:
-  db:
-    image: postgis/postgis:16-3.5
-    container_name: bothy-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: bothy
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
-      POSTGRES_DB: bothy
-    volumes:
-      - bothy-pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bothy -d bothy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bothy-demo
-
   graph:
     build:
       context: ..
@@ -54,15 +36,12 @@ services:
       - .env.production
       - .env.sso
     environment:
-      DATABASE_URL: postgres://bothy:${POSTGRES_PASSWORD}@db:5432/bothy
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (Neon pooled URL) in .env.production}
       PORT: "8787"
       BOTHY_DATA_DIR: /app/data
       TURING_SIDECAR_URL: http://graph:6778
     volumes:
       - bothy-agent-data:/app/data
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -123,7 +102,6 @@ networks:
     driver: bridge
 
 volumes:
-  bothy-pgdata:
   bothy-agent-data:
   bothy-idp-data:
   caddy-data:

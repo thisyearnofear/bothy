@@ -447,7 +447,7 @@ brain.
 ## Demo on a plain VPS (Docker + Caddy)
 
 `deploy/docker-compose.demo.yml` is a stand-alone stack for a fresh VPS: Caddy
-(automatic HTTPS) -> web -> agent -> PostGIS. Only ports 80/443 are published.
+(automatic HTTPS) -> web -> agent -> Neon Postgres (external). Only ports 80/443 are published.
 It does not need Coolify/Traefik.
 
 1. DNS: add an `A` record `bothy.trustfall.xyz` -> the VPS IPv4 address (DNS only,
@@ -457,8 +457,8 @@ It does not need Coolify/Traefik.
    ```bash
    cd deploy
    cp .env.production.example .env.production
-   # edit: POSTGRES_PASSWORD, WEB_ORIGIN/PUBLIC_WEB_URL/PUBLIC_APP_URL=https://bothy.trustfall.xyz,
-   # and any LLM keys. DATABASE_URL in this file is ignored (compose overrides it).
+   # edit: DATABASE_URL (Neon pooled URL; run CREATE EXTENSION postgis; once), WEB_ORIGIN/PUBLIC_WEB_URL/PUBLIC_APP_URL=https://bothy.trustfall.xyz,
+   # and any LLM keys. Free Neon tier is enough; take backups via Neon branches/PITR.
    docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
    docker compose -f docker-compose.demo.yml --env-file .env.production run --rm agent npm run seed
    curl https://bothy.trustfall.xyz/api/health

@@ -117,13 +117,13 @@ Strands handoff are subsequent roadmap gates, not completed claims.
 ### Option A: your own VPS (Docker + Caddy), no extra cost
 
 `deploy/docker-compose.demo.yml` runs Caddy (automatic HTTPS), the web app, the
-agent, PostGIS and the TuringDB graph service on one host. Only ports 80/443
+agent and the TuringDB graph service on one host, with Postgres/PostGIS on Neon. Only ports 80/443
 are published. This is what serves the live demo at `https://bothy.trustfall.xyz`.
 
 ```bash
 # DNS: A record bothy.<your-domain> -> the VPS IPv4 address, then on the VPS:
 cd deploy
-cp .env.production.example .env.production   # set POSTGRES_PASSWORD, URLs, keys
+cp .env.production.example .env.production   # set DATABASE_URL (Neon), URLs, keys
 docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
 docker compose -f docker-compose.demo.yml --env-file .env.production run --rm agent npm run seed
 curl https://bothy.<your-domain>/api/health
