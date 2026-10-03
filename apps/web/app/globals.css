@@ -367,3 +367,128 @@ button:not(:disabled):hover {
     animation-delay: 0s !important;
   }
 }
+
+/* ---- Landing: descent through the dependency chain ---- */
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: url("/descent/1-platform.jpg") center / cover no-repeat;
+  opacity: 0.55;
+  transform: scale(1.04);
+  animation: hero-drift 40s ease-in-out infinite alternate;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, transparent 0%, var(--page) 78%),
+    linear-gradient(to bottom, transparent 55%, var(--page));
+}
+.hero > :not(.hero-bg):not(header) { position: relative; z-index: 1; }
+@keyframes hero-drift {
+  to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); }
+}
+
+.descent { position: relative; height: 640vh; }
+.descent-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--page);
+}
+.descent-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform, opacity;
+}
+.descent-layer:not(:first-of-type) { opacity: 0; }
+.descent-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent, color-mix(in oklch, var(--page) 72%, transparent) 90%),
+    linear-gradient(to top, var(--page), transparent 40%);
+  pointer-events: none;
+}
+.descent-cap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 0 clamp(1.25rem, 5vw, 4.5rem) clamp(3.5rem, 12vh, 7rem);
+  max-width: 62rem;
+  will-change: transform, opacity;
+}
+.descent-cap:not(:first-of-type) { opacity: 0; }
+.descent-rail {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  text-align: right;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.descent-rail li { color: var(--text-faint); opacity: 0.45; transition: opacity var(--dur-standard) var(--ease-base), color var(--dur-standard) var(--ease-base); }
+.descent-rail li[data-on="true"] { color: var(--cursor); opacity: 1; }
+.descent-note {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: 1.25rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Reduced motion / no-JS: stack the layers as ordinary sections. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg { animation: none; transform: none; }
+  .descent { height: auto; }
+  .descent-stage { position: static; height: auto; overflow: visible; }
+  .descent-layer, .descent-scrim, .descent-rail, .descent-note { display: none; }
+  .descent-cap { position: static; opacity: 1 !important; padding-block: 4rem; border-top: 1px solid var(--rule); }
+}
+@media (max-width: 640px) {
+  .descent-rail { display: none; }
+}
+
+.proof-rail {
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem clamp(1.25rem, 5vw, 4.5rem) 1.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  cursor: grab;
+  scrollbar-width: thin;
+}
+.proof-rail:active { cursor: grabbing; }
+.proof-card {
+  flex: 0 0 min(22rem, 82vw);
+  scroll-snap-align: start;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  transition: transform var(--dur-standard) var(--ease-base), border-color var(--dur-standard) var(--ease-base);
+}
+.proof-card:hover { transform: translateY(-4px); border-color: var(--cursor); }

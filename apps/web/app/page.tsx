@@ -1,66 +1,68 @@
 import Link from "next/link";
-import CaseList from "../components/CaseList";
+import Descent from "../components/Descent";
+import ProofCases from "../components/ProofCases";
 
-const rule = { borderColor: "var(--rule)" } as const;
+const pad = "px-5 sm:px-10";
 
 export default function Landing() {
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-5" style={rule}>
-        <Link href="/" className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</Link>
-        <nav className="flex gap-5 text-sm" aria-label="Main navigation">
-          <Link href="/defense" className="underline">Defence workspace</Link>
-          <Link href="/pilot" className="underline">Pilot</Link>
-        </nav>
-      </header>
+    <main>
+      <section className="hero">
+        <div className="hero-bg" aria-hidden />
+        <header className={`absolute inset-x-0 top-0 z-10 flex items-center justify-between py-6 ${pad}`}>
+          <Link href="/" className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</Link>
+          <nav className="flex gap-6 text-sm" aria-label="Main navigation">
+            <Link href="/defense" className="underline-offset-4 hover:underline">Workspace</Link>
+            <Link href="/pilot" className="underline-offset-4 hover:underline">Pilot</Link>
+          </nav>
+        </header>
 
-      <section className="grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.3fr_1fr]">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.18em]" style={{ color: "var(--cursor)" }}>Accountable programme-impact briefs</p>
-          <h1 className="mt-5 text-[clamp(2.75rem,6vw,5rem)] font-semibold leading-[1.02] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>
-            A supply disruption.<br />A defensible next decision.
+        <div className={`${pad} pb-16 sm:pb-24`}>
+          <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>Defence supply-chain exposure</p>
+          <h1 className="mt-5 max-w-5xl text-[clamp(2.75rem,9vw,8rem)] font-semibold leading-[0.92] tracking-[-0.06em]" style={{ color: "var(--text-strong)" }}>
+            Which programmes break when gallium does?
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed">
-            For European defence-prime supply-chain teams: establish what might be exposed,
-            inspect the dependencies behind it, and give the next verification a named owner.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/defense?mode=onboarding" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Try a guided investigation</Link>
-            <Link href="/pilot" className="coarse-target rounded-lg border px-5 py-3 text-sm" style={rule}>Scope a two-week pilot</Link>
+          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <Link href="/defense?mode=onboarding" className="coarse-target rounded-lg border-2 px-6 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>
+              Try a guided investigation
+            </Link>
+            <Link href="/pilot" className="text-sm underline underline-offset-4">Scope a two-week pilot</Link>
+            <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>Scroll to descend ↓</span>
           </div>
-          <p className="mt-5 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-            Prototype · public/synthetic demo data · exports are unapproved analysis.
-          </p>
         </div>
-        <aside className="rounded-lg border p-6 sm:p-8" style={{ ...rule, background: "var(--panel)" }} aria-label="Product workflow">
-          <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>The case, not another alert</p>
-          <ol className="mt-6 space-y-6">
-            {[
-              ["01", "Trace the exposure", "Which programmes depend on the disrupted material or lane?"],
-              ["02", "Keep the evidence", "Follow a claim to its stored row. Keep source versions and coverage gaps visible."],
-              ["03", "Own the decision", "Review, assignment, and recorded outcomes are implemented in the prototype. Buyer identity and operational validation remain pending."],
-            ].map(([number, title, text]) => (
-              <li key={number} className="flex gap-4 border-t pt-4" style={rule}>
-                <span className="mono text-sm" style={{ color: "var(--cursor)" }}>{number}</span>
-                <div><h2 className="font-medium" style={{ color: "var(--text-strong)" }}>{title}</h2><p className="mt-1 text-sm leading-relaxed">{text}</p></div>
-              </li>
-            ))}
-          </ol>
-        </aside>
       </section>
 
-      <section className="border-t py-10" style={rule}>
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Built for a useful decision</p>
-        <h2 className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>A dependency is a reason to investigate, not a prediction of failure.</h2>
-        <p className="mt-4 max-w-3xl text-sm leading-relaxed">Bothy makes the graph inspectable and the evidence portable. Inventory, substitutes, timing, and analyst review determine what the exposure means. The pilot measures time to a trusted brief, not just query speed.</p>
+      <Descent />
+
+      <section className="flex min-h-[80svh] flex-col justify-center py-24">
+        <div className={pad}>
+          <h2 className="max-w-4xl text-[clamp(2rem,5.5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>
+            A dependency is a reason to investigate, not a prediction of failure.
+          </h2>
+          <p className="mt-6 max-w-xl text-base">
+            Every claim traces to a stored row. Every gap stays visible. Every next check gets a named owner.
+          </p>
+          <Link href="/defense?mode=onboarding" className="coarse-target mt-8 inline-block rounded-lg border-2 px-6 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>
+            Try a guided investigation
+          </Link>
+        </div>
       </section>
 
-      <section className="border-t py-10" style={rule}>
-        <h2 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Earlier proof cases</h2>
-        <p className="mt-2 text-sm">Winter roads and floods established the replay-and-evidence approach. Their modeled timelines are demonstrations, not predictive validation.</p>
-        <CaseList />
+      <section className="pb-24">
+        <div className={`${pad} mb-6 flex items-end justify-between gap-4`}>
+          <div>
+            <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--text-faint)" }}>Earlier proof cases</p>
+            <p className="mt-2 text-sm">Replays on authored timelines. Demonstrations, not predictive validation.</p>
+          </div>
+          <span className="mono hidden text-xs sm:block" style={{ color: "var(--text-faint)" }}>Drag →</span>
+        </div>
+        <ProofCases />
       </section>
-      <footer className="mono border-t pt-5 text-xs" style={{ ...rule, color: "var(--text-faint)" }}>Bothy · the evidence stays with the decision.</footer>
+
+      <footer className={`mono flex flex-wrap justify-between gap-2 border-t py-5 text-xs ${pad}`} style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
+        <span>Bothy · the evidence stays with the decision.</span>
+        <span>Prototype · public/synthetic data · exports are unapproved analysis</span>
+      </footer>
     </main>
   );
 }
