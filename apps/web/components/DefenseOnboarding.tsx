@@ -29,6 +29,7 @@ export default function DefenseOnboarding() {
         <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-tight tracking-tight" style={{ color: "var(--text-strong)" }}>
           A gallium delay is reported. What should your team verify?
         </h2>
+        <p className="mt-3 text-sm" style={{ color: "var(--text-faint)" }}>An exercise hypothesis, not a live alert. Invented platforms and parts; no company BOM needed.</p>
 
         <ol className="ob-track mt-10" aria-label="Exercise steps">
           {steps.map((item, index) => (
@@ -68,11 +69,11 @@ export default function DefenseOnboarding() {
       <section className="ob-notes" aria-label="Notes for your team">
         <details>
           <summary>Before you start</summary>
-          <p>Analysis needs a running graph service. Saving and role handoffs need configured SSO; the local rehearsal uses fixed synthetic accounts and does not validate your identity provider. This guide does not track case state. Confirm each result in the saved case and audit.</p>
+          <p>Analysis needs a running graph service. Saving and role handoffs need configured SSO; the local rehearsal uses fixed synthetic accounts and does not validate your identity provider. This guide does not track case state or certify completion. Confirm each result in the saved case and audit.</p>
           <p>Do not enter real programme details, supplier relationships, files, credentials or buyer evidence. Private access, hosting, retention, export controls and data transfer are agreed first.</p>
         </details>
-        <details>
-          <summary>Try to break the assumptions</summary>
+        <details aria-label="Stress-test checklist">
+          <summary>Stress-test checklist: try to break the assumptions</summary>
           <p>Use synthetic records in a disposable environment. These are checks to perform, not claimed results.</p>
           <ul>{checks.map((check) => <li key={check}>{check}</li>)}</ul>
         </details>

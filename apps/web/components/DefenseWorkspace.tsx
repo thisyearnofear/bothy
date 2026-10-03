@@ -20,7 +20,7 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
     <section className="rounded-xl border p-5 sm:p-7" style={card} aria-label="Workspace next action">
       <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>{session.authenticated ? "Your team workspace" : "Explore the sample workspace"}</p>
       <h2 className="mt-3 text-2xl font-semibold">{session.authenticated ? focus.title : "What could be exposed—and who will check?"}</h2>
-      <p className="mt-3 max-w-3xl text-sm leading-relaxed">{session.authenticated ? focus.description : "If gallium supply is delayed, which modeled dependencies justify checking inventory, alternatives and timing? Follow one verification from analyst to reviewer to owner."}</p>
+      <p className="mt-3 max-w-3xl text-sm leading-relaxed">{session.authenticated ? focus.description : "If gallium supply is delayed, which modeled dependencies justify checking inventory, alternatives and timing? Follow one verification from analyst to reviewer to owner. Sample data is synthetic."}</p>
       <div className="mt-5 flex flex-wrap gap-3">
         <a className="coarse-target rounded-lg border px-4 py-3 text-sm font-medium" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }} href="/defense?mode=onboarding">Try the guided team exercise</a>
         {(!session.authenticated || session.roles.some((role) => role === "analyst" || role === "reviewer")) && <a className="coarse-target rounded-lg border px-4 py-3 text-sm font-medium" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }} href="/defense?mode=investigate&scenario=gallium-chain">{session.authenticated ? "Start a separate investigation" : "Explore the gallium sample"}</a>}
