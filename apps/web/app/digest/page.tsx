@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { SiteHeader } from "../../components/PageHero";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 
@@ -34,7 +35,9 @@ export default function DigestPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main>
+    <SiteHeader />
+    <div className="enter mx-auto max-w-3xl px-5 py-10 sm:px-10">
       <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Bothy loop · digest wall</p>
       <h1 className="mt-2 text-3xl font-semibold" style={{ color: "var(--text-strong)" }}>
         Pinged only on real decisions.
@@ -71,6 +74,7 @@ export default function DigestPage() {
       </section>
 
       <Link href="/watch" className="mono mt-4 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>← back to watch room</Link>
+    </div>
     </main>
   );
 }

@@ -33,7 +33,7 @@ export function PilotInterestForm({ compact }: { compact?: boolean }) {
     } finally { setBusy(false); }
   };
 
-  const input = "rounded border px-2 py-1.5 text-sm";
+  const input = "min-w-0 flex-1 basis-40 rounded-lg border px-3 py-2.5 text-sm";
   const style = { borderColor: "var(--rule)", background: "var(--page)", color: "var(--text-strong)" } as const;
   return (
     <div className={compact ? "" : "mt-2"}>
@@ -41,7 +41,7 @@ export function PilotInterestForm({ compact }: { compact?: boolean }) {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" className={input} style={style} />
         <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Organisation" aria-label="Organisation" className={input} style={style} />
         <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="work email" aria-label="Email" type="email" className={input} style={style} />
-        <button onClick={() => void submit()} disabled={busy || !email || !name} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
+        <button onClick={() => void submit()} disabled={busy || !email || !name} className="coarse-target rounded-lg border-2 px-5 py-2.5 text-sm font-medium disabled:opacity-50" style={{ borderColor: "var(--text-strong)", color: "var(--text-body)" }}>
           {busy ? "sending…" : "Request pilot"}
         </button>
       </div>

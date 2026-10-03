@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { site } from "../../../lib/site";
+import { SiteHeader } from "../../../components/PageHero";
 import { riskColor } from "../../../../../packages/shared/src/lib";
 import { firstCrossed, leadTimeLabel, ms } from "../../../lib/derive";
 import type { RiskLabel, RiskSnapshot } from "../../../../../packages/shared/src/types";
@@ -85,7 +86,9 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
   const c = await getCase(id);
   if (!c) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-24 text-center">
+      <main>
+      <SiteHeader />
+      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
         <h1 className="text-3xl font-semibold">Case not found</h1>
         <p className="mono mt-4 text-sm uppercase tracking-widest" style={{ color: "var(--text-body)" }}>
           The link may be old — open the watch room for live cases.
@@ -93,11 +96,14 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <a href="/watch?case=live" className="mt-8 inline-block rounded-lg border px-5 py-2.5 text-sm underline">
           Open the watch room
         </a>
+      </div>
       </main>
     );
   }
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
+    <main>
+      <SiteHeader />
+      <div className="enter mx-auto max-w-2xl px-6 py-10">
       <p className="mono text-xs uppercase tracking-[0.22em]" style={{ color: "var(--cursor)" }}>
         Bothy case · {c.scenario} · {c.routeId}
       </p>
@@ -155,6 +161,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       >
         {c.awake ? "Open the desk and sign" : "Open the watch room"}
       </a>
+      </div>
     </main>
   );
 }

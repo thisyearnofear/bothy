@@ -578,3 +578,39 @@ button:not(:disabled):hover {
 .ob-notes details > :not(summary) { font-size: 0.875rem; line-height: 1.6; margin: 0 0 1rem; max-width: 40rem; }
 .ob-notes ul { padding-left: 1.1rem; display: grid; gap: 0.5rem; }
 @media (prefers-reduced-motion: reduce) { .ob-stage { animation: none; } }
+
+/* ---- Workspace: path tiles + role flow ---- */
+.path-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 0.5rem; overflow: hidden; }
+@media (min-width: 768px) { .path-grid { grid-template-columns: repeat(3, 1fr); } }
+.path-tile {
+  display: grid; align-content: start; gap: 0.6rem; min-height: 11rem; padding: 1.5rem;
+  background: var(--page); position: relative;
+  transition: background var(--dur-standard) var(--ease-base);
+}
+.path-tile:hover, .path-tile:focus-visible { background: var(--panel); }
+.path-n { font-size: 0.75rem; color: var(--cursor); letter-spacing: 0.16em; }
+.path-title { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; color: var(--text-strong); }
+.path-text { font-size: 0.875rem; }
+.path-go { position: absolute; right: 1.25rem; bottom: 1.1rem; color: var(--cursor); transition: transform var(--dur-standard) var(--ease-expo); }
+.path-tile:hover .path-go { transform: translateX(6px); }
+
+.role-flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 2rem; }
+@media (min-width: 768px) { .role-flow { grid-template-columns: repeat(3, 1fr); gap: 3rem; } }
+.role-flow li { border-top: 1px solid var(--rule); padding-top: 1.25rem; position: relative; }
+.role-flow li::before { content: ""; position: absolute; top: -1px; left: 0; width: 2.5rem; height: 1px; background: var(--cursor); }
+
+/* ---- Pilot: route + facts ---- */
+.route { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.route li { display: grid; gap: 0.5rem 2rem; padding: 1.75rem 0; border-bottom: 1px solid var(--rule); }
+@media (min-width: 768px) { .route li { grid-template-columns: 4rem minmax(0, 1fr) minmax(0, 1.4fr); align-items: baseline; } }
+.route-n { font-size: 0.8rem; color: var(--cursor); letter-spacing: 0.16em; }
+.route h3 { margin: 0; font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; color: var(--text-strong); }
+.route p { margin: 0; font-size: 0.9rem; line-height: 1.6; }
+
+.facts { display: grid; gap: 2.5rem; }
+@media (min-width: 768px) { .facts { grid-template-columns: repeat(2, 1fr); gap: 3rem 4rem; } }
+.facts > div { border-top: 1px solid var(--rule); padding-top: 1rem; }
+.facts p { margin: 0 0 0.6rem; font-size: 0.9rem; line-height: 1.6; }
+.facts strong { color: var(--text-strong); font-weight: 600; }
+.fact-k { font-size: 0.7rem !important; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-faint); }
+.fact-note { font-size: 0.78rem !important; color: var(--text-faint); }
