@@ -22,6 +22,30 @@ Graph exports are labelled unapproved analysis. Modeled replay lead times and
 heuristic thresholds must never be described as proven prediction or inevitability.
 The road/cinema specification below remains useful for the earlier demo only.
 
+### Public site visual system (October 2026)
+
+Landing, `/defense`, the guided exercise, `/pilot`, `/case/[id]` and `/digest`
+share one language. The working surfaces stay calm; the spectacle lives in
+the heroes.
+
+- **Landing (`/`)**: one-line hero over a generated plate, then a scrubbed
+  GSAP ScrollTrigger "descent" through six layers (platform, system, assembly,
+  component, material, source) in `components/Descent.tsx`, then a draggable
+  proof-case rail (`ProofCases.tsx`). Reduced motion renders the layers as
+  stacked sections.
+- **Inner pages**: `PageHero` (compact hero with a plate per page, shared
+  `SiteHeader`) and a staged `.enter` entrance. Imagery stays in the hero band;
+  the tool below is unchanged.
+- **Imagery**: `apps/web/public/descent/*.jpg`, generated, abstract, labelled
+  illustrative. Per `edth-dependency-visual-spec.md`: no military photography,
+  no partner logos, no glowing networks.
+- **Copy rule**: one idea per beat. Long boundary statements live in
+  disclosures or a single footer line, but phrases covered by tests
+  (`onboarding.test.ts`, `workspace.test.ts`) must remain in the DOM.
+- **Next.js gotchas**: rewrites are fixed at build time (pass `AGENT_URL` as a
+  build arg); unlayered CSS beats Tailwind utilities, so avoid setting
+  `margin` or `padding` in custom classes you also size with utilities.
+
 The concept (Decide-Replay) lives in [dashboard.md](dashboard.md). This file is
 the *craft* layer: how Bothy should look, move, and prioritise a decision.
 

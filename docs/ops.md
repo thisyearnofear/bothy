@@ -294,10 +294,12 @@ reset.
 
 
 
-## Deploy to Fly.io (recommended — free tier)
+## Deploy to Fly.io (pay-as-you-go)
 
-Fly.io runs real Docker containers on 3 shared VMs, has persistent volumes,
-and doesn't sleep like Render/Railway. It provides a unified container deployment.
+Fly.io runs real Docker containers with persistent volumes and does not sleep
+like Render/Railway, but it has no free tier for new accounts (about $8/month
+for the two always-on apps). The TuringDB graph service is not provisioned on
+Fly yet. For a no-cost demo use "Demo on a plain VPS" below.
 
 ### Quick start
 
@@ -331,18 +333,15 @@ cp fly/web.toml fly.toml && fly deploy --app bothy-web
 
 Full guide: [`fly/DEPLOY.md`](fly/DEPLOY.md)
 
-### Free tier
+### Indicative cost
 
-| Resource | Allowance |
-|----------|-----------|
-| Shared VMs | 3 |
-| RAM | 512MB/VM |
-| Bandwidth | 160GB/month |
-| Volumes | 3GB |
+Two always-on shared-cpu-1x apps at 512 MB are roughly $7.4/month, plus
+volumes ($0.15/GB) and egress ($0.02/GB in North America and Europe). See
+fly.io/docs/about/pricing for current prices.
 
-### Fly.io + free Postgres
+### Fly.io + Postgres
 
-Use an existing managed Postgres (Neon free tier, Supabase, etc.) or create one on Fly:
+Use an existing managed Postgres with PostGIS (Neon, Supabase, etc.) or create one on Fly:
 
 ```bash
 fly postgres create --name bothy-db --org personal

@@ -1,6 +1,6 @@
-# Fly.io Deployment Guide (Free Tier)
+# Fly.io Deployment Guide
 
-Fly.io offers 3 shared VMs and 160GB outbound bandwidth free per month. Bothy runs as two apps with internal networking — no reverse proxy needed.
+Fly.io bills per second with no free tier for new accounts; two always-on shared-cpu-1x apps at 512 MB cost roughly $8/month plus volume and egress. Bothy runs as two apps with internal networking, so no reverse proxy is needed. The TuringDB graph service is not provisioned on Fly yet, so the gallium investigation needs it added (see `deploy/graph/` for the container recipe). For a no-cost demo use the VPS stack in the README.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ fly ips allocate-v6 --app bothy-agent
 # No public port exposure needed for agent
 ```
 
-## 3. Add Postgres (free with Fly.io)
+## 3. Add Postgres
 
 ```bash
 # Use an existing managed Postgres or create one on Fly.io
@@ -63,7 +63,7 @@ fly postgres create --name bothy-db --org personal
 fly postgres attach --app bothy-agent --database-app bothy-db
 ```
 
-Or connect to an existing Neon/Supabase free tier Postgres:
+Or connect to an existing managed Postgres with PostGIS (for example Neon or Supabase):
 
 ```bash
 fly secrets set \
@@ -102,15 +102,14 @@ fly certs create your-domain.com --app bothy-web
 fly certs create api.your-domain.com --app bothy-agent
 ```
 
-## Fly.io Free Tier Limits
+## Indicative cost (check fly.io/docs/about/pricing)
 
-| Resource | Free Allowance |
-|----------|---------------|
-| Shared VMs | 3 |
-| RAM per VM | 512MB |
-| Outbound bandwidth | 160GB/month |
-| Volumes | 3GB |
-| Postgres | 1 shared VM, 1GB storage |
+| Item | Approx. per month |
+|------|-------------------|
+| 2 x shared-cpu-1x, 512 MB, always on | $7.4 |
+| Volume (`agent_data`), per GB | $0.15 |
+| Egress (North America / Europe), per GB | $0.02 |
+| Dedicated IPv4 (optional), per app | $2.00 |
 
 ## Monitoring
 

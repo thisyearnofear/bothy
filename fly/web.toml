@@ -4,6 +4,9 @@ primary_region = "lax"
 [build]
   dockerfile = "apps/web/Dockerfile"
 
+[build.args]
+  AGENT_URL = "http://bothy-agent.internal:8787"
+
 [env]
   PORT = "8080"
   NODE_ENV = "production"

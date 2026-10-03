@@ -112,38 +112,51 @@ The earlier road agent uses Strands / OpenAI-compatible providers with a
 deterministic scripted fallback. Its defence brief integration and bounded
 Strands handoff are subsequent roadmap gates, not completed claims.
 
-## Deploy (Fly.io — free tier, recommended)
+## Deploy
 
-Fly.io runs real Docker on 3 shared VMs, has persistent volumes, and doesn't sleep
-like Render/Railway free tiers. Bothy uses internal networking over Fly's private
-network — no reverse proxy needed.
+### Option A: your own VPS (Docker + Caddy), no extra cost
+
+`deploy/docker-compose.demo.yml` runs Caddy (automatic HTTPS), the web app, the
+agent, PostGIS and the TuringDB graph service on one host. Only ports 80/443
+are published. This is what serves the live demo at `https://bothy.trustfall.xyz`.
 
 ```bash
-# Install flyctl
+# DNS: A record bothy.<your-domain> -> the VPS IPv4 address, then on the VPS:
+cd deploy
+cp .env.production.example .env.production   # set POSTGRES_PASSWORD, URLs, keys
+docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.demo.yml --env-file .env.production run --rm agent npm run seed
+curl https://bothy.<your-domain>/api/health
+curl https://bothy.<your-domain>/api/graph/health
+```
+
+The `graphs/` stores (about 470 MB) are not in Git; see `graphs/README.md`.
+Details: "Demo on a plain VPS" in [`docs/ops.md`](docs/ops.md).
+
+### Option B: Fly.io (pay-as-you-go, about $8/month for two always-on 512 MB apps)
+
+Fly has no free tier for new accounts. The configs in `fly/` define two
+always-on apps (`bothy-agent`, `bothy-web`) on shared-cpu-1x with 512 MB.
+Not yet provisioned for Fly: the TuringDB graph service (so the gallium
+investigation will report the analysis service as unavailable) and a database
+(bring your own PostGIS URL).
+
+```bash
 curl -L https://fly.io/install.sh | sh
 fly auth login
-
-# Create apps
 fly apps create bothy-agent --org personal
 fly apps create bothy-web --org personal
-
-# Set secrets (never committed)
 fly secrets set DATABASE_URL="<your-postgres-url>" \
-  WEB_ORIGIN="https://bothy.fly.dev" \
-  PUBLIC_WEB_URL="https://bothy.fly.dev" \
+  WEB_ORIGIN="https://bothy.fly.dev" PUBLIC_WEB_URL="https://bothy.fly.dev" \
   PORT=8787 --app bothy-agent
-
-fly secrets set AGENT_URL="http://bothy-agent.internal:8787" \
-  PORT=8080 --app bothy-web
-
-# Deploy
+fly secrets set AGENT_URL="http://bothy-agent.internal:8787" PORT=8080 --app bothy-web
 cp fly/agent.toml fly.toml && fly deploy --app bothy-agent
 cp fly/web.toml fly.toml && fly deploy --app bothy-web
 ```
 
-Full guide: [`fly/DEPLOY.md`](fly/DEPLOY.md).
-
-Free tier: 3 shared VMs, 512MB RAM/VM, 160GB bandwidth/month, 3GB volumes.
+The web image bakes the agent URL into its Next rewrites at build time;
+`fly/web.toml` passes it as a build argument. Full guide:
+[`fly/DEPLOY.md`](fly/DEPLOY.md).
 
 ## Validate
 
