@@ -37,6 +37,9 @@ describe("allowPath", () => {
   it("permits the documented defence routes", () => {
     for (const [method, path] of [
       ["GET", "/session"], ["POST", "/briefs"], ["GET", "/briefs/abc"],
+      ["GET", "/owners"], ["GET", "/briefs/page/0"], ["GET", "/briefs/page/20"],
+      ["GET", "/briefs/page/review/0"], ["GET", "/briefs/page/work/20"], ["GET", "/briefs/page/assignment/0"],
+      ["POST", "/briefs/abc/revisions"],
       ["GET", "/briefs/abc/evidence"], ["GET", "/briefs/abc/audit"],
       ["POST", "/briefs/abc/review"], ["POST", "/briefs/abc/action"],
       ["POST", "/briefs/abc/action/acknowledge"], ["POST", "/briefs/abc/action/outcome"],
@@ -48,6 +51,8 @@ describe("allowPath", () => {
   it("refuses anything outside the defence surface", () => {
     for (const [method, path] of [
       ["GET", "/graph/health"], ["POST", "/briefs/abc/../../etc/passwd"],
+      ["GET", "/briefs/page/-1"], ["GET", "/briefs/page/owner"], ["POST", "/owners"],
+      ["GET", "/briefs/page/other/0"], ["GET", "/briefs/page/work/-1"],
       ["DELETE", "/briefs/abc"], ["POST", "/briefs/abc/email"], ["GET", "/briefs/abc/action"],
       ["POST", "/assessments/abc/decision"], ["GET", "/session/extra"],
     ] as const) {
@@ -72,12 +77,23 @@ describe("filterBody", () => {
     assert.deepEqual(filterBody("POST /briefs/:id/acknowledge", { subject: "attacker" }), {});
   });
 
+  it("revision bodies contain only captured run identity", () => {
+    assert.deepEqual(filterBody("POST /briefs/:id/revisions", { runId: "capture", parentBriefId: "forged", subject: "forged", status: "approved" }), { runId: "capture" });
+  });
+
   it("returns undefined for reads", () => {
     assert.equal(filterBody("GET /briefs/:id", undefined), undefined);
   });
 });
 
 describe("proxyDefense", () => {
+  it("refuses queue identity filters before contacting the agent", async () => {
+    const agent = upstream(200, { cases: [] });
+    const result = await proxyDefense(get("/briefs/page/0?subject=other", { cookie: await cookie("at") }), "/briefs/page/0", SECRET, agent.impl);
+    assert.equal(result.status, 400);
+    assert.equal(agent.calls.length, 0);
+  });
+
   it("forwards the cookie token as a bearer and never a client Authorization header", async () => {
     const agent = upstream(200, { ok: true });
     const result = await proxyDefense(

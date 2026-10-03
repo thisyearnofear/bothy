@@ -92,6 +92,14 @@ describe("bridge to agent end to end", () => {
     assert.equal(brief.evidenceHash, evidenceHash(run));
     assert.equal(brief.claims.length, 2);
 
+    const creatorCases = await call("GET", "/briefs/page/0", undefined, "analyst");
+    assert.ok(JSON.parse(creatorCases.body).cases.some((item: { id: string }) => item.id === brief.id));
+    const otherCases = await call("GET", "/briefs/page/0", undefined, "other");
+    assert.ok(!JSON.parse(otherCases.body).cases.some((item: { id: string }) => item.id === brief.id));
+    assert.equal((await call("GET", "/owners", undefined, "analyst")).status, 403);
+    const owners = await call("GET", "/owners", undefined, "reviewer");
+    assert.ok(JSON.parse(owners.body).owners.some((item: { subject: string }) => item.subject === "owner"));
+
     const approved = await call("POST", `/briefs/${brief.id}/review`, { decision: "approved", note: "Dependencies check out." }, "reviewer");
     assert.equal(approved.status, 200);
     assert.equal(JSON.parse(approved.body).status, "approved");
@@ -99,6 +107,10 @@ describe("bridge to agent end to end", () => {
     const assigned = await call("POST", `/briefs/${brief.id}/action`, { owner: "owner", dueAt: new Date(Date.now() + 86_400_000).toISOString() }, "reviewer");
     assert.equal(assigned.status, 200);
     assert.equal(JSON.parse(assigned.body).action.status, "assigned");
+
+    const ownerCases = await call("GET", "/briefs/page/0", undefined, "owner");
+    assert.ok(JSON.parse(ownerCases.body).cases.some((item: { id: string }) => item.id === brief.id));
+    assert.equal((await call("GET", `/briefs/${brief.id}/evidence`, undefined, "owner")).status, 200);
 
     const acknowledged = await call("POST", `/briefs/${brief.id}/action/acknowledge`, {}, "owner");
     assert.equal(acknowledged.status, 200);
@@ -113,6 +125,26 @@ describe("bridge to agent end to end", () => {
     const entries = (JSON.parse(audit.body) as { entries: { subject: string; action: string }[] }).entries;
     assert.deepEqual(entries.map((entry) => entry.action), ["approved", "action_assigned", "action_acknowledged", "action_completed"]);
     assert.deepEqual(entries.map((entry) => entry.subject), ["reviewer", "reviewer", "owner", "owner"]);
+  });
+
+  it("filters review/work by verified role and creates an independent linked revision", async () => {
+    const run = captureRun();
+    const parent = JSON.parse((await call("POST", "/briefs", { runId: run.runId }, "analyst")).body);
+    const review = await call("GET", "/briefs/page/review/0", undefined, "reviewer");
+    assert.ok(JSON.parse(review.body).cases.some((item: { id: string }) => item.id === parent.id));
+    assert.equal((await call("GET", "/briefs/page/review/0", undefined, "analyst")).status, 403);
+    assert.equal((await call("GET", "/briefs/page/work/0", undefined, "reviewer")).status, 403);
+    await call("POST", `/briefs/${parent.id}/review`, { decision: "approved" }, "reviewer");
+    const previous = (await call("GET", `/briefs/${parent.id}`, undefined, "analyst")).body;
+    const fresh = captureRun();
+    assert.equal((await call("POST", `/briefs/${parent.id}/revisions`, { runId: fresh.runId }, "other")).status, 404);
+    const revision = await call("POST", `/briefs/${parent.id}/revisions`, { runId: fresh.runId, status: "approved", subject: "forged" }, "analyst");
+    assert.equal(revision.status, 201);
+    const child = JSON.parse(revision.body);
+    assert.equal(child.parentBriefId, parent.id);
+    assert.equal(child.status, "pending");
+    assert.equal(child.createdBySubject, "analyst");
+    assert.equal((await call("GET", `/briefs/${parent.id}`, undefined, "analyst")).body, previous);
   });
 
   it("surfaces the agent's 409 on a second review", async () => {

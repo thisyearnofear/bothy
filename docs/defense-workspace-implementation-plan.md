@@ -20,9 +20,12 @@ copy, a UI-derived gallium summary, and brief-first ordering. [Slice two](defens
 adds stored-row citation navigation, typed recovery, and synthetic-demo case
 access. Verification totals are 76 web tests and 21 agent tests.
 
-The deterministic persisted brief generator is unchanged. Person selection,
-saved-case queues, customer tenancy, indexed list storage, committed browser
-coverage, and buyer validation are not implemented. The steps below retain the
+A subsequent continuity slice implements bounded access-scoped case pages,
+configured owner selection, additive list indexes, and retained-evidence reopening;
+see [domain workspaces](domain-workspaces.md). The deterministic persisted brief
+generator is unchanged. Focused review/assignment/work views and parent-linked
+revisions are also implemented. Display-name directory, cursor pagination,
+customer tenancy, committed browser coverage, and buyer validation remain planned. The steps below retain the
 original delivery plan and acceptance criteria; implementation notes identify
 which parts have actually been verified.
 

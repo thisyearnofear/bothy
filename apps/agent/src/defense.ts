@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { Router } from "express";
 import { z } from "zod";
-import type { DefenseBrief, GraphRun } from "../../../packages/shared/src/types";
+import type { DefenseBrief, DefenseCasePage, DefenseCaseFilter, GraphRun } from "../../../packages/shared/src/types";
 import { AccessError, type Principal, type createAuth } from "./auth";
 import { getScenarioDef } from "./graph/scenarios";
 import { witnessRunId } from "./graph/witness";
@@ -13,7 +13,10 @@ export class DefenseStore {
   constructor(private db: DatabaseSync) {
     db.exec(`CREATE TABLE IF NOT EXISTS graph_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS defense_briefs (id TEXT PRIMARY KEY, status TEXT NOT NULL, brief TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS defense_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, brief_id TEXT NOT NULL, subject TEXT NOT NULL, action TEXT NOT NULL, at TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS defense_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, brief_id TEXT NOT NULL, subject TEXT NOT NULL, action TEXT NOT NULL, at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS defense_creator ON defense_briefs(json_extract(brief, '$.createdBySubject'));
+      CREATE INDEX IF NOT EXISTS defense_owner ON defense_briefs(json_extract(brief, '$.action.owner'));
+      CREATE INDEX IF NOT EXISTS defense_created ON defense_briefs(json_extract(brief, '$.createdAt'), id);`);
   }
   private run(id: string): GraphRun {
     const row = this.db.prepare("SELECT run FROM graph_runs WHERE id = ?").get(id) as { run: string } | undefined;
@@ -43,6 +46,48 @@ export class DefenseStore {
       (principal.roles.includes("action-owner") && brief.action?.owner === principal.subject));
     if (!allowed) throw new AccessError(404, "brief not found");
     return brief;
+  }
+  list(principal: Principal, offset: number, filter: DefenseCaseFilter = "all"): DefenseCasePage {
+    if (!["all", "review", "assignment", "work"].includes(filter)) throw new AccessError(400, "invalid case filter");
+    if ((filter === "review" || filter === "assignment") && !principal.roles.includes("reviewer")) throw new AccessError(403, "reviewer role required");
+    if (filter === "work" && !principal.roles.includes("action-owner")) throw new AccessError(403, "action-owner role required");
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw new AccessError(400, "invalid case offset");
+    const rows = this.db.prepare(`SELECT brief FROM defense_briefs
+      WHERE COALESCE(json_extract(brief, '$.accessScope'), 'synthetic-demo') = 'synthetic-demo'
+      AND (? = 1 OR (? = 1 AND json_extract(brief, '$.createdBySubject') = ?)
+        OR (? = 1 AND json_extract(brief, '$.action.owner') = ?))
+      AND (? = 'all' OR (? = 'review' AND status = 'pending')
+        OR (? = 'assignment' AND status = 'approved' AND json_extract(brief, '$.action') IS NULL)
+        OR (? = 'work' AND json_extract(brief, '$.action.owner') = ? AND json_extract(brief, '$.action.status') IN ('assigned', 'acknowledged')))
+      ORDER BY json_extract(brief, '$.createdAt') DESC, id DESC LIMIT 21 OFFSET ?`).all(
+      Number(principal.roles.includes("reviewer")), Number(principal.roles.includes("analyst")), principal.subject,
+      Number(principal.roles.includes("action-owner")), principal.subject, filter, filter, filter, filter, principal.subject, offset,
+    ) as { brief: string }[];
+    return {
+      cases: rows.slice(0, 20).map(({ brief }) => {
+        const { id, title, createdAt, status, action } = JSON.parse(brief) as DefenseBrief;
+        return { id, title, createdAt, status, ...(action ? { action: { owner: action.owner, dueAt: action.dueAt, status: action.status } } : {}) };
+      }),
+      nextOffset: rows.length > 20 ? offset + 20 : null,
+    };
+  }
+  revise(id: string, runId: string, principal: Principal): DefenseBrief {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const parent = this.authorizeRead(id, principal);
+      if (!principal.roles.some((role) => role === "analyst" || role === "reviewer")) throw new AccessError(403, "analyst or reviewer role required");
+      const previous = this.evidence(id);
+      const capture = this.run(runId);
+      if (runId === parent.runId || capture.scenarioId !== previous.scenarioId || capture.graph !== previous.graph || capture.cypher !== previous.cypher) {
+        throw new AccessError(409, "a separate capture of the same exposure question is required");
+      }
+      const child = this.draft(runId, principal);
+      child.parentBriefId = parent.id;
+      this.db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify(child), child.id);
+      this.db.prepare("INSERT INTO defense_audit (brief_id, subject, action, at) VALUES (?, ?, ?, ?)").run(child.id, principal.subject, "revision_created", new Date().toISOString());
+      this.db.exec("COMMIT");
+      return child;
+    } catch (e) { this.db.exec("ROLLBACK"); throw e; }
   }
   draft(runId: string, creator?: Principal): DefenseBrief {
     const run = this.run(runId);
@@ -155,6 +200,23 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
   });
   router.use(auth.require("analyst", "reviewer", "action-owner"));
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
+  router.get("/briefs/page/:offset", (req, res) => {
+    if (Object.keys(req.query).length || !/^(0|[1-9]\d*)$/.test(req.params.offset)) return res.status(400).json({ error: "only a numeric case offset is accepted" });
+    handle(() => store.list(res.locals.principal, Number(req.params.offset)), res);
+  });
+  router.get("/briefs/page/:filter/:offset", (req, res) => {
+    if (Object.keys(req.query).length || !/^(0|[1-9]\d*)$/.test(req.params.offset) || !["all", "review", "assignment", "work"].includes(req.params.filter)) return res.status(400).json({ error: "invalid case page" });
+    handle(() => store.list(res.locals.principal, Number(req.params.offset), req.params.filter as DefenseCaseFilter), res);
+  });
+  router.post("/briefs/:id/revisions", (req, res) => {
+    const runId = witnessRunId(req.body);
+    if (!runId) return res.status(400).json({ error: "only runId is accepted" });
+    handle(() => store.revise(req.params.id, runId, res.locals.principal), res, true);
+  });
+  router.get("/owners", (_req, res) => {
+    if (!res.locals.principal.roles.includes("reviewer")) return res.status(403).json({ error: "reviewer role required" });
+    handle(() => ({ owners: auth.eligibleOwners() }), res);
+  });
   router.get("/briefs/:id", (req, res) => handle(() => store.authorizeRead(req.params.id, res.locals.principal), res));
   router.get("/briefs/:id/evidence", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.evidence(req.params.id); }, res));
   router.get("/briefs/:id/audit", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return { entries: store.audit(req.params.id) }; }, res));

@@ -37,9 +37,16 @@ layout, clickable citation inspection, typed recovery, and synthetic-demo
 creator/owner/reviewer case access. See [slice one](defense-workspace-slice-one.md)
 and [slice two](defense-workspace-slice-two.md) for verification.
 
-Owner selection/directory, saved-case queues, customer tenancy, committed browser
-coverage, and real buyer identity/data validation remain outstanding. These
-changes do not complete the operational Phase 1/2 gates.
+A subsequent domain/continuity slice adds an access-scoped saved-case collection,
+configured-owner selection, and a retained-evidence reopen view. Flood remains a
+seeded replay within the separate watch experience; [domain workspaces](domain-workspaces.md)
+records its discovery criteria and proposed protective-action journey.
+
+Focused review/assignment/current-owner work views and independently reviewed,
+parent-linked revisions are now implemented. A [flood operator validation brief](flood-operator-validation-brief.md)
+is prepared; selecting a partner and conducting validation remain outstanding.
+Provider display-name directory, cursor pagination, customer tenancy, committed
+browser coverage, and real buyer identity/data validation remain outstanding. These changes do not complete the operational Phase 1/2 gates.
 
 ### Submission gates
 

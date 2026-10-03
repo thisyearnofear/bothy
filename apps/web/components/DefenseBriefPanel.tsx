@@ -17,7 +17,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
   token_endpoint_unreachable: "The SSO token endpoint is unreachable.",
 };
 
-export default function DefenseBriefPanel({ run, session }: { run: GraphRun | null; session: DefenseSession }) {
+export default function DefenseBriefPanel({ run, session, savedCase = false }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean }) {
   const [brief, setBrief] = useState<DefenseBrief | null>(null);
   const [evidence, setEvidence] = useState<GraphRun | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,12 +29,24 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [owner, setOwner] = useState("");
+  const [owners, setOwners] = useState<{ subject: string }[]>([]);
+  const [ownerError, setOwnerError] = useState("");
+  const [ownerRetry, setOwnerRetry] = useState(0);
   const [dueAt, setDueAt] = useState("");
   const [outcome, setOutcome] = useState("");
   const alive = useRef(true);
   const authenticated = session.authenticated && !sessionExpired;
   const reviewer = authenticated && !conflicted && session.roles.includes("reviewer");
   const assignedOwner = authenticated && !conflicted && session.roles.includes("action-owner") && brief?.action?.owner === session.subject;
+
+  useEffect(() => {
+    setOwners([]); setOwnerError("");
+    if (!reviewer || brief?.status !== "approved" || brief.action) return;
+    const ctl = new AbortController();
+    api.defenseOwners(ctl.signal).then((result) => { if (!ctl.signal.aborted) setOwners(result.owners); })
+      .catch((e) => { if (!ctl.signal.aborted && !isAbortError(e)) setOwnerError(recoveryMessage(e)); });
+    return () => ctl.abort();
+  }, [reviewer, brief?.status, brief?.action, ownerRetry]);
 
   useEffect(() => {
     if (selected && evidence) {
@@ -95,8 +107,8 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
     <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Programme verification brief">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? "Saving…" : briefStage(brief, Boolean(run))}</p>
-          <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-strong)" }}>{brief?.title ?? "Prepare a cited verification brief"}</h2>
+          <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? "Saving…" : savedCase && !brief ? "Reopening saved case" : briefStage(brief, Boolean(run))}</p>
+          <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-strong)" }}>{brief?.title ?? (savedCase ? "Saved verification brief" : "Prepare a cited verification brief")}</h2>
         </div>
         <button className={control} style={card} disabled={busy || !run || Boolean(brief)}
           onClick={() => { if (run) void update(() => api.draftDefenseBrief(run.runId)); }}>{busy ? "Saving…" : "Draft cited brief"}</button>
@@ -120,9 +132,9 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
         )}
         {signInNotice && <p role="alert">{signInNotice}</p>}
       </div>
-      {!brief && <p className="mt-2 text-sm">{run ? "The analysis is ready. Draft a brief from the captured evidence for reviewer verification." : "Analyze exposure first to enable drafting."} Briefs are deterministic and make no production-loss prediction.</p>}
+      {!brief && !savedCase && <p className="mt-2 text-sm">{run ? "The analysis is ready. Draft a brief from the captured evidence for reviewer verification." : "Analyze exposure first to enable drafting."} Briefs are deterministic and make no production-loss prediction.</p>}
       {brief?.status === "rejected" && <p className="mt-3 text-sm">This brief was rejected. Check the review note, then rerun the exposure question to prepare a new brief. The rejected record is retained.</p>}
-      {brief && !busy && <p className="mt-2 text-sm" role="status">Saved case. Bookmark this page to reopen it with an authorized session.</p>}
+      {brief && !busy && <p className="mt-2 text-sm" role="status">Saved case. Bookmark this page or reopen it from your saved-case collection.</p>}
       {error && <div className="mt-3 space-y-2 text-sm">
         <p role="alert">{error}</p>
         {authenticated && <button className={control} style={card} disabled={busy} onClick={() => setReopen((value) => value + 1)}>Reload saved case</button>}
@@ -134,6 +146,7 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
             graph {brief.graphCommit} · query {brief.queryHash}<br />
             evidence {brief.evidenceHash}
           </p>
+          {brief.parentBriefId && <p className="text-sm">Linked revision of <a className="underline" href={`/defense?brief=${encodeURIComponent(brief.parentBriefId)}`}>the prior case</a>. Access to that case is checked separately. This revision requires its own review.</p>}
           <ol className="space-y-3">
             {brief.claims.map((claim, index) => <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
               <p className="break-words text-sm">{claim.text}</p>
@@ -156,7 +169,7 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
               </div>
             </li>)}
           </ol>
-          {!brief.claims.length && <p className="text-sm">No rows were captured. This is not evidence of no exposure.</p>}
+          {!brief.claims.length && <p className="text-sm">No claims are recorded in this brief. Inspect its retained evidence; an empty claim list does not establish no exposure.</p>}
           <div>
             <h3 className="text-sm font-semibold">Known gaps</h3>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{brief.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
@@ -189,13 +202,19 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
           {brief.review && <p className="break-words text-sm">Reviewed by {brief.review.subject} at {new Date(brief.review.at).toLocaleString()}: {brief.review.note || "No note recorded."}</p>}
           {brief.status === "approved" && !brief.action && <div className="space-y-3">
             {!reviewer && <p className="text-sm">A signed-in reviewer must assign this verification action.</p>}
-            <label className="block text-sm">Assigned owner (configured OIDC subject)
-              <input value={owner} maxLength={200} onChange={(e) => setOwner(e.target.value)} disabled={busy || !reviewer} className="mt-2 block w-full rounded-lg border p-3" style={card} />
+            <label className="block text-sm">Assign an eligible verification owner
+              <select value={owner} onChange={(e) => setOwner(e.target.value)} disabled={busy || !reviewer || !owners.length} className="mt-2 block w-full rounded-lg border p-3" style={card}>
+                <option value="">Choose a configured action owner</option>
+                {owners.map((person) => <option key={person.subject} value={person.subject}>{person.subject}</option>)}
+              </select>
             </label>
+            <p className="text-sm">These identifiers come from this deployment's verified role configuration, not an identity-provider directory.</p>
+            {ownerError && <p role="alert" className="text-sm">{ownerError}</p>}
+            {reviewer && <button className={control} style={card} disabled={busy} onClick={() => setOwnerRetry((value) => value + 1)}>Refresh eligible owners</button>}
             <label className="block text-sm">Verification due
               <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} disabled={busy || !reviewer} className="mt-2 block max-w-full rounded-lg border p-3" style={card} />
             </label>
-            <button className={control} style={card} disabled={busy || !reviewer || !owner.trim() || !dueAt}
+            <button className={control} style={card} disabled={busy || !reviewer || !owners.some((person) => person.subject === owner) || !dueAt}
               onClick={() => void update(() => api.assignDefenseAction(brief.id, owner.trim(), new Date(dueAt).toISOString()))}>Assign verification action</button>
           </div>}
           {brief.action && <div className="space-y-3">

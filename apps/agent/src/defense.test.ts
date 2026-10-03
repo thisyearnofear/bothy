@@ -79,6 +79,11 @@ test("OIDC-protected HTTP journey rejects forged fields, wrong roles, duplicate 
     const { data: brief } = await request("/briefs", { runId: run.runId });
     const path = `/briefs/${brief.id}`;
     assert.equal((await request(path)).status, 401);
+    assert.equal((await request("/briefs/page/0")).status, 401);
+    assert.equal((await request("/briefs/page/0?subject=other", undefined, "reviewer")).status, 400);
+    assert.equal((await request("/briefs/page/-1", undefined, "reviewer")).status, 400);
+    assert.equal((await request("/owners", undefined, "analyst")).status, 403);
+    assert.deepEqual((await request("/owners", undefined, "reviewer")).data.owners, [{ subject: "other" }, { subject: "owner" }]);
     for (const suffix of ["", "/evidence", "/audit"]) {
       assert.equal((await request(path + suffix, undefined, "other")).status, 404);
       assert.equal((await request(path + suffix, undefined, "analyst")).status, 404);
@@ -137,6 +142,93 @@ test("case access is limited to creator, assigned owner and synthetic-demo revie
     assert.throws(() => store.authorizeRead(legacy.id, analyst), /not found/);
     db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify({ ...brief, accessScope: "restricted" }), brief.id);
     assert.throws(() => store.authorizeRead(brief.id, reviewer), /not found/);
+  } finally { db.close(); }
+});
+
+test("saved-case pages enforce identity scope, bounded order and legacy visibility", () => {
+  const { db, store, run } = fixture();
+  try {
+    const creator = { subject: "analyst", roles: ["analyst"] as "analyst"[] };
+    const reviewer = { subject: "reviewer", roles: ["reviewer"] as "reviewer"[] };
+    const ids = Array.from({ length: 22 }, () => store.draft(run.runId, creator).id);
+    const anonymous = store.draft(run.runId);
+    const first = store.list(creator, 0);
+    assert.equal(first.cases.length, 20);
+    assert.equal(first.nextOffset, 20);
+    const second = store.list(creator, 20);
+    assert.equal(second.cases.length, 2);
+    assert.equal(second.nextOffset, null);
+    assert.equal(new Set([...first.cases, ...second.cases].map((item) => item.id)).size, 22);
+    assert.ok(!first.cases.some((item) => item.id === anonymous.id));
+    assert.equal(store.list({ subject: "unrelated", roles: ["analyst"] }, 0).cases.length, 0);
+    assert.equal(store.list({ subject: "owner", roles: ["action-owner"] }, 0).cases.length, 0);
+    store.review(ids[0], reviewer, "approved", "");
+    store.assign(ids[0], reviewer, "owner", "2026-10-30T12:00:00Z");
+    const owned = store.list({ subject: "owner", roles: ["action-owner"] }, 0);
+    assert.equal(owned.cases[0].id, ids[0]);
+    assert.equal(owned.cases.length, 1);
+    assert.ok(!("outcome" in owned.cases[0].action!));
+    assert.equal(store.list(reviewer, 20).cases.length, 3);
+    assert.throws(() => store.list(creator, -1), /offset/);
+    assert.throws(() => store.list(creator, 100001), /offset/);
+    // Recreating the store adds idempotent indexes without changing the ledger.
+    const reopened = new DefenseStore(db);
+    assert.deepEqual(reopened.list(creator, 0), store.list(creator, 0));
+    assert.equal(reopened.audit(ids[0]).length, 2);
+  } finally { db.close(); }
+});
+
+test("focused views enforce roles and include only the relevant case stage", () => {
+  const { db, store, run } = fixture();
+  try {
+    const reviewer = { subject: "reviewer", roles: ["reviewer", "action-owner"] as ("reviewer" | "action-owner")[] };
+    const pending = store.draft(run.runId);
+    const approved = store.draft(run.runId);
+    store.review(approved.id, reviewer, "approved", "");
+    assert.deepEqual(store.list(reviewer, 0, "review").cases.map((item) => item.id), [pending.id]);
+    assert.deepEqual(store.list(reviewer, 0, "assignment").cases.map((item) => item.id), [approved.id]);
+    store.assign(approved.id, reviewer, reviewer.subject, "2026-10-30T12:00:00Z");
+    assert.equal(store.list(reviewer, 0, "assignment").cases.length, 0);
+    assert.deepEqual(store.list(reviewer, 0, "work").cases.map((item) => item.id), [approved.id]);
+    store.advanceAction(approved.id, reviewer);
+    store.advanceAction(approved.id, reviewer, "Verified");
+    assert.equal(store.list(reviewer, 0, "work").cases.length, 0);
+    assert.throws(() => store.list({ subject: "analyst", roles: ["analyst"] }, 0, "review"), /reviewer/);
+    assert.throws(() => store.list({ subject: "reviewer", roles: ["reviewer"] }, 0, "work"), /action-owner/);
+  } finally { db.close(); }
+});
+
+test("linked revisions preserve parent evidence, state and audit and require a distinct same-question capture", () => {
+  const { db, store, run } = fixture();
+  try {
+    const creator = { subject: "analyst", roles: ["analyst"] as "analyst"[] };
+    const reviewer = { subject: "reviewer", roles: ["reviewer"] as "reviewer"[] };
+    const parent = store.draft(run.runId, creator);
+    store.review(parent.id, reviewer, "approved", "Retain this decision");
+    store.assign(parent.id, reviewer, "owner", "2026-10-30T12:00:00Z");
+    const prior = JSON.stringify(store.get(parent.id));
+    const audit = store.audit(parent.id);
+    const fresh = { ...run, runId: "new-capture", capturedAt: "2026-10-03T12:00:00Z" };
+    db.prepare("INSERT INTO graph_runs (id, run) VALUES (?, ?)").run(fresh.runId, JSON.stringify(fresh));
+    assert.throws(() => store.revise(parent.id, fresh.runId, { subject: "unrelated", roles: ["analyst"] }), /not found/);
+    assert.throws(() => store.revise(parent.id, fresh.runId, { subject: "owner", roles: ["action-owner"] }), /analyst or reviewer/);
+    assert.throws(() => store.revise(parent.id, run.runId, creator), /separate capture/);
+    const child = store.revise(parent.id, fresh.runId, creator);
+    assert.equal(child.parentBriefId, parent.id);
+    assert.notEqual(child.id, parent.id);
+    assert.notEqual(child.evidenceHash, parent.evidenceHash);
+    assert.equal(child.status, "pending");
+    assert.equal(child.review, undefined);
+    assert.equal(child.action, undefined);
+    assert.equal(child.createdBySubject, creator.subject);
+    assert.equal(JSON.stringify(store.get(parent.id)), prior);
+    assert.deepEqual(store.audit(parent.id), audit);
+    assert.deepEqual(store.evidence(parent.id), run);
+    assert.equal(store.audit(child.id)[0].action, "revision_created");
+    const unpinned = { ...fresh, runId: "bad-capture", graphCommit: null };
+    db.prepare("INSERT INTO graph_runs (id, run) VALUES (?, ?)").run(unpinned.runId, JSON.stringify(unpinned));
+    assert.throws(() => store.revise(parent.id, unpinned.runId, creator), /pinned/);
+    assert.equal(store.list(creator, 0).cases.length, 2);
   } finally { db.close(); }
 });
 

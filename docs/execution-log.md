@@ -1,5 +1,64 @@
 # Execution log
 
+## 3 October 2026: focused work views and linked revisions
+
+Implemented finite, role-scoped all/review/assignment/current-owner work views.
+Review and assignment require reviewer authority; active work requires the
+verified action owner and excludes completed tasks. Filters preserve existing
+case access and bounded pagination.
+
+Accessible analysts/reviewers can recapture the same exposure question and create
+a parent-linked pending brief. Server validation requires a distinct pinned
+capture of the same scenario/graph/query and intact parent evidence. Child creation
+and `revision_created` audit are transactional; parent evidence, decision, action,
+and audit are unchanged. No approval/action inheritance or automatic supersession
+is implied. Branches are permitted; consolidated revision history remains future work.
+
+Prepared [flood operator validation brief](flood-operator-validation-brief.md)
+with candidate user/decision, interview/task script, authority/data questions,
+and acceptance proposal. No operator was consulted and no validation is claimed.
+
+Verification: 79 web tests and 24 agent tests passed; production build, typecheck,
+and diff checks passed. Lint has zero errors and the existing `CaseList` warning.
+Tests cover finite route/body contracts, role/stage filtering, bridge revision
+creation, inaccessible parents, unpinned/same-capture rejection, and unchanged
+parent evidence/state/audit. Synthetic browser-tab rehearsal confirmed review
+filter exclusion, separate pending-revision link, retained parent approval, and
+390px layout without horizontal overflow. No real IdP/live graph, outreach,
+customer import, deployment, external dispatch, or paid inference was performed.
+
+
+## 3 October 2026: domain workspaces and defence case continuity
+
+Accepted organization: one accountable case contract with separate domain
+workspaces. Defence remains the active product; flood resilience is a discovery
+track with a seeded replay. [Domain workspaces](domain-workspaces.md) defines
+users, evidence categories, authority boundaries, and the proposed flood action
+journey. Flood cards and the watch header now explicitly distinguish seeded
+replay/training from live monitoring and prevention claims.
+
+Implemented bounded, server-scoped saved-case pages, a reviewer-only configured
+owner endpoint/picker, and a dedicated retained-evidence reopen view. Additive
+SQLite expression indexes preserve existing serialized records and audit data.
+Case-page summaries omit claims and outcome text. Identity/filter query parameters
+are refused; roles and subject come from verified server authority. Offset pages
+are deterministic for a fixed collection, but may shift when new records arrive.
+
+Verification: 77 web tests and 22 agent tests passed; typecheck, production build,
+and diff checks passed. Lint has zero errors and the existing `CaseList` warning.
+Tests cover case isolation, bounded pagination, idempotent index creation,
+reviewer-only owner access, and the real browser-bridge-to-agent discovery/action
+journey. Browser-tab synthetic fixtures checked saved exposure, eligible-owner
+selection, saved-case links, absence of graph-query UI on reopening, and 390px
+layout without horizontal overflow. Final empty-claim/signed-out copy refinements
+were build-checked after that browser rehearsal.
+
+No live flood ingestion, real buyer IdP, retained customer-data migration,
+deployment, external dispatch, or paid inference was performed. Specialized
+review/work filters, cursor pagination, display-name directory, customer tenancy,
+revision linkage, and committed browser automation remain follow-up work.
+
+
 ## 3 October 2026: defence workspace and case-access follow-up
 
 Recorded using this session's local date; the existing SSO entry below retains

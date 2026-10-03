@@ -620,10 +620,11 @@ export default function Watch() {
             </h1>
             {scenario && (
               <span className="mono text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
-                {scenario.id === "backtest" ? "illustrative replay" : scenario.id === "flood" ? "generalization proof" : "operator view"}
+                {scenario.id === "backtest" ? "illustrative replay" : scenario.id === "flood" ? "seeded flood replay · not live" : "operator view"}
               </span>
             )}
           </div>
+          {scenario?.id === "flood" && <p className="mt-2 text-sm">Replay/training only. Seeded illustrative signals, not current gauge readings or validated flood prevention.</p>}
           {!compact && scenario?.subtitle && (
             <p className="mt-0.5 text-sm" style={{ color: "var(--text-faint)" }}>
               {scenario.subtitle}

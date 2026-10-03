@@ -13,6 +13,10 @@ import {
 const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
   { method: "GET", pattern: /^\/session$/, key: "GET /session" },
   { method: "POST", pattern: /^\/briefs$/, key: "POST /briefs" },
+  { method: "GET", pattern: /^\/briefs\/page\/(0|[1-9]\d{0,5})$/, key: "GET /briefs/page/:offset" },
+  { method: "GET", pattern: /^\/owners$/, key: "GET /owners" },
+  { method: "GET", pattern: /^\/briefs\/page\/(all|review|assignment|work)\/(0|[1-9]\d{0,5})$/, key: "GET /briefs/page/:filter/:offset" },
+  { method: "POST", pattern: /^\/briefs\/[^/]+\/revisions$/, key: "POST /briefs/:id/revisions" },
   { method: "GET", pattern: /^\/briefs\/[^/]+$/, key: "GET /briefs/:id" },
   { method: "GET", pattern: /^\/briefs\/[^/]+\/evidence$/, key: "GET /briefs/:id/evidence" },
   { method: "GET", pattern: /^\/briefs\/[^/]+\/audit$/, key: "GET /briefs/:id/audit" },
@@ -27,6 +31,7 @@ const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
 // cannot even attempt to smuggle in a subject, commit, or evidence hash.
 const BODY_FIELDS: Record<string, readonly string[]> = {
   "POST /briefs": ["runId"],
+  "POST /briefs/:id/revisions": ["runId"],
   "POST /briefs/:id/review": ["decision", "note"],
   "POST /briefs/:id/action": ["owner", "dueAt"],
   "POST /briefs/:id/acknowledge": [],
@@ -92,6 +97,7 @@ export async function proxyDefense(
   const method = request.method.toUpperCase();
   const route = allowPath(method, rawPath);
   if (!route.ok) return json(404, "not found");
+  if (new URL(request.url).search) return json(400, "query parameters are not accepted on defence routes");
 
   // SameSite=Lax already blocks a cross-site cookie riding a POST; this makes
   // the CSRF boundary explicit for an endpoint that approves interventions.

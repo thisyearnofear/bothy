@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
 import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
+import DefenseCases from "./DefenseCases";
 import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
@@ -111,6 +112,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
 
   return (
     <section className="space-y-5" aria-label="Defence exposure workspace">
+      <DefenseCases session={session} />
       <div className="rounded-lg border p-4 sm:p-5" style={card}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <label className="min-w-0 flex-1 text-sm">

@@ -63,6 +63,7 @@ export interface DefenseBrief {
   // Missing metadata denotes a legacy synthetic demo case, not customer tenancy.
   accessScope?: "synthetic-demo";
   createdBySubject?: string;
+  parentBriefId?: string;
   id: string;
   runId: string;
   title: string;
@@ -79,6 +80,10 @@ export interface DefenseBrief {
   review?: { subject: string; decision: "approved" | "rejected"; note: string; at: string };
   action?: { owner: string; dueAt: string; status: "assigned" | "acknowledged" | "completed"; acknowledgedAt?: string; outcome?: string; completedAt?: string };
 }
+
+export type DefenseCaseSummary = Pick<DefenseBrief, "id" | "title" | "createdAt" | "status" | "action">;
+export type DefenseCaseFilter = "all" | "review" | "assignment" | "work";
+export interface DefenseCasePage { cases: DefenseCaseSummary[]; nextOffset: number | null }
 
 export type Hazard = "snow" | "ice" | "wind" | "flood" | "rockfall";
 export type RiskLabel = "LOW" | "MODERATE" | "ELEVATED" | "HIGH";

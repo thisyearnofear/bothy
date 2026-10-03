@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import GraphPanel from "../../components/GraphPanel";
+import DefenseSavedCase from "../../components/DefenseSavedCase";
 import { SESSION_COOKIE, openSession } from "@/lib/session";
 import type { DefenseSession } from "../../lib/api";
 
@@ -34,8 +35,10 @@ async function resolveSession(): Promise<DefenseSession> {
   }
 }
 
-export default async function DefensePage() {
+export default async function DefensePage({ searchParams }: { searchParams: Promise<{ brief?: string | string[] }> }) {
   const session = await resolveSession();
+  const { brief } = await searchParams;
+  const savedId = typeof brief === "string" && brief ? brief : null;
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <header className="mb-8 border-b pb-6" style={{ borderColor: "var(--rule)" }}>
@@ -47,7 +50,7 @@ export default async function DefensePage() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: "var(--text-strong)" }}>One disruption. Which programmes are exposed?</h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed">Trace the dependencies, inspect the evidence, and prepare the next decision. Public/synthetic hackathon data, not live operational intelligence.</p>
       </header>
-      <GraphPanel initialSession={session} />
+      {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : <GraphPanel initialSession={session} />}
       <footer className="mt-8 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
         Prototype boundary: synthetic/public evidence and deterministic briefs. Review and owned-action APIs fail closed unless OIDC and the SSO session bridge are configured. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.
       </footer>

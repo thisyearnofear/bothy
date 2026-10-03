@@ -19,6 +19,12 @@ Military logistics cells are design partners and a later deployment channel.
 Energy operators, winter-road teams, and humanitarian logistics are expansion
 candidates, not additional buyers to build for now.
 
+The accepted organization is one accountable case model with separate domain
+workspaces. Defence remains the active product; flood resilience is a scoped
+discovery track with a seeded replay, not an operational prevention service.
+See [domain-workspaces.md](domain-workspaces.md) for distinct user journeys and
+requirements before opening a second operational workspace.
+
 ## The workflow we are building
 
 Disruption → version-pinned dependencies → affected programmes → cited brief →

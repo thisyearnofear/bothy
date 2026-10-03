@@ -36,9 +36,9 @@ export const CASES: CaseDef[] = [
     id: "flood",
     name: "Eden Valley flood",
     short: "Flood",
-    kind: "generalization proof",
+    kind: "seeded flood replay",
     place: "Appleby · Osmotherley",
-    blurb: "Same ledger, different wedge. Environment Agency river gauges → flood warning → road closure. The pipeline generalizes.",
+    blurb: "Illustrative gauge-like signals, a warning, and route disruption on an authored timeline. Not live monitoring or proof of flood prevention.",
     href: "/watch?case=flood",
   },
   {

@@ -12,6 +12,8 @@ import type {
   GraphRun,
   GraphWitness,
   DefenseBrief,
+  DefenseCasePage,
+  DefenseCaseFilter,
 } from "../../../packages/shared/src/types";
 
 export type { GraphScenario, GraphRows, GraphRun, GraphWitness, DefenseBrief };
@@ -211,6 +213,9 @@ export const api = {
   witness: (hash: string, signal?: AbortSignal) =>
     get<GraphWitness & { links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
   defenseSession: (signal?: AbortSignal) => get<DefenseSession>("/api/defense/session", signal),
+  defenseCases: (offset = 0, signal?: AbortSignal, filter: DefenseCaseFilter = "all") => get<DefenseCasePage>(`/api/defense/briefs/page/${filter}/${offset}`, signal),
+  reviseDefenseBrief: (id: string, runId: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/revisions`, { runId }),
+  defenseOwners: (signal?: AbortSignal) => get<{ owners: { subject: string }[] }>("/api/defense/owners", signal),
   draftDefenseBrief: (runId: string) => post<DefenseBrief>("/api/defense/briefs", { runId }),
   defenseBrief: (id: string, signal?: AbortSignal) => get<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}`, signal),
   defenseEvidence: (id: string) => get<GraphRun>(`/api/defense/briefs/${encodeURIComponent(id)}/evidence`),

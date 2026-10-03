@@ -36,6 +36,7 @@ export function createAuth(env: Env = process.env, keys?: JWTVerifyGetKey) {
   const configured = Boolean(resolver);
   return {
     configured,
+    eligibleOwners: () => configured ? Object.entries(principals).filter(([, roles]) => roles.includes("action-owner")).map(([subject]) => ({ subject })).sort((a, b) => a.subject.localeCompare(b.subject)) : [],
     canOwn: (subject: string) => Object.hasOwn(principals, subject) && principals[subject].includes("action-owner"),
     async authenticate(header: string | undefined): Promise<Principal> {
       if (!resolver) throw new AccessError(503, "OIDC review is not configured; approval is disabled");

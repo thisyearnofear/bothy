@@ -93,7 +93,27 @@ the agent with no token.
   synthetic demos. Unknown scope fails closed. This is not customer tenancy.
   Saved brief URLs require SSO to reopen. Citations fetch stored, hash-checked
   evidence and validate run/revision/query/row/column identity, without rerunning
-  the graph. No owner-directory or saved-case list endpoint exists.
+  the graph.
+- `GET /api/defense/briefs/page/:offset`: up to 20 authorized case summaries and
+  `nextOffset`; offset is a bounded nonnegative integer. Server filters by verified
+  roles/subject using the same synthetic-demo case policy. No identity/filter query
+  parameters are accepted. Creation-time/id ordering is deterministic, but pages
+  may shift as records are added. Summary responses omit claims and outcome text.
+- `GET /api/defense/briefs/page/:filter/:offset`: the same bounded collection
+  with a finite `all`, `review`, `assignment`, or `work` view. Review selects pending
+  records; assignment selects approved/unassigned records; both require reviewer
+  authority. Work requires action-owner authority and selects only the verified
+  caller's assigned/acknowledged work. Filters never widen case access.
+- `POST /api/defense/briefs/:id/revisions`: authenticated, strict `{runId}` body;
+  accessible analyst/reviewer only. Requires a separate pinned capture of the same
+  scenario/graph/query and verifies parent evidence. Transactionally creates a
+  new pending brief with a server-set `parentBriefId` and `revision_created` audit
+  event. Parent state/evidence/audit are unchanged; no approval/action is inherited.
+  Multiple branches may exist. Parent navigation remains access-checked.
+- `GET /api/defense/owners`: reviewer-only configured action-owner subjects. This
+  is not an identity-provider directory or display-name service. Assignment still
+  revalidates eligibility on the server. The browser bridge allowlists both routes.
+  Saved brief URLs open retained evidence independently of graph availability.
 - `POST …/:id/review`: reviewer; only decision and optional note, pending-only.
 - `POST …/:id/action`: reviewer; approved brief, configured owner subject and
   ISO `dueAt`; an assigned action cannot be overwritten.

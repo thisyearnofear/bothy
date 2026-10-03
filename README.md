@@ -13,8 +13,11 @@ graph evidence and generates deterministic, row-cited verification briefs.**
 The workspace includes a gallium exposure summary, clickable stored-evidence
 citations, brief-first layout, and status-specific recovery. Saved-case access
 is limited to creator analysts, assigned owners, and reviewers of the synthetic
-demo collection. This is not customer tenancy; queues and an owner directory
-are not implemented.
+demo collection. An access-scoped saved-case collection, configured-owner picker,
+and stored-evidence reopening view are implemented. This is not customer tenancy
+or an identity-provider directory. Review/assignment/current-owner work filters
+and parent-linked, separately reviewed revisions are implemented.
+See [domain workspaces](docs/domain-workspaces.md) for the defence/flood split.
 A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
 cookie, server-side bearer forwarding) is implemented, but review and owned-action
 APIs still fail closed until OIDC and SSO are configured, and the bridge has not

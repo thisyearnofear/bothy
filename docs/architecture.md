@@ -30,8 +30,17 @@ Synthetic-demo briefs record a verified creator when supplied. A shared case
 access check protects brief/evidence/audit reads and transactional transitions:
 creator analysts, assigned action owners, and reviewers of the synthetic demo
 collection are allowed. Legacy records have no inferred creator; unknown scopes
-fail closed. This policy does not establish customer tenancy. No owner directory
-or saved-case list API exists.
+fail closed. This policy does not establish customer tenancy. Bounded case pages
+apply the same scope in SQL and return summary metadata only. Additive expression
+indexes cover serialized creator, assigned owner, and creation-time fields;
+existing evidence/audits are not rewritten. A reviewer-only endpoint exposes
+configured eligible owner subjects, not a provider directory. Saved cases have a
+retained-evidence view independent of the graph service. See [domain workspaces](domain-workspaces.md)
+for the shared case contract and distinct defence/flood journeys. Finite list
+filters apply stage constraints without widening authority. Linked revisions
+validate the parent capture and a distinct same-question capture, then create
+a pending child and its audit in one transaction; parent decisions and actions
+remain untouched. Revision branches are allowed and do not imply supersession.
 
 The workspace puts an evidence-bounded gallium summary and brief before exports.
 Citation inspection fetches hash-checked stored evidence, validates its identity,
