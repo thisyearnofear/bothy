@@ -1,0 +1,46 @@
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: apps/agent/Dockerfile
+    container_name: bothy-agent
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    expose:
+      - "8787"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bothy-internal
+    ports:
+      - "8787:8787"
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: bothy-web
+    restart: unless-stopped
+    environment:
+      - AGENT_URL=http://agent:8787
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BASE_URL=${PUBLIC_WEB_URL:-http://localhost:3001}
+    depends_on:
+      - agent
+    networks:
+      - bothy-internal
+    ports:
+      - "3001:3000"
+
+networks:
+  bothy-internal:
+    driver: bridge

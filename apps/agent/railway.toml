@@ -1,0 +1,11 @@
+[build]
+  builder = "DOCKERFILE"
+  dockerfile = "apps/agent/Dockerfile"
+
+[deploy]
+  # Agent exposes 8787 internally; Railway assigns external port via PORT
+  healthcheckPath = "/api/health"
+  healthcheckTimeout = 30
+  # Allow the agent time to warm up (loads TuringDB graphs)
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 3

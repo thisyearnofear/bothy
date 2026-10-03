@@ -1,0 +1,44 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build web app
+        run: npm -w @bothy/web run build
+
+      - name: Deploy agent to Railway
+        uses: railway/deploy-action@v2
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          service: ${{ vars.AGENT_SERVICE_ID }}
+          project: ${{ vars.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy web to Railway
+        uses: railway/deploy-action@v2
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          service: ${{ vars.WEB_SERVICE_ID }}
+          project: ${{ vars.RAILWAY_PROJECT_ID }}

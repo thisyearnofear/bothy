@@ -1,0 +1,11 @@
+[build]
+  builder = "DOCKERFILE"
+  dockerfile = "apps/web/Dockerfile"
+
+[deploy]
+  # Next.js runs on the port Railway injects via $PORT (default 3000)
+  healthcheckPath = "/"
+  healthcheckTimeout = 30
+  # Required env vars: AGENT_URL must resolve to the agent service inside Railway
+  envs:
+    - AGENT_URL=http://agent.internal
