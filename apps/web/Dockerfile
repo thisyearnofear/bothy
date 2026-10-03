@@ -27,11 +27,11 @@ ENV PORT=8080
 
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./.next/static
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
-WORKDIR /app
+WORKDIR /app/apps/web
 ENV PORT=8080
 
 EXPOSE 8080

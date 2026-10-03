@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async rewrites() {
     const agent = process.env.AGENT_URL ?? "http://localhost:8787";
     return [

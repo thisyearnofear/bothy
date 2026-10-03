@@ -2,12 +2,14 @@ app = "bothy-agent"
 primary_region = "lax"
 
 [build]
+  dockerfile = "apps/agent/Dockerfile"
 
 [deploy]
   release_command = "npm run seed"
 
 [env]
   PORT = "8787"
+  BOTHY_DATA_DIR = "/app/data"
 
 [http_service]
   internal_port = 8787

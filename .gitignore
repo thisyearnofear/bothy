@@ -32,3 +32,6 @@ __pycache__/
 
 # Demo video pipeline — local-only, not part of the app
 apps/demo-video/
+
+# CommandCode / local agent cache
+.commandcode/

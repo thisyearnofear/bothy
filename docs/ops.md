@@ -246,7 +246,7 @@ assessments do not enter the external notification queue.
   runs non-interactively (`BatchMode=yes`).
 - **LLM keys stay server-side.** `VENICE_API_KEY`, `OPENAI_API_KEY`,
   `OPENROUTER_API_KEY`, etc. live only in ignored `.env` files. Never paste a
-  key into source, a committed template, a Netlify variable, browser code, or a
+  key into source, a committed template, a deployment variable, browser code, or a
   shell command saved in history. The agent's default chain needs zero keys
   (free Qwen endpoint) and always falls back to scripted.
 - **Audit everything.** Every assessment, tool call, and duty-officer decision is
@@ -297,7 +297,7 @@ reset.
 ## Deploy to Fly.io (recommended — free tier)
 
 Fly.io runs real Docker containers on 3 shared VMs, has persistent volumes,
-and doesn't sleep like Render/Railway. It replaces Netlify + VPS entirely.
+and doesn't sleep like Render/Railway. It provides a unified container deployment.
 
 ### Quick start
 
@@ -380,7 +380,7 @@ open http://localhost:3001
 
 See the "Public demo deployment" section below.
 
-The public watch room runs on Netlify; the agent runs as `bothy-agent` on the
+The public watch room formerly ran on an external web host; the agent runs as `bothy-agent` on the
 VPS, where Coolify's existing Traefik proxy terminates TLS for
 `https://api.bothy.trustfall.xyz`. The agent is attached to the proxy's external
 `coolify` Docker network and has no host-published port. Traefik is the only
@@ -395,12 +395,12 @@ Postgres publicly or replace the existing Coolify proxy with another listener.
 ```bash
 # On the VPS, from the checked-out repository root:
 cp deploy/.env.production.example deploy/.env.production
-# Set DATABASE_URL to the real password and WEB_ORIGIN to the final Netlify URL.
+# Set DATABASE_URL to the real password and WEB_ORIGIN to the final web URL.
 docker compose -f deploy/docker-compose.vps.yml up -d --build
 curl https://api.bothy.trustfall.xyz/api/health
 ```
 
-`deploy/.env.production` is ignored by Git. For the Netlify build, set the
+`deploy/.env.production` is ignored by Git. For web builds, set the
 server-only `AGENT_URL=https://api.bothy.trustfall.xyz` environment variable;
 the existing Next rewrite then proxies browser `/api/*` requests to the agent.
 After the agent is healthy, refresh an operator snapshot before rehearsal:
@@ -417,7 +417,7 @@ only the Bothy agent; it does not host Venice or expose the Venice key. First
 revoke any key that has been pasted into a chat, issue a replacement in Venice,
 and enter the replacement directly into the ignored VPS-local
 `deploy/.env.production` with a protected editor or secret manager. Do not put
-the key in Git, Netlify, shell history, or a command pasted into a shared
+the key in Git, deployment environment variables, shell history, or a command pasted into a shared
 terminal.
 
 Set only these non-browser server variables on the VPS:

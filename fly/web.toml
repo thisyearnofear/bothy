@@ -2,6 +2,7 @@ app = "bothy-web"
 primary_region = "lax"
 
 [build]
+  dockerfile = "apps/web/Dockerfile"
 
 [env]
   PORT = "8080"
