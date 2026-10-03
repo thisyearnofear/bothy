@@ -52,6 +52,11 @@ browser coverage, and real buyer identity/data validation remain outstanding. Th
 
 - **EDTH first:** one scenario, native graph versioning, readable evidence,
   rehearsal with graph available and unavailable, accurate weekend bright line.
+  The [submission pack](edth-submission-pack.md) contains pitch/deck guidance and
+  an evidence ledger. Current event deadline/channel/build window are unconfirmed:
+  the retrieved London listing shows completed June dates, while the October
+  Defence Tech Days hackathon link returns page-not-found. Confirm organizer
+  instructions before treating any Sunday deadline as current.
 - **Nebius next:** current official rules, an exercised eligible NVIDIA model
   on Nebius, reproducible setup, public demo/video, and a dated delta log.
   The repo records a 30 October 2026 deadline; re-check before submission.

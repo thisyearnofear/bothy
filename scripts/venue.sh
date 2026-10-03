@@ -47,7 +47,7 @@ status() {
   [ "$(probe "http://127.0.0.1:$TURING_PORT/")" != "000" ] && ok "TuringDB   :$TURING_PORT" || bad "TuringDB   :$TURING_PORT"
   [ "$(probe "http://127.0.0.1:$SIDECAR_PORT/health")" = "200" ] && ok "sidecar    :$SIDECAR_PORT" || bad "sidecar    :$SIDECAR_PORT"
   [ "$(probe "http://127.0.0.1:$AGENT_PORT/api/health")" = "200" ] && ok "agent      :$AGENT_PORT" || bad "agent      :$AGENT_PORT"
-  [ "$(probe "http://127.0.0.1:$WEB_PORT/watch")" != "000" ] && ok "web        :$WEB_PORT" || bad "web        :$WEB_PORT"
+  [ "$(probe "http://127.0.0.1:$WEB_PORT/defense")" != "000" ] && ok "web        :$WEB_PORT" || bad "web        :$WEB_PORT"
 }
 
 stop_all() {
@@ -114,11 +114,11 @@ start_all() {
       && ok "warmed $g" || warn "warm failed for $g"
   done
 
-  if [ "$(probe "http://127.0.0.1:$WEB_PORT/watch")" = "000" ]; then
+  if [ "$(probe "http://127.0.0.1:$WEB_PORT/defense")" = "000" ]; then
     echo "starting web..."
     ( cd "$ROOT/apps/web" && PORT="$WEB_PORT" AGENT_URL="http://127.0.0.1:$AGENT_PORT" \
       daemon /tmp/web-venue.log npm run dev )
-    wait_for "http://127.0.0.1:$WEB_PORT/watch" "web" 40 || { bad "see /tmp/web-venue.log"; exit 1; }
+    wait_for "http://127.0.0.1:$WEB_PORT/defense" "web" 40 || { bad "see /tmp/web-venue.log"; exit 1; }
     ok "web up"
   else
     ok "web already up"
@@ -128,7 +128,8 @@ start_all() {
   status
   echo
   echo "Demo doors:"
-  echo "  watch room   http://127.0.0.1:$WEB_PORT/watch"
+  echo "  defence      http://127.0.0.1:$WEB_PORT/defense?scenario=gallium-exposure"
+  echo "  earlier demo http://127.0.0.1:$WEB_PORT/watch?replay=1"
   echo "  digest wall  http://127.0.0.1:$WEB_PORT/digest"
   echo "  pilot        http://127.0.0.1:$WEB_PORT/pilot"
   echo "  visualizer   http://127.0.0.1:$UI_PORT"

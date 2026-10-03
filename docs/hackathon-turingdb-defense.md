@@ -9,10 +9,15 @@ desk with a graph panel attached.
 
 Demo spine: disruption hypothesis → catalogue query → inspect exposure and
 coverage caveats → pinned replay / comparison → cited verification brief or
-unapproved witness. The next slice implements an OIDC-protected review → assigned
-verification → acknowledgment → recorded outcome API, tested with signed dummy
-JWTs. Real browser SSO wiring and operational validation remain gates, so the
-public unauthenticated demo must not claim to complete that authorized journey.
+unapproved witness. The prototype now implements browser SSO, protected review,
+configured-owner assignment, acknowledgment/outcome, scoped work views, and linked
+pending revisions. Tests use synthetic identities and evidence; a real buyer IdP
+and operational validation remain unverified. The public unauthenticated demo
+must not claim to complete the authorized journey.
+
+Use [edth-submission-pack.md](edth-submission-pack.md) for the current pitch,
+rehearsal checklist, and event-confirmation blockers. Historical material below
+is not submission-ready copy.
 
 The venue measurements below are historical observations, not fresh benchmarks.
 Limited query rows are samples, not total exposed entities. Witness hash linkage

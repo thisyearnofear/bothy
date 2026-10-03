@@ -1,5 +1,32 @@
 # Execution log
 
+## 3 October 2026: European defence submission preparation
+
+Committed and pushed domain/case continuity, focused work views, and linked
+revisions as `2f42123`. Before push, 79 web and 24 agent tests and typecheck passed;
+staged lint and secret checks passed. The unrelated `.commandcode/` directory
+was excluded.
+
+Prepared [EDTH submission pack](edth-submission-pack.md): six-slide outline,
+pitch draft, demonstration/failure rehearsal, dated contribution ledger, jury
+answers, and go/no-go criteria. Refreshed the older submission plan's current
+workflow description. Venue script checks and demo door now target `/defense`
+instead of the historical watch room; its warm-up queries were checked against
+the read catalogue and are already allowed. Script syntax and diff checks passed.
+
+Six Python graph boundary tests passed; these use mocked clients, not live graph
+validation. TuringDB binary and supply-chain/logistics graph directories are
+present locally, but the graph/sidecar/agent/web services were not running and
+were not started in this preparation step. No live graph/IdP walkthrough,
+PDF/video production, public upload, organizer contact, or submission occurred.
+
+Official-source checks found that the retrieved London hackathon listing shows
+completed June 26 through 28 dates without a stated year; it gives PDF/video and
+three-minute pitch/two-minute Q&A guidance, not a verified upcoming deadline.
+The October 1 through 8, 2026 Defence Tech Days page links a different hackathon
+URL which currently returns page-not-found. Event/track, eligibility, deadline,
+team number, submission channel, and build-window attribution need confirmation.
+
 ## 3 October 2026: focused work views and linked revisions
 
 Implemented finite, role-scoped all/review/assignment/current-owner work views.
