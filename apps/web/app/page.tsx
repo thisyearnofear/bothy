@@ -18,14 +18,14 @@ export default function Landing() {
         <div>
           <p className="mono text-xs uppercase tracking-[0.18em]" style={{ color: "var(--cursor)" }}>Accountable programme-impact briefs</p>
           <h1 className="mt-5 text-[clamp(2.75rem,6vw,5rem)] font-semibold leading-[1.02] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>
-            The disruption is local.<br />The impact isn’t.
+            A supply disruption.<br />A defensible next decision.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed">
-            For defence supply-chain teams: trace a material, supplier, or transit dependency
-            into programme exposure, and keep the evidence with the decision.
+            For European defence-prime supply-chain teams: establish what might be exposed,
+            inspect the dependencies behind it, and give the next verification a named owner.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/defense" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Open the resilience workspace</Link>
+            <Link href="/defense?mode=onboarding" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Try a guided investigation</Link>
             <Link href="/pilot" className="coarse-target rounded-lg border px-5 py-3 text-sm" style={rule}>Scope a two-week pilot</Link>
           </div>
           <p className="mt-5 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
@@ -37,7 +37,7 @@ export default function Landing() {
           <ol className="mt-6 space-y-6">
             {[
               ["01", "Trace the exposure", "Which programmes depend on the disrupted material or lane?"],
-              ["02", "Keep the evidence", "Inspect the query and captured result. Make missing coverage explicit."],
+              ["02", "Keep the evidence", "Follow a claim to its stored row. Keep source versions and coverage gaps visible."],
               ["03", "Own the decision", "Review, assignment, and recorded outcomes are implemented in the prototype. Buyer identity and operational validation remain pending."],
             ].map(([number, title, text]) => (
               <li key={number} className="flex gap-4 border-t pt-4" style={rule}>

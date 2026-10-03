@@ -31,7 +31,7 @@ export default function PilotPage() {
           ].map(([title, text]) => <li key={title} className="rounded-lg border p-4" style={card}><h3 className="font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed">{text}</p></li>)}
         </ol>
         <p className="text-sm leading-relaxed">This page collects contact interest only. Do not provide sensitive BOMs, programme details, credentials, or files here. Private data transfer and customer tenancy must be designed and approved separately.</p>
-        <Link href="/defense?mode=investigate&scenario=gallium-chain" className="inline-block text-sm underline">Explore the synthetic sample before scoping</Link>
+        <Link href="/defense?mode=onboarding" className="inline-block text-sm underline">Try the guided synthetic team exercise before scoping</Link>
       </section>
 
       <section className="mt-6 grid gap-2" aria-label="Scenario teasers">

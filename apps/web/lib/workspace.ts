@@ -9,5 +9,6 @@ export function workspaceFocus(session: DefenseSession): { title: string; descri
 
 export function defenseMode(params: { brief?: string | string[]; mode?: string | string[]; scenario?: string | string[] }) {
   if (typeof params.brief === "string" && params.brief) return "case";
+  if (params.mode === "onboarding") return "onboarding";
   return params.mode === "investigate" || typeof params.scenario === "string" ? "investigation" : "workspace";
 }

@@ -90,7 +90,7 @@ Implementation baseline pushed: `2f42123` on `main` (3 October 2026).
 
 | Evidence | Status |
 |---|---|
-| TypeScript tests | Latest local verification: 81 web and 25 agent passed; earlier pushed baseline was 79/24. |
+| TypeScript tests | Latest local verification: 91 web and 27 agent passed (118 total); earlier pushed baseline was 79/24. |
 | Python graph boundary tests | 6 passed on 3 October; mocked boundary tests, not live query proof |
 | Typecheck and production build | Passed after local OIDC rehearsal changes; final commit checks rerun before publication. |
 | Commit checks | ESLint staged checks and secret scan passed |
@@ -102,6 +102,10 @@ Implementation baseline pushed: `2f42123` on `main` (3 October 2026).
 | Event eligibility/deadline/channel | Unconfirmed |
 
 Useful dated commits, all showing 3 October 2026 in local git history:
+- `06e3744`: audited reviewer finding reassessment.
+- `bf8d979`: role-aware workspace, presentation polish, pilot onboarding.
+- `de1052d`: live gallium explanation, local SSO rehearsal, deck draft.
+- `38133c2`: EDTH submission pack and corrected demo door.
 - `2f42123`: scoped work views, linked revisions, saved cases, domain organization.
 - `fd824f5`: exposure summary, citation navigation, recovery, synthetic case access.
 - `380aee9`: browser SSO bridge.

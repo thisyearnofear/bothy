@@ -4,6 +4,10 @@ Date: 2026-10-03
 POC: Bothy product lead
 TL;DR: The front door now organizes work by role. Investigation and retained case records are separate, and pilot onboarding explains the agreements needed before private data transfer. This is a coherent prototype adoption flow, not production certification.
 
+## Guided sample onboarding
+
+`/defense?mode=onboarding` introduces a synthetic gallium-delay hypothesis and a four-step analyst/reviewer/owner/reviewer exercise. Each step names its task and expected check; six stress checks help a team test the assumptions. The guide does not track case completion. It opens the actual sample in a separate tab and routes private adoption to the pilot agreements. See [sample onboarding](defence-prime-sample-onboarding.md).
+
 ## Entry and navigation
 
 `/defense` opens a workspace. Anonymous users can explore the synthetic gallium sample, sign in when configured, or scope a pilot. Signed-in reviewers default to awaiting review; action owners default to their active work; analysts default to accessible investigations. For combined reviewer/owner roles, review takes precedence and the work selector remains available.

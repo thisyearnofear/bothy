@@ -19,6 +19,8 @@ test("workspace defaults follow verified roles, with reviewer precedence for com
 test("workspace, investigation and saved-case modes are explicit and old scenario links still work", () => {
   assert.equal(defenseMode({}), "workspace");
   assert.equal(defenseMode({ mode: "investigate" }), "investigation");
+  assert.equal(defenseMode({ mode: "onboarding" }), "onboarding");
+  assert.equal(defenseMode({ brief: "saved", mode: "onboarding" }), "case");
   assert.equal(defenseMode({ scenario: "gallium-chain" }), "investigation");
   assert.equal(defenseMode({ brief: "saved", scenario: "gallium-chain" }), "case");
   assert.equal(defenseMode({ brief: ["a", "b"], mode: ["investigate"] }), "workspace");

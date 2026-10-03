@@ -42,9 +42,15 @@ configured-owner selection, and a retained-evidence reopen view. Flood remains a
 seeded replay within the separate watch experience; [domain workspaces](domain-workspaces.md)
 records its discovery criteria and proposed protective-action journey.
 
-Focused review/assignment/current-owner work views and independently reviewed,
-parent-linked revisions are now implemented. A [flood operator validation brief](flood-operator-validation-brief.md)
-is prepared; selecting a partner and conducting validation remain outstanding.
+A subsequent domain/continuity slice adds an access-scoped saved-case collection,
+configured-owner selection, and a retained-evidence reopen view. Flood remains a
+seeded replay within the separate watch experience; [domain workspaces](domain-workspaces.md)
+records its discovery criteria and proposed protective-action journey.
+
+Focused review/assignment/current-owner work views, independently reviewed parent-linked
+revisions, and audited reviewer finding reassessment are now implemented. A guided
+synthetic exercise is available at `/defense?mode=onboarding` ([sample onboarding](defence-prime-sample-onboarding.md)),
+and a [flood operator validation brief](flood-operator-validation-brief.md) is prepared.
 Provider display-name directory, cursor pagination, customer tenancy, committed
 browser coverage, and real buyer identity/data validation remain outstanding. These changes do not complete the operational Phase 1/2 gates.
 

@@ -1,5 +1,21 @@
 # Execution log
 
+## 3 October 2026: positioning and guided sample onboarding
+
+Aligned landing, workspace, and defence header around a supply disruption and a
+defensible next decision: what might be exposed, why evidence supports it, and
+who checks consequences. Added `/defense?mode=onboarding`, a synthetic gallium
+exercise with four role steps and six stress checks. Actual investigation opens
+in a new tab so the guide remains available. No automatic completion claims,
+private data intake, or invented customer results are introduced.
+
+Verification: 91 web and 27 agent tests passed, web types/production build/diff
+checks passed; lint retains the CaseList warning. Browser checks verified step
+navigation, final-step boundary, six stress checks, and 390px layout without
+horizontal overflow. This is guide/navigation verification, not the full live
+rehearsal or buyer validation. See [sample onboarding](defence-prime-sample-onboarding.md).
+Temporary preview stopped; changes remain uncommitted.
+
 ## 3 October 2026: workspace commit and reviewer finding reassessment
 
 Committed the role-aware workspace, pilot onboarding, and presentation pass as
