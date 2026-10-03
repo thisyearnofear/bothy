@@ -17,6 +17,12 @@ analyst. Preserve roads/floods as reference demos, not competing priorities.
 Phase 0 is the first implementation slice, not production certification.
 **Phase 0 is locally implemented and validated**; see
 [execution-log.md](execution-log.md) for exact checks and limitations.
+**Phases 1/2 foundations are implemented:** isolated catalogue-only/pinned graph
+reads, fail-closed OIDC bearer verifier, transactional defence review/audit, and
+a deterministic cited brief → assigned verification → acknowledgment → recorded
+outcome path. They are **not complete operational gates**: real browser SSO/
+session integration, road audit/outbox transactions, abandoned-change reclamation,
+customer privacy, and live model-version binding remain outstanding.
 Remaining limitations must stay visible. Do not ship a new identity system,
 remote deployment, or paid integration without the relevant configuration and
 authorization.

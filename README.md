@@ -8,9 +8,11 @@ supplier, or transit disruption, trace programme exposure, and keep the evidence
 with the decision.
 
 The target workflow is exposure → cited brief → authorized review → owned
-action → recorded outcome. **The current defence prototype explores graph
-exposure and exports unapproved evidence snapshots.** It does not yet provide
-authenticated review, a completed intervention loop, or continuous monitoring.
+action → recorded outcome. **The current defence prototype captures pinned
+graph evidence and generates deterministic, row-cited verification briefs.**
+OIDC-protected review and owned-action APIs are implemented but fail closed
+until configured. Browser sign-in/session integration, continuous monitoring,
+and independent operational validation are still outstanding.
 Dependencies are not proof of stoppage; query row limits are not total impact.
 
 ## Run the defence demo
@@ -31,15 +33,17 @@ graph runs and witness artifacts in `apps/agent/data/bothy-loop.db`.
 
 1. Choose an exposure question and run the catalogue query.
 2. Inspect query rows and source/coverage caveats.
-3. Export a server-captured, explicitly unapproved evidence snapshot.
-4. Open the share link or download its hash-linked JSON.
-5. Advanced controls expose replay, comparison, and a temporary-marker branch
-   demonstration. This is not a production-loss simulation.
+3. Export an unapproved witness or draft a cited verification brief.
+4. With configured OIDC and a trusted SSO session bridge, review the brief,
+   assign a configured action owner, acknowledge it, and record an outcome.
+5. Advanced controls expose pinned replay/comparison. The temporary-marker
+   simulation requires an analyst/reviewer and cannot submit changes.
 
 Graph unavailable is an explicit failure state, not fabricated fallback data.
-This remains a **single-operator prototype**: authenticated access, read/write
-enforcement, and concurrent graph-state isolation are outstanding. Do not expose
-it to sensitive customer data or treat public witness links as private sharing.
+Reads use fresh per-request clients and an exact reviewed query allowlist.
+Only public/synthetic evidence is appropriate: public witness links are not
+private sharing, recorded outcomes are not proof of effectiveness, and abandoned
+daemon changes still need a reclamation policy.
 See [ops.md](docs/ops.md).
 
 ## Earlier winter-road / flood demos
@@ -54,8 +58,8 @@ npm run seed                # writes the demo catalogue; inspect seed.ts and pro
 npm run dev                 # agent :8787 · web :3000
 ```
 
-Open `/watch?replay=1` or `/watch?case=flood`. A typed officer name is demo
-attribution, not authenticated authority. Email queueing and sending require an
+Open `/watch?replay=1` or `/watch?case=flood`. Decisions now require a verified
+OIDC reviewer; typed names cannot grant approval. Email queueing and sending require an
 approved assessment; log-only mode never marks an email delivered. External
 dispatch also requires `DIGEST_TOKEN`.
 
@@ -82,15 +86,17 @@ Strands handoff are subsequent roadmap gates, not completed claims.
 
 ```bash
 npm test
+npm -w @bothy/agent run test:graph  # requires the installed TuringDB Python SDK
 npm run typecheck
 npm run lint
 npm -w @bothy/web run build
 git diff --check
 ```
 
-Tests cover witness provenance/request boundaries, approval-gated email,
-pending-only decision updates, API envelope contracts, and opt-in provider
-configuration without external email or inference.
+Tests cover OIDC signature/role failures, atomic review/audit, cited brief/action
+transitions, evidence tampering, concurrent sidecar state, read-only enforcement,
+witness provenance, email gates, API contracts, and opt-in provider configuration.
+No external email or inference is required.
 
 ## Repository
 

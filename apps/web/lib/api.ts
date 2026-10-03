@@ -11,9 +11,18 @@ import type {
   GraphRows,
   GraphRun,
   GraphWitness,
+  DefenseBrief,
 } from "../../../packages/shared/src/types";
 
-export type { GraphScenario, GraphRows, GraphRun, GraphWitness };
+export type { GraphScenario, GraphRows, GraphRun, GraphWitness, DefenseBrief };
+
+export interface DefenseSession {
+  configured: boolean;
+  authenticated: boolean;
+  subject?: string;
+  roles: ("analyst" | "reviewer" | "action-owner")[];
+  error?: string;
+}
 
 export interface GraphBenchRow {
   id: string;
@@ -150,7 +159,7 @@ export const api = {
   audit: (id: ScenarioId, signal?: AbortSignal) => get<AuditEntry[]>(`/api/scenario/${id}/audit`, signal),
   // ---- Watch-room defense track (TuringDB graph, proxied /api -> agent :8787) ----
   graphHealth: (signal?: AbortSignal) =>
-    get<{ ok: boolean; graphs?: string[]; error?: string }>(`/api/graph/health`, signal),
+    get<{ ok: boolean; graphs?: string[]; requestIsolation?: boolean; pinnedReads?: boolean; error?: string }>(`/api/graph/health`, signal),
   graphScenarios: (signal?: AbortSignal) =>
     get<{ scenarios: GraphScenario[] }>(`/api/graph/scenarios`, signal).then((data) => data.scenarios),
   runScenario: (id: string, opts: { commit?: string } = {}, signal?: AbortSignal) =>
@@ -166,7 +175,7 @@ export const api = {
   graphDiff: (body: GraphDiffBody, signal?: AbortSignal) =>
     post<GraphDiff>(`/api/graph/diff`, body, signal),
   graphSimulate: (
-    body: { graph: string; writes: string[]; readCypher: string; keep?: boolean },
+    body: { graph: string; writes: string[]; readCypher: string },
     signal?: AbortSignal
   ) =>
     post<{ ok: boolean; beforeCount: number; afterCount: number; error?: string }>(
@@ -178,6 +187,17 @@ export const api = {
     post<GraphWitness>(`/api/graph/witness`, body, signal),
   witness: (hash: string, signal?: AbortSignal) =>
     get<GraphWitness & { links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
+  defenseSession: (signal?: AbortSignal) => get<DefenseSession>("/api/defense/session", signal),
+  draftDefenseBrief: (runId: string) => post<DefenseBrief>("/api/defense/briefs", { runId }),
+  defenseBrief: (id: string, signal?: AbortSignal) => get<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}`, signal),
+  defenseEvidence: (id: string) => get<GraphRun>(`/api/defense/briefs/${encodeURIComponent(id)}/evidence`),
+  reviewDefenseBrief: (id: string, decision: "approved" | "rejected", note: string) =>
+    post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/review`, { decision, note }),
+  assignDefenseAction: (id: string, owner: string, dueAt: string) =>
+    post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/action`, { owner, dueAt }),
+  acknowledgeDefenseAction: (id: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/action/acknowledge`, {}),
+  recordDefenseOutcome: (id: string, outcome: string) =>
+    post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/action/outcome`, { outcome }),
   // ---- Local log-only digest loop (SQLite record, Postgres mirror best-effort)
   loopSubscribe: (body: { email: string; routeId: string; scenario?: string }, signal?: AbortSignal) =>
     post<{ ok: boolean; count: number; total: number }>(`/api/loop/subscribe`, body, signal),

@@ -29,8 +29,12 @@ import { sendDigest } from "./digest";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
 import { hasProviders, providerSummary, rehearseChain } from "./agent/providers";
+import { createAuth } from "./auth";
+import { defenseRouter } from "./defense";
+import { GraphRequestError } from "./graph/turing";
 
 const app = express();
+const auth = createAuth();
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
 
@@ -213,44 +217,20 @@ app.post("/api/graph/query", async (req, res) => {
     const commit = typeof req.body.commit === "string" ? req.body.commit : undefined;
     res.json(await graphQuery(graph, cypher, commit));
   } catch (e) {
-    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+    res.status(e instanceof GraphRequestError && e.status === 400 ? 400 : 503).json({ ok: false, error: String((e as Error)?.message ?? e) });
   }
 });
 
-app.post("/api/graph/simulate", async (req, res) => {
-  // Branch-to-simulate: open change -> apply hypothetical writes -> read the
-  // blast-radius delta -> abandon (default) or submit. Returns before/after.
+app.post("/api/graph/simulate", auth.require("analyst", "reviewer"), async (req, res) => {
+  // One isolated sidecar request owns the lifecycle. Submission is disabled.
   try {
-    const { graphChange, graphQuery, BLAST_QUERIES } = await import("./graph/turing");
-    const graph = typeof req.body.graph === "string" ? req.body.graph : "supply_chain_deep";
-    const writes = Array.isArray(req.body.writes) ? req.body.writes.map(String) : [];
-    const readCypher = typeof req.body.readCypher === "string" && req.body.readCypher
-      ? req.body.readCypher
-      : BLAST_QUERIES.bom8("Loitering munition");
-    const keep = req.body.keep === true;
-    if (!writes.length) return res.status(400).json({ error: "writes[] (Cypher CREATE/SET) is required" });
-    const change = await graphChange.open();
-    await graphChange.checkout(change);
-    const { logAudit } = await import("./repo");
-    // Writes must be SET-only on existing nodes (no CREATE/MATCH-write). Take the
-    // baseline BEFORE opening the change so before/after is meaningful.
-    const before = await graphQuery(graph, readCypher);
-    try {
-      for (const w of writes) await graphQuery(graph, w);
-      const after = await graphQuery(graph, readCypher);
-      if (keep) {
-        await graphChange.submit();
-        await logAudit("live", "duty-officer", "graph_simulate_keep", `${graph}: kept simulation (${writes.length} writes)`);
-      } else {
-        await graphChange.abandon();
-      }
-      res.json({ ok: true, kept: keep, beforeCount: before.count, afterCount: after.count, after, before });
-    } catch (e) {
-      try { await graphChange.abandon(); } catch { /* already clean */ }
-      throw e;
+    const { graphSimulate } = await import("./graph/turing");
+    if (Object.keys(req.body).some((key) => !["graph", "writes", "readCypher"].includes(key))) {
+      return res.status(400).json({ error: "only graph, writes and readCypher are accepted; submission is disabled" });
     }
+    res.json(await graphSimulate(req.body));
   } catch (e) {
-    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+    res.status(e instanceof GraphRequestError && e.status === 400 ? 400 : 503).json({ ok: false, error: String((e as Error)?.message ?? e) });
   }
 });
 
@@ -258,9 +238,8 @@ app.post("/api/graph/simulate", async (req, res) => {
 // Durable state: witness chain, loop subs/digests, and pilot counter persist in
 // a local SQLite file (DATA_DIR/bothy-loop.db, default ./data/). Postgres
 // remains the system of record when reachable (best-effort mirrors); SQLite is
-// what survives restarts on venue floors with no tunnel. No new npm deps —
-// better-sqlite3 would be nicer but this ships via node:sqlite-free SQL using
-// the zero-dep `node:sqlite` module on Node 22+.
+// what survives restarts on venue floors with no tunnel. SQLite uses the
+// built-in `node:sqlite` module; OIDC verification separately uses `jose`.
 import { captureGraphRun, createWitness, witnessRunId } from "./graph/witness";
 import type { GraphRun } from "../../../packages/shared/src/types";
 import { DatabaseSync } from "node:sqlite";
@@ -280,6 +259,7 @@ CREATE TABLE IF NOT EXISTS loop_subs (email TEXT, route_id TEXT, scenario TEXT, 
 CREATE TABLE IF NOT EXISTS loop_digests (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient TEXT, subject TEXT, body TEXT, case_href TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, n INTEGER);
 INSERT OR IGNORE INTO counters (name, n) VALUES ('pilot_fallback', 0);`);
+app.use("/api/defense", defenseRouter(loopDb, auth));
 const witnessByHash = new Map<string, WitnessEntry>(
   (loopDb.prepare(`SELECT hash, prev, at, pack FROM witness ORDER BY rowid`).all() as { hash: string; prev: string | null; at: string; pack: string }[])
     .map((r) => [r.hash, { hash: r.hash, prev: r.prev, at: r.at, pack: JSON.parse(r.pack) } as WitnessEntry]),
@@ -312,7 +292,7 @@ app.post("/api/graph/scenario/:id/run", async (req, res) => {
       ? req.body.commit.trim()
       : undefined;
     const r = await runScenario(def.id, commit);
-    const captured = captureGraphRun(def, r, commit);
+    const captured = captureGraphRun(def, r);
     loopDb.prepare(`INSERT INTO graph_runs (id, run) VALUES (?, ?)`).run(captured.runId, JSON.stringify(captured));
     res.json({
       ...captured,
@@ -328,7 +308,7 @@ app.post("/api/graph/scenario/:id/run", async (req, res) => {
       },
     });
   } catch (e) {
-    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+    res.status(e instanceof GraphRequestError && e.status === 400 ? 400 : 503).json({ ok: false, error: String((e as Error)?.message ?? e) });
   }
 });
 
@@ -375,7 +355,7 @@ app.post("/api/graph/diff", async (req, res) => {
       removedSample: before.rows.filter((r) => !afterKeys.has(key(r))).slice(0, 10),
     });
   } catch (e) {
-    res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
+    res.status(e instanceof GraphRequestError && e.status === 400 ? 400 : 503).json({ ok: false, error: String((e as Error)?.message ?? e) });
   }
 });
 
@@ -514,16 +494,12 @@ app.get("/api/llm/health", async (_req, res) => {
   res.json(rehearsal);
 });
 
-app.post("/api/assessments/:id/decision", async (req, res) => {
+app.post("/api/assessments/:id/decision", auth.require("reviewer"), async (req, res) => {
   const decision = req.body.decision;
   if (decision !== "approved" && decision !== "rejected") {
     return res.status(400).json({ error: "decision must be approved|rejected" });
   }
-  const officer =
-    typeof req.body.actor === "string" ? req.body.actor.trim().slice(0, 120) : "";
-  if (!officer) {
-    return res.status(400).json({ error: "actor is required — name the duty officer who signs" });
-  }
+  const officer = res.locals.principal.subject;
   const note =
     typeof req.body.note === "string" && req.body.note.trim()
       ? req.body.note.trim().slice(0, 500)

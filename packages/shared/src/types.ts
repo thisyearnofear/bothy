@@ -16,6 +16,7 @@ export interface GraphRows {
   rows: Record<string, unknown>[];
   count: number;
   ms: number;
+  graphCommit?: string | null;
 }
 
 export interface GraphRun extends GraphRows {
@@ -26,15 +27,17 @@ export interface GraphRun extends GraphRows {
   graphCommit: string | null;
   capturedAt: string;
   sourceBoundary: string;
+  queryHash: string;
 }
 
 export interface GraphWitnessPack {
-  version: 1;
+  version: 1 | 2;
   runId: string;
   scenarioId: string;
   graph: string;
   cypher: string;
   graphCommit: string | null;
+  queryHash?: string;
   capturedAt: string;
   sourceBoundary: string;
   approval: "unapproved";
@@ -49,6 +52,29 @@ export interface GraphWitness {
   prev: string | null;
   at: string;
   pack: GraphWitnessPack;
+}
+
+export interface BriefClaim {
+  text: string;
+  citations: { runId: string; row: number; column: string }[];
+}
+
+export interface DefenseBrief {
+  id: string;
+  runId: string;
+  title: string;
+  createdAt: string;
+  evidenceHash: string;
+  graphCommit: string;
+  queryHash: string;
+  generator: { id: "bothy-scripted"; version: "defense-brief-v1"; cloudInference: false };
+  resultCount: number;
+  claims: BriefClaim[];
+  gaps: string[];
+  recommendedAction: string;
+  status: "pending" | "approved" | "rejected";
+  review?: { subject: string; decision: "approved" | "rejected"; note: string; at: string };
+  action?: { owner: string; dueAt: string; status: "assigned" | "acknowledged" | "completed"; acknowledgedAt?: string; outcome?: string; completedAt?: string };
 }
 
 export type Hazard = "snow" | "ice" | "wind" | "flood" | "rockfall";

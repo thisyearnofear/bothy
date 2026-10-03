@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
+import type { DefenseSession } from "../lib/api";
+import DefenseBriefPanel from "./DefenseBriefPanel";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
@@ -21,6 +23,7 @@ export default function GraphPanel() {
   const [witness, setWitness] = useState<GraphWitness | null>(null);
   const [copyNote, setCopyNote] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  const [session, setSession] = useState<DefenseSession>({ configured: false, authenticated: false, roles: [] });
   const active = scenarios.find((scenario) => scenario.id === activeId);
 
   useEffect(() => {
@@ -29,6 +32,9 @@ export default function GraphPanel() {
     setError(null);
     api.graphHealth(ctl.signal).then((result) => setHealth(result.ok)).catch((e) => {
       if (!isAbortError(e)) setHealth(false);
+    });
+    api.defenseSession(ctl.signal).then((result) => { if (!ctl.signal.aborted) setSession(result); }).catch(() => {
+      if (!ctl.signal.aborted) setSession({ configured: false, authenticated: false, roles: [], error: "SSO session could not be verified. Review and action updates are disabled." });
     });
     api.graphScenarios(ctl.signal).then((list) => {
       if (ctl.signal.aborted) return;
@@ -61,6 +67,7 @@ export default function GraphPanel() {
       setCopyNote(null);
       setDiff(null);
       setSimNote(null);
+      window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(active.id)}`);
     });
   };
 
@@ -109,7 +116,7 @@ export default function GraphPanel() {
         {active && <p className="mt-3 max-w-3xl text-sm leading-relaxed">{active.stakes}</p>}
         {health === false && (
           <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
-            <p className="text-sm">Graph unavailable. No results have been fabricated. Start TuringDB and the sidecar, then retry.</p>
+            <p className="text-sm">Graph unavailable or sidecar upgrade required. No results have been fabricated. Start TuringDB and the request-isolated sidecar, then retry.</p>
             <button className={control} style={card} disabled={busy} onClick={() => setRetry((value) => value + 1)}>Retry connection</button>
           </div>
         )}
@@ -179,6 +186,8 @@ export default function GraphPanel() {
         </aside>
       </div>
 
+      <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
+
       <details className="rounded-lg border p-4 sm:p-5" style={card}>
         <summary className="cursor-pointer text-sm font-medium" style={{ color: "var(--text-strong)" }}>Advanced: query, replay, and simulation</summary>
         {active && <pre className="mono mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>{active.cypher}</pre>}
@@ -192,18 +201,18 @@ export default function GraphPanel() {
           <button className={control} style={card} disabled={busy || !active || !beforeCommit || !afterCommit} onClick={() => void execute(async () => {
             if (active) setDiff(await api.graphDiff({ graph: active.graph, cypher: active.cypher, beforeCommit, afterCommit }));
           })}>Compare versions</button>
-          <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true} onClick={() => void execute(async () => {
+          <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true || !session.authenticated || !session.roles.some((role) => role === "analyst" || role === "reviewer")} onClick={() => void execute(async () => {
             const result = await api.graphSimulate({
               graph: "supply_chain_deep",
               writes: ["MATCH (p:Platform {archetype:'Loitering munition'}) SET p.sim_closed = true"],
               readCypher: "MATCH (p:Platform {archetype:'Loitering munition'}) WHERE p.sim_closed = true RETURN p.name",
             });
-            setSimNote(`Temporary marker demonstration: ${result.beforeCount} → ${result.afterCount} rows. Branch abandoned; this does not model lost production.`);
+            setSimNote(`Temporary marker demonstration: ${result.beforeCount} → ${result.afterCount} rows. Change left unsubmitted; this does not model lost production.`);
           })}>Demo temporary branch</button>
         </div>
         {simNote && <p className="mt-3 text-sm">{simNote}</p>}
         {diff && <div className="mt-3 text-sm"><p>{diff.beforeCount} → {diff.afterCount} query rows</p><pre className="mono mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ added: diff.addedSample, removed: diff.removedSample }, null, 2)}</pre></div>}
-        <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Single-operator prototype. Concurrent graph replay/simulation and authorization are not yet hardened.</p>
+        <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Catalogue-only, pinned reads use isolated graph clients. Simulation requires SSO and cannot submit changes. Daemon-side abandoned-change reclamation and independent operational validation remain outstanding.</p>
       </details>
     </section>
   );

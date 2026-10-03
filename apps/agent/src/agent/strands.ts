@@ -77,13 +77,13 @@ export function toStrandsTools(tools: ToolSet) {
     }),
     tool({
       name: "get_blast_radius",
-      description: "Multi-hop blast radius on the versioned TuringDB defense graph. kind: bom|material|ownership|chokepoint|risk. target: archetype, material name, HQ country, chokepoint name, or product id.",
+      description: "Pinned catalogue-only exposure read. Reviewed targets: bom/Loitering munition, material/Primary gallium, ownership/CHN, chokepoint/Taiwan Strait. Other targets and arbitrary risk queries are rejected. Rows show exposure, not confirmed operational impact.",
       inputSchema: BlastSchema,
       callback: async (input) => tools.get_blast_radius(input ?? {}),
     }),
     tool({
       name: "replay_at",
-      description: "Time-travel read: run a Cypher query pinned at a past graph commit hash.",
+      description: "Time-travel catalogue read at a bare hexadecimal graph commit. Only exact reviewed catalogue Cypher is permitted; arbitrary queries or writes are rejected.",
       inputSchema: ReplaySchema,
       callback: async (input) => tools.replay_at(input ?? {}),
     }),

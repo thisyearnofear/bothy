@@ -9,8 +9,14 @@
   unpinned HEAD rather than claiming reproducibility.
 - Only approved road assessments enter the external email queue/sender.
 - Nebius is opt-in connected cloud inference, never an offline claim.
-- Role authorization, graph request isolation, immutable commit/model binding,
-  and the complete defence brief/action loop remain roadmap gates.
+- Graph reads use request-isolated clients, exact query allowlists, and concrete
+  revision pinning. Never restore public submit/change lifecycle endpoints.
+- OIDC API review fails closed without configured issuer/audience/JWKS/subject
+  roles. Derive identity from verified access tokens, never names or body roles.
+- Defence review/action + audit is transactional in SQLite; preserve the
+  pending → approved/rejected and assigned → acknowledged → completed gates.
+- Customer-data privacy, browser SSO/session integration, road outbox,
+  abandoned-change reclamation, and live model-version binding remain gates.
 
 ## Repository map
 

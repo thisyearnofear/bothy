@@ -1,0 +1,26 @@
+{
+  "reads": {
+    "supply_chain_deep": [
+      "MATCH (n) RETURN count(n)",
+      "MATCH (p:Platform {archetype:'Loitering munition'})-[:CONTAINS]->{8,8}(m:Mineral) RETURN DISTINCT p.name, m.name",
+      "MATCH (p:Platform)-[:CONTAINS]->+(:Material {name:'Primary gallium'}) RETURN DISTINCT p.name LIMIT 50",
+      "MATCH (:Country {nato_member:true})<-[:HEADQUARTERED_IN]-(c:Company)-[:SUBSIDIARY_OF]->+(u:Company {hq_country:'CHN'}) RETURN DISTINCT c.name, u.name LIMIT 20",
+      "MATCH (s:Shipment)-[:TRANSITED]->(:Chokepoint {name:'Taiwan Strait'}), (s)-[:SHIPPED_TO]->(f:Facility)-[:SUPPLIES]->+(prime:Facility {facility_type:'final assembly plant'}) RETURN DISTINCT prime.name LIMIT 20",
+      "MATCH (f:Facility)-[:OPERATED_BY]->(:Company)-[:SUBSIDIARY_OF]->+(u:Company)-[:HEADQUARTERED_IN]->(:Country {eu_sanctions_target:true}), (f)-[:SUPPLIES]->(b:Facility)-[:LOCATED_IN]->(:Country {nato_member:true}) RETURN DISTINCT f.name, u.name, b.name LIMIT 20",
+      "MATCH (s:Shipment)-[:IMPACTED_BY]->(d:Disruption) WHERE d.disruption_id='D01' RETURN s.status, count(s)"
+    ],
+    "power_plants": [
+      "MATCH (n) RETURN count(n)",
+      "MATCH (p:PowerPlant)-[e:NEAR]-(q:PowerPlant)-[:LOCATED_IN]->(co:Country) WHERE p.country_code='UKR' RETURN p.name, q.name, co.name, e.distance_km LIMIT 12"
+    ],
+    "logistics_risk": [
+      "MATCH (n) RETURN count(n)",
+      "MATCH (s:Shipment)-[:FROM_SUPPLIER]->(sup:Supplier)-[:LOCATED_IN]->(co:Country), (s)-[:CLASSIFIED_AS]->(:RiskClassification {name:'High Risk'}) RETURN co.name, count(s) ORDER BY count(s) DESC LIMIT 10"
+    ]
+  },
+  "simulation": {
+    "graph": "supply_chain_deep",
+    "writes": ["MATCH (p:Platform {archetype:'Loitering munition'}) SET p.sim_closed = true"],
+    "readCypher": "MATCH (p:Platform {archetype:'Loitering munition'}) WHERE p.sim_closed = true RETURN p.name"
+  }
+}

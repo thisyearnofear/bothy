@@ -19,22 +19,63 @@ retain the default `0.0.0.0` API binding behind the proxy.
 - `GET /api/graph/bench` returns `{ results: [...], totalMs }`.
 - `POST /api/graph/scenario/:id/run` accepts an optional graph `commit` and
   persists a captured run in SQLite. Its response includes `runId`, graph,
-  Cypher, capture time, result count, source boundary, and explicit commit
-  (or `null` when HEAD was not pinned).
+  Cypher, query hash, capture time, result count, source boundary, and actual
+  graph revision. HEAD is resolved and pinned by the sidecar before execution.
 - `POST /api/graph/witness` accepts **only `{ runId }`**. Browser-authored rows,
   officer, scenario, or approval fields are rejected. Unknown runs return 404.
   The retained query result is exported without a 50-row evidence truncation.
-- Witness links survive agent restarts. Existing pre-version-1 packs remain
+- New witnesses use pack version 2 (query hash + actual pinned revision).
+  Witness links survive agent restarts. Existing pre-version-1 packs remain
   readable but are labelled legacy/unverified provenance.
 - `bash scripts/witness-qr.sh` follows run → captured `runId` → witness export.
   It creates local artifacts; it does not submit or publish anything.
 
 Witnesses are **unapproved analysis**, not signed decisions. Hash linkage is
 not authentication or immutable storage. Public demo links must not contain
-buyer-sensitive data. The sidecar is still single-client, and arbitrary-query /
-simulation routes are not hardened for hostile or concurrent callers.
-Keep the prototype in a trusted, single-operator environment until roadmap
-phase 1 is complete; CORS is not authorization.
+buyer-sensitive data. Both agent and sidecar enforce the exact reviewed
+`graph/read-policy.json` catalogue before executing Cypher. Each sidecar request
+owns its client/graph/commit/change and closes the HTTP transport. The daemon must
+be loopback HTTP. Separate `/change/*` endpoints are removed; the one reviewed
+marker simulation cannot submit and requires a verified analyst/reviewer.
+Restart an existing old sidecar explicitly to load the new implementation;
+health refuses to report the old bridge as a safe available service.
+Abandoned server-side change reclamation and coordination with administrative
+writers remain open. CORS is not authorization or customer-data protection.
+
+## OIDC and the defence verification journey
+
+Configure all four `BOTHY_OIDC_*` variables in the ignored runtime environment:
+HTTPS issuer, dedicated API access-token audience, HTTPS JWKS URL, and JSON
+subject-to-role map (`analyst`, `reviewer`, `action-owner`). Role claims in the
+token and browser-provided names/roles are ignored. `jose` verifies RS256/ES256,
+issuer, audience, `sub`, `iat`, and `exp`; token age is limited to one hour.
+Missing/invalid configuration returns 503 on protected operations. Bad tokens
+return 401, unassigned/wrong-role subjects 403, conflicting transitions 409.
+
+This is a bearer API adapter, **not an implemented browser login flow**. Use a
+trusted OIDC client/SSO session bridge that obtains an API access token and
+forwards it as `Authorization: Bearer …`. Use a dedicated API audience, not the
+browser application's ID-token audience. Do not paste tokens into this demo UI,
+put them in localStorage, logs, commands, or public artifacts. No cookies are
+accepted directly by the agent and no identity headers are trusted.
+
+- `GET /api/defense/session`: configuration/verified-session state, no token.
+- `POST /api/defense/briefs`: only `{runId}`; public/synthetic deterministic
+  draft, bound to complete evidence hash, graph revision, query hash, and
+  `defense-brief-v1`. Legacy unpinned runs return 409.
+- `GET /api/defense/briefs/:id`, `/evidence`, `/audit`: verified workspace role
+  required; no-store responses. Saved brief URLs require SSO to reopen.
+- `POST …/:id/review`: reviewer; only decision and optional note, pending-only.
+- `POST …/:id/action`: reviewer; approved brief, configured owner subject and
+  ISO `dueAt`; an assigned action cannot be overwritten.
+- `POST …/:id/action/acknowledge`: only assigned owner; empty body.
+- `POST …/:id/action/outcome`: only acknowledged owner; nonempty outcome.
+
+Defence review/action + audit are one SQLite transaction, including rollback
+when audit persistence fails. Outcome text is an owner assertion, not independently
+verified operational impact. Approving a verification brief never sends an
+email or authorizes a production intervention. Customer evidence privacy and
+the legacy log-only digest wall are separate hardening gates.
 
 ## Approval and email rehearsal
 
@@ -42,7 +83,8 @@ Pending/rejected assessments do not enter the external notification queue.
 Approval queues eligible subscribers, and the sender independently filters
 legacy queued rows to approved assessments. Pending-only updates return 409
 when a decision already exists. Decision + audit + queue are not yet a single
-transaction; authenticated roles and an outbox remain required.
+transaction; an outbox remains required. Road decisions now require a verified
+OIDC reviewer and ignore any supplied actor name.
 
 Without `RESEND_API_KEY`, the sender logs only a notification identifier, does
 not disclose recipient/body, does not call Resend, and leaves rows queued.
@@ -113,7 +155,9 @@ curl -X POST http://localhost:8787/api/scenario/live/signals/road \
   -d '{"routeId":"r-B5311","roadKind":"closure","headline":"Wasdale Head blocked by drifts","actor":"J. Smith"}'
 ```
 
-Approve / reject requires a typed duty-officer name; the audit row uses that name.
+Road approvals now require a verified OIDC reviewer; a typed actor name is
+display-only attribution in the audit trail, not authority. Pending/rejected
+assessments do not enter the external notification queue.
 
 ## Security checklist
 

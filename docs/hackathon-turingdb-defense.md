@@ -8,13 +8,17 @@ analyst investigating primary-gallium programme exposure**, not a winter-road
 desk with a graph panel attached.
 
 Demo spine: disruption hypothesis → catalogue query → inspect exposure and
-coverage caveats → replay / temporary simulation / diff → export an explicitly
-unapproved evidence snapshot. Cited brief → authenticated approval → owned action
-is the next delivery gate, not something the present graph demo proves.
+coverage caveats → pinned replay / comparison → cited verification brief or
+unapproved witness. The next slice implements an OIDC-protected review → assigned
+verification → acknowledgment → recorded outcome API, tested with signed dummy
+JWTs. Real browser SSO wiring and operational validation remain gates, so the
+public unauthenticated demo must not claim to complete that authorized journey.
 
 The venue measurements below are historical observations, not fresh benchmarks.
 Limited query rows are samples, not total exposed entities. Witness hash linkage
-is not an authenticated signature. A supplied officer name is demo attribution.
+is not an authenticated signature. Supplied officer names cannot grant approval;
+only the configured OIDC reviewer can decide. Simulation is a reviewed,
+abandon-only marker demonstration, not lost-production modelling.
 Native graph analysis can run locally; cloud inference and map tiles are network
 dependencies. Local inference, offline maps, and the full offline decision loop
 have not been certified. Replication has infrastructure/support costs.

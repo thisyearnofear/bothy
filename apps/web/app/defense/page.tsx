@@ -20,7 +20,7 @@ export default function DefensePage() {
       </header>
       <GraphPanel />
       <footer className="mt-8 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
-        Prototype boundary: evidence exploration and unapproved exports. Authenticated review, assigned actions, and outcome tracking are the next delivery gate. No cloud inference runs on this page.
+        Prototype boundary: synthetic/public evidence and deterministic briefs. OIDC review and owned-action APIs fail closed until configured; a trusted SSO sign-in/session bridge is still required. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.
       </footer>
     </main>
   );

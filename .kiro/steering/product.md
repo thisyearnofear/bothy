@@ -11,7 +11,10 @@ Do not describe names as authenticated signatures, unapproved graph exports as
 approved interventions, heuristic scores as probabilities, cloud inference as
 offline, or manual assessment as continuous monitoring. Server-captured
 evidence and approval-before-external-dispatch are required foundations.
-Identity, graph commit pinning, and tracked action/outcome remain separate gates.
+Pinned graph evidence and the deterministic brief/action APIs are implemented.
+OIDC review fails closed until configured; browser SSO/session integration and
+independently verified operational outcomes remain separate gates. Road decisions
+require a verified OIDC reviewer; typed names are display attribution only.
 
 ## Historical road-demo contract
 

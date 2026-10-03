@@ -173,7 +173,7 @@ export function makeTools(ctx: AgentCtx): ToolSet {
       try {
         const res = await graphQuery(graph, shape);
         const lines = res.rows.slice(0, 12).map((r) => Object.values(r).join(" ← "));
-        const body = `Blast radius [${kind} :: ${target}] on ${graph}: ${res.count} affected, ${res.ms}ms.\n${lines.join("\n")}${res.count > 12 ? `\n… +${res.count - 12} more` : ""}`;
+        const body = `Exposure [${kind} :: ${target}] on ${graph}, revision ${res.graphCommit}: ${res.count} captured query rows, ${res.ms}ms. Not confirmed impact; catalogue limits may truncate.\n${lines.join("\n")}${res.count > 12 ? `\n… +${res.count - 12} more captured rows` : ""}`;
         track("get_blast_radius", { kind, target }, body);
         return body;
       } catch (e) {
@@ -192,7 +192,7 @@ export function makeTools(ctx: AgentCtx): ToolSet {
       try {
         const res = await graphQuery(graph, q, commit);
         const lines = res.rows.slice(0, 8).map((r) => Object.values(r).join(" ← "));
-        const body = `Replay at ${commit ?? "HEAD"} on ${graph}: ${res.count} rows, ${res.ms}ms.\n${lines.join("\n")}`;
+        const body = `Replay at ${res.graphCommit} on ${graph}: ${res.count} captured rows, ${res.ms}ms. Exposure is not confirmed impact.\n${lines.join("\n")}`;
         track("replay_at", { commit }, body);
         return body;
       } catch (e) {

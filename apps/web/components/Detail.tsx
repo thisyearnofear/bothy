@@ -246,7 +246,7 @@ export default function Detail({
 
         {pending && vowedAwake && (
           <label className="mt-2 block text-xs" style={{ color: "var(--text-faint)" }}>
-            Duty officer name
+            Display name (not authentication)
             <input
               ref={nameRef}
               id="officer-name"
@@ -300,7 +300,7 @@ export default function Detail({
                 Reject
               </button>
               <span className="mono w-full text-xs" style={{ color: officer.trim() ? "var(--text-faint)" : "var(--cursor)" }}>
-                {officer.trim() ? `awaiting ${officer.trim()}…` : `type your name to sign for ${route.actor}`}
+                {officer.trim() ? "Verified OIDC reviewer required; this name cannot grant approval." : "Add a display name. Approval still requires a verified OIDC reviewer."}
               </span>
             </>
           )}

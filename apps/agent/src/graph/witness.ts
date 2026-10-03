@@ -8,7 +8,8 @@ export function captureGraphRun(scenario: GraphScenario, result: GraphRows, comm
     scenarioId: scenario.id,
     graph: scenario.graph,
     cypher: scenario.cypher,
-    graphCommit: commit ? commit.replace(/\(HEAD\)$/, "") : null,
+    graphCommit: result.graphCommit ?? (commit ? commit.replace(/\(HEAD\)$/, "") : null),
+    queryHash: createHash("sha256").update(scenario.cypher).digest("hex"),
     capturedAt: new Date().toISOString(),
     sourceBoundary: "Hackathon pack: synthetic supply/logistics data and public WRI energy data. Query rows may be limited; exposure is not proven operational impact.",
   };
@@ -16,12 +17,13 @@ export function captureGraphRun(scenario: GraphScenario, result: GraphRows, comm
 
 export function createWitness(run: GraphRun, prev: string | null): GraphWitness {
   const pack: GraphWitness["pack"] = {
-    version: 1,
+    version: 2,
     runId: run.runId,
     scenarioId: run.scenarioId,
     graph: run.graph,
     cypher: run.cypher,
     graphCommit: run.graphCommit,
+    queryHash: run.queryHash ?? createHash("sha256").update(run.cypher).digest("hex"),
     capturedAt: run.capturedAt,
     sourceBoundary: run.sourceBoundary,
     approval: "unapproved",

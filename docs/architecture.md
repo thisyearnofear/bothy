@@ -11,13 +11,31 @@ The first slice introduces an independent `/defense` surface and server-captured
 graph result snapshots. Witness export references a captured run, not
 browser-supplied rows. It records scenario, graph, Cypher, retrieval time,
 result count, and source boundary, explicitly as **unapproved analysis**.
-An explicit historical commit can be replayed and retained in the capture.
-Automatic HEAD pinning and authenticated reviewer/model binding remain outstanding.
+Reads now resolve HEAD to a concrete graph revision before execution and retain
+that revision plus a SHA-256 query hash. Legacy unpinned runs cannot become briefs.
+The sidecar creates a separate JSON client per request, closes its transport,
+and accepts exact catalogue queries only. Arbitrary Cypher and separate public
+change/submit endpoints are disabled. One authenticated simulation request owns
+its lifecycle and never submits. Daemon-side abandoned-change reclamation and
+coordination with independent administrative graph writers remain open gates.
+
+`defense.ts` generates row-cited deterministic verification briefs and binds
+the complete run hash, graph/query revisions, and generator version. Review,
+action transitions, and audit append commit in one SQLite transaction. Review is
+pending-only; assignment requires approval; only the verified assigned owner may
+acknowledge and complete the action. This workflow records a verification step,
+not an operational intervention or automatically dispatched notification.
+
+`auth.ts` verifies OIDC API access-token signatures, issuer, audience, and time
+claims via `jose`; only RS256/ES256 are enabled. Roles are an explicit server-side
+subject allowlist, not claims accepted from the browser. Missing/invalid config
+disables review/simulation. The browser SSO login/session bridge is not yet
+provided; no password system or pasted-token UI has been introduced.
 
 Email queueing and sending require approved assessments; legacy queued pending
-drafts are excluded at the sender. A typed officer name remains demo attribution,
-not authenticated authority. Read/write isolation, role checks, atomic decision
-plus audit, private sharing, and background monitoring are subsequent gates.
+drafts are excluded at the sender. Road approvals also require a verified OIDC
+reviewer, but the legacy Postgres decision + audit + queue is not transactional.
+Its outbox, private customer-data sharing, and background monitoring remain gates.
 
 Nebius configuration is server-only and opt-in. It is connected cloud inference,
 not DIL/offline inference. No eligible model or successful live call is claimed
