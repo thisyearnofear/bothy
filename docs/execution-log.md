@@ -1,5 +1,70 @@
 # Execution log
 
+## 3 October 2026: real local browser SSO and owned-action rehearsal
+
+Added a disposable loopback OIDC-provider launcher with ephemeral signing/client/
+session secrets, fixed synthetic accounts, and a temporary ledger. Docker/Java
+were unavailable, so `oidc-provider` 9.12.2 was used as a development dependency.
+Agent HTTP identity endpoints require explicit development-only loopback opt-in;
+production remains HTTPS-only. Added optional RFC 8707 resource-indicator support
+and fixed the sign-in return link's first-render hydration mismatch.
+
+Real browser authorization/consent and confidential code exchange succeeded.
+Agent signature/JWKS/issuer/audience verification returned subject reviewer.
+Live gallium capture was drafted, approved, and assigned to owner. After separate
+application/provider logout, owner login returned to the saved brief and enabled
+acknowledgment/outcome. Persisted audit recorded reviewer approved/assigned and
+owner acknowledged/completed. No fetch mocking, token insertion or cookie
+injection was used. See [local SSO runbook](demo-sso-rehearsal.md) and screenshots
+`assets/edth-sso-assignment.png` / `assets/edth-sso-outcome.png`.
+
+Browser datetime fill needed standard input/change events to update React state;
+the actual assigned due time was read back independently. Fixed-account identity
+selection is deliberately local/demo-only, not real user authentication. No buyer
+IdP or production deployment is certified. Rehearsal services were stopped.
+
+A combined verification command timed out; isolated reruns passed 81 web and
+25 agent tests with no leftover rehearsal processes. Earlier Python graph suite
+passed six tests. Final production build, typecheck, launcher syntax, and diff
+checks passed; lint had zero errors and the existing `CaseList` warning. No secrets
+were written to configuration files or committed; no buyer data, external send,
+paid inference, public upload or submission occurred.
+
+## 3 October 2026: live gallium explanation and submission visuals
+
+Validated the bounded typed `gallium-chain` query against the existing local
+starter graph in a separate loopback in-memory TuringDB daemon at :6688.
+Graph history returned `fa702a0364247caf` and an empty initial revision.
+Ten chain rows returned, including a synthetic IFV fire-control path through
+laser diode, GaAs substrate wafer, and primary gallium. Final material traversal
+spans 1–4 edges; intermediate material names are not returned. No actual weapon
+BOM, total exposure, or production-loss claim is implied.
+
+Added the exact query to the catalogue and read policy, a chain explanation
+component for new/saved cases, separately linked USGS/Commission supply context,
+and graph-specific synthetic provenance. Rehearsed real browser → disposable
+agent ledger → isolated sidecar → graph, without mocked browser responses.
+The captured query reported 41.2ms in this run; this is one observation, not a
+benchmark. Stopping the sidecar and rerunning produced a visible failure while
+preserving the prior capture. At 390px, document width remained 390px and all
+eight rendered stages were present.
+
+Saved actual desktop/mobile screenshots under `assets/edth-gallium-*.png` and
+created `docs/edth-deck.html`, a six-slide print-ready draft. Browser rendering
+confirmed six slides and successful loading of the live screenshot. No final
+PDF or video is produced. Team number, demo-video link, and event-period
+contribution attribution still need finalization.
+
+Verification: 80 web and 24 agent tests passed, six Python boundary tests passed,
+production build/typecheck/diff checks passed. Lint has zero errors and the
+existing `CaseList` warning. No configured browser IdP was available; the live
+rehearsal stops at capture/rendering and the authenticated review journey remains
+test-backed rather than freshly browser-proven. No retained case ledger was used;
+startup created runtime directories in the graph root despite in-memory mode.
+No graph writes, simulation, seed/reset, paid inference, public upload or
+submission occurred. Temporary services were stopped after rehearsal.
+
+
 ## 3 October 2026: European defence submission preparation
 
 Committed and pushed domain/case continuity, focused work views, and linked

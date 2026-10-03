@@ -68,8 +68,14 @@ cookie.
 Set `BOTHY_SSO_*` and `BOTHY_SESSION_SECRET` (see `.env.example`). This requires
 a **confidential** OIDC client able to mint a token for the API audience; a
 browser-only public/SPA registration usually cannot. Incomplete configuration
-fails closed: `/api/auth/login` returns 503 and there is no dev bypass. Rotate
-`BOTHY_SESSION_SECRET` to invalidate every live session.
+fails closed: `/api/auth/login` returns 503; there is no signature or role bypass.
+A disposable local protocol rehearsal is available via `node scripts/demo-sso.mjs`.
+Agent HTTP issuer/JWKS requires both `NODE_ENV=development` and explicit
+`BOTHY_OIDC_ALLOW_LOCAL_DEMO=true` with loopback URLs; production stays HTTPS-only.
+The provider has fixed synthetic accounts and ephemeral secrets, and must never
+be exposed as real authentication. Optional `BOTHY_SSO_RESOURCE` supports RFC 8707.
+See [local SSO runbook](demo-sso-rehearsal.md) for setup and verified results.
+Rotate `BOTHY_SESSION_SECRET` to invalidate every live session.
 
 `next.config.ts` excludes `/api/defense` and `/api/auth` from the `/api/:path*`
 agent rewrite. This is load-bearing, not an optimisation: a bare array is an

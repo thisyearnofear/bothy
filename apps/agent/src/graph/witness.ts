@@ -11,7 +11,9 @@ export function captureGraphRun(scenario: GraphScenario, result: GraphRows, comm
     graphCommit: result.graphCommit ?? (commit ? commit.replace(/\(HEAD\)$/, "") : null),
     queryHash: createHash("sha256").update(scenario.cypher).digest("hex"),
     capturedAt: new Date().toISOString(),
-    sourceBoundary: "Hackathon pack: synthetic supply/logistics data and public WRI energy data. Query rows may be limited; exposure is not proven operational impact.",
+    sourceBoundary: scenario.graph === "supply_chain_deep"
+      ? "TuringDB starter deep supply chain: platforms, parts, companies and BOM identities are synthetic; material relationships and production shares are approximate reference data, not verified procurement evidence. Query rows may be limited; exposure is not proven operational impact."
+      : "Hackathon pack: synthetic supply/logistics data and public WRI energy data. Query rows may be limited; exposure is not proven operational impact.",
   };
 }
 

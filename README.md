@@ -20,10 +20,18 @@ and parent-linked, separately reviewed revisions are implemented.
 See [domain workspaces](docs/domain-workspaces.md) for the defence/flood split.
 A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
 cookie, server-side bearer forwarding) is implemented, but review and owned-action
-APIs still fail closed until OIDC and SSO are configured, and the bridge has not
-been exercised against a real identity provider. Continuous monitoring and
+APIs still fail closed until OIDC and SSO are configured. A real disposable local
+OIDC provider has been browser-rehearsed through live graph capture, approval,
+assignment, separate owner sign-in, acknowledgment and outcome. This validates
+local protocol integration, not a buyer identity provider. See the
+[local SSO runbook](docs/demo-sso-rehearsal.md). Continuous monitoring and
 independent operational validation are still outstanding.
+The separate `gallium-chain` scenario explains ten sampled synthetic dependency
+rows with a bounded final material segment; intermediate material names are not
+returned. Official USGS/EU context is linked separately from graph evidence.
 Dependencies are not proof of stoppage; query row limits are not total impact.
+A [six-slide HTML deck draft](docs/edth-deck.html) and live screenshots are available;
+final PDF/video, team details and event contribution attribution remain pending.
 
 ## Run the defence demo
 

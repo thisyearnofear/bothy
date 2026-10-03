@@ -69,6 +69,13 @@ describe("pkce", () => {
 });
 
 describe("authorizeUrl", () => {
+  it("supports an optional standard resource indicator without exposing the client secret", () => {
+    const config = loadConfig({ ...env, BOTHY_SSO_RESOURCE: "http://127.0.0.1:8798" })!;
+    const url = new URL(authorizeUrl(config, { state: "st", challenge: "ch", nonce: "no" }));
+    assert.equal(url.searchParams.get("resource"), "http://127.0.0.1:8798");
+    assert.equal(url.searchParams.get("audience"), "bothy-api");
+    assert.equal(url.searchParams.get("client_secret"), null);
+  });
   it("requests a code with PKCE, state, and the API audience", () => {
     const config = loadConfig(env)!;
     const url = new URL(authorizeUrl(config, { state: "st", challenge: "ch", nonce: "no" }));

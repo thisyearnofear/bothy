@@ -1,6 +1,6 @@
-/** Defense scenario catalogue: 8 read-only Cypher scenarios for the demo desk.
- * Every cypher below was verified against live TuringDB via the :6777 sidecar
- * before being written here (2026-10-02). Read-only only — no CREATE/SET.
+/** Defense scenario catalogue: reviewed read-only queries.
+ * Original queries were venue-tested; gallium-chain was validated locally on
+ * 2026-10-03 at fa702a0364247caf. No CREATE/SET.
  */
 
 import type { GraphScenario } from "../../../../packages/shared/src/types";
@@ -27,6 +27,15 @@ export const SCENARIOS: GraphScenario[] = [
     kind: "material-exposure",
     howToRead: "One platform name per row; any depth of CONTAINS chain ending at Primary gallium.",
     eyAngle: "Count the platforms, then name the scariest three (AD assets, strike, ISR).",
+  },
+  {
+    id: "gallium-chain",
+    title: "Explain an illustrative gallium dependency",
+    stakes: "Inspect a sampled synthetic platform-to-component chain; verify the real programme mapping separately.",
+    graph: "supply_chain_deep",
+    cypher: "MATCH (p:Platform)-[:CONTAINS]->(s:System)-[:CONTAINS]->(ss:Subsystem)-[:CONTAINS]->(a:Assembly)-[:CONTAINS]->(sa:Subassembly)-[:CONTAINS]->(c:Component)-[:CONTAINS]->(m:Material)-[:CONTAINS]->{1,4}(g:Material {name:'Primary gallium'}) RETURN DISTINCT p.name, p.archetype, s.name, ss.name, a.name, sa.name, c.name, c.family, m.name, g.name LIMIT 10",
+    kind: "dependency-explanation",
+    howToRead: "One sampled modeled chain per row. The last segment is bounded connectivity through 1–4 edges; intermediate material nodes are not returned. Platforms and parts are synthetic. Ten rows are not a total exposure count.",
   },
   {
     id: "chn-ownership",

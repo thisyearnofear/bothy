@@ -5,6 +5,7 @@ import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, t
 import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
 import DefenseCases from "./DefenseCases";
+import GalliumExplanation from "./GalliumExplanation";
 import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
@@ -164,6 +165,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         </>}
       </section>
 
+      {rows?.scenarioId === "gallium-chain" && <GalliumExplanation run={rows} />}
       <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">

@@ -26,6 +26,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
+    "oidc-provider": "^9.12.2",
     "tsx": "4.19.0",
     "typescript": "^5.7.0"
   }

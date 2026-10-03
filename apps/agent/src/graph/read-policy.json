@@ -2,6 +2,7 @@
   "reads": {
     "supply_chain_deep": [
       "MATCH (n) RETURN count(n)",
+      "MATCH (p:Platform)-[:CONTAINS]->(s:System)-[:CONTAINS]->(ss:Subsystem)-[:CONTAINS]->(a:Assembly)-[:CONTAINS]->(sa:Subassembly)-[:CONTAINS]->(c:Component)-[:CONTAINS]->(m:Material)-[:CONTAINS]->{1,4}(g:Material {name:'Primary gallium'}) RETURN DISTINCT p.name, p.archetype, s.name, ss.name, a.name, sa.name, c.name, c.family, m.name, g.name LIMIT 10",
       "MATCH (p:Platform {archetype:'Loitering munition'})-[:CONTAINS]->{8,8}(m:Mineral) RETURN DISTINCT p.name, m.name",
       "MATCH (p:Platform)-[:CONTAINS]->+(:Material {name:'Primary gallium'}) RETURN DISTINCT p.name LIMIT 50",
       "MATCH (:Country {nato_member:true})<-[:HEADQUARTERED_IN]-(c:Company)-[:SUBSIDIARY_OF]->+(u:Company {hq_country:'CHN'}) RETURN DISTINCT c.name, u.name LIMIT 20",

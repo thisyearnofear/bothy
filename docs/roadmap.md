@@ -48,6 +48,14 @@ is prepared; selecting a partner and conducting validation remain outstanding.
 Provider display-name directory, cursor pagination, customer tenancy, committed
 browser coverage, and real buyer identity/data validation remain outstanding. These changes do not complete the operational Phase 1/2 gates.
 
+The bounded `gallium-chain` explanation is live-tested against the local starter
+at `fa702a0364247caf`, returning ten sampled synthetic paths. The final material
+segment is bounded connectivity, not returned intermediate nodes. A disposable
+local OIDC browser journey through approval, assignment, separate owner login,
+acknowledgment/outcome and audit is verified. This does not validate buyer identity,
+real procurement data or production readiness. See [local rehearsal](demo-sso-rehearsal.md).
+Deck HTML and screenshots exist; final PDF/video remain pending.
+
 ### Submission gates
 
 - **EDTH first:** one scenario, native graph versioning, readable evidence,

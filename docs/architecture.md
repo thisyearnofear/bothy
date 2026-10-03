@@ -55,8 +55,13 @@ the web app as a backend-for-frontend (`app/api/auth/*` + `app/api/defense/*`,
 see `ops.md`): authorization code + PKCE, an encrypted HttpOnly session cookie,
 and server-side forwarding of `Authorization: Bearer …`. The agent still receives
 only a bearer token and never a cookie, and no password system or pasted-token UI
-exists. It is unvalidated against a live IdP: the bridge has tests and a local
-HTTP check, but no real buyer identity provider has been exercised yet.
+exists. A disposable local `oidc-provider` instance has now browser-rehearsed
+code/PKCE exchange, live graph capture, review/assignment, separate owner login,
+acknowledgment/outcome, and persisted audit. No buyer identity provider has been
+validated. The agent's HTTP exception requires both explicit local-demo opt-in
+and development mode with loopback URLs; production remains HTTPS-only.
+Optional RFC 8707 resource indicators support providers requiring a resource
+parameter. See [demo-sso-rehearsal.md](demo-sso-rehearsal.md).
 
 Email queueing and sending require approved assessments; legacy queued pending
 drafts are excluded at the sender. Road approvals also require a verified OIDC

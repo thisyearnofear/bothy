@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, isAbortError, recoveryMessage, type DefenseSession, type GraphRun } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
 import DefenseCases from "./DefenseCases";
+import GalliumExplanation from "./GalliumExplanation";
 import { exposureSummary } from "../lib/exposureSummary";
 
 export default function DefenseSavedCase({ id, initialSession }: { id: string; initialSession: DefenseSession }) {
@@ -54,6 +55,7 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
       {error && <p role="alert" className="mt-3 text-sm">{error}</p>}
       <button className="coarse-target mt-3 rounded border px-3 py-2 text-sm" onClick={() => setRetry((value) => value + 1)}>Refresh saved evidence and session</button>
     </section>
+    {run?.scenarioId === "gallium-chain" && <GalliumExplanation run={run} />}
     <DefenseBriefPanel key={id} run={null} session={session} savedCase />
     <div id="saved-cases"><DefenseCases session={session} /></div>
   </div>;

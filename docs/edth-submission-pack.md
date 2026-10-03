@@ -13,7 +13,9 @@ Sources checked on 3 October 2026:
 - [London 2026 Defence Tech Days](https://eurodefense.tech/london-2026/): October 1 through 8, 2026, for the broader event series. Its hackathon link points to [this address](https://events.eurodefense.tech/events/european-defense-tech-hackathon-london-2), which returned a page-not-found message during this check.
 - The repo's October 30 deadline belongs to the separate Nebius track and must not be reused for EDTH.
 
-Before submitting, confirm the exact event/track, eligibility, event build window, deadline/time zone, team number, deck/video format, submission URL, and public/non-confidential disclosure requirements. No organizer has been contacted by this session. Treat the older deck format below as a preparation template, not confirmed current rules.
+Follow-up source check: the current [October hackathon page](https://events.eurodefense.tech/european-defense-tech-hackathon-london-2) resolves, identifies October 1 through 4, and explicitly permits bringing a project. The user supplied Friday 18:00 through Sunday 4 October noon as the 42-hour build window. The `/resources` page remains HTTP 401, so sponsor-specific eligibility, contribution accounting, deck/video format, team number, deadline time zone, and submission channel still need the authenticated instructions. The earlier page-not-found observation above concerned a different `/events/` address.
+
+No organizer has been contacted by this session. Treat the older deck format below as a preparation template until the current resources confirm it. See [asset manifest](edth-asset-manifest.md) for verified dataset/software sources and provenance boundaries.
 
 ## Submission proposition
 
@@ -88,15 +90,15 @@ Implementation baseline pushed: `2f42123` on `main` (3 October 2026).
 
 | Evidence | Status |
 |---|---|
-| TypeScript tests | 79 web and 24 agent passed on the implementation baseline |
+| TypeScript tests | Latest local verification: 81 web and 25 agent passed; earlier pushed baseline was 79/24. |
 | Python graph boundary tests | 6 passed on 3 October; mocked boundary tests, not live query proof |
-| Typecheck and production build | Passed in the preceding implementation work; typecheck rerun before push |
+| Typecheck and production build | Passed after local OIDC rehearsal changes; final commit checks rerun before publication. |
 | Commit checks | ESLint staged checks and secret scan passed |
-| UI rehearsal | Synthetic browser-tab fixtures for filters, stored rows and revisions; not a live graph/IdP walkthrough |
-| Live graph on submission revision | Not yet rehearsed in this session |
+| Local authenticated browser rehearsal | Real disposable OIDC provider, confidential code exchange/PKCE, signed API-token verification, live graph capture, reviewer approval/assignment, separate owner login, acknowledgment/outcome and persisted audit verified. Fixed synthetic accounts; not buyer-IdP validation. See `demo-sso-rehearsal.md`. |
+| Live graph on current worktree | Gallium-chain query rehearsed through the real sidecar/agent/UI at graph revision `fa702a0364247caf`; ten sampled rows returned. Rehearse again on the final submission commit. |
 | Real buyer IdP | Not validated |
 | Clean-clone graph pack setup | Not rehearsed |
-| Current public demo/video/PDF | Not produced or submitted by this session |
+| Submission visuals | Live desktop/mobile PNGs in `assets/`; six-slide print-ready `docs/edth-deck.html` draft rendered and image checked. No final PDF, recorded video, public upload or submission. |
 | Event eligibility/deadline/channel | Unconfirmed |
 
 Useful dated commits, all showing 3 October 2026 in local git history:

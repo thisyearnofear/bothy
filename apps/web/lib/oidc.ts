@@ -9,6 +9,7 @@ export interface SsoConfig {
   audience: string;
   scope: string;
   redirectUri: string;
+  resource?: string;
 }
 
 export interface TokenSet {
@@ -57,6 +58,7 @@ export function loadConfig(env: Env = process.env): SsoConfig | null {
     audience,
     scope: env.BOTHY_SSO_SCOPE ?? "openid profile email",
     redirectUri,
+    ...(env.BOTHY_SSO_RESOURCE ? { resource: env.BOTHY_SSO_RESOURCE } : {}),
   };
 }
 
@@ -81,6 +83,7 @@ export function authorizeUrl(
   url.searchParams.set("code_challenge", params.challenge);
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("audience", config.audience);
+  if (config.resource) url.searchParams.set("resource", config.resource);
   return url.toString();
 }
 
@@ -123,6 +126,7 @@ export async function exchangeCode(config: SsoConfig, code: string, verifier: st
       client_id: config.clientId,
       client_secret: config.clientSecret,
       redirect_uri: config.redirectUri,
+      ...(config.resource ? { resource: config.resource } : {}),
     })
   );
 }

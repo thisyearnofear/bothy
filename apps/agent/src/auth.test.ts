@@ -14,6 +14,22 @@ test("OIDC fails closed when configuration is absent, partial, or malformed", as
   }
 });
 
+test("HTTP identity configuration requires explicit development-only loopback opt-in", async () => {
+  const fixture = await authFixture();
+  const local = { ...fixture.env, NODE_ENV: "development", BOTHY_OIDC_ALLOW_LOCAL_DEMO: "true", BOTHY_OIDC_ISSUER: "http://127.0.0.1:9099", BOTHY_OIDC_JWKS_URL: "http://127.0.0.1:9099/jwks" };
+  assert.equal(createAuth(local, fixture.keys).configured, true);
+  for (const env of [
+    { ...local, NODE_ENV: "production" }, { ...local, NODE_ENV: "test" },
+    { ...local, BOTHY_OIDC_ALLOW_LOCAL_DEMO: "false" },
+    { ...local, BOTHY_OIDC_ISSUER: "http://remote.example" },
+    { ...local, BOTHY_OIDC_JWKS_URL: "http://remote.example/jwks" },
+    { ...local, BOTHY_OIDC_ISSUER: "http://user:pass@127.0.0.1:9099" },
+  ]) assert.equal(createAuth(env, fixture.keys).configured, false);
+  const verifier = createAuth(local, fixture.keys);
+  assert.deepEqual(await verifier.authenticate(`Bearer ${await fixture.token("reviewer", undefined, "5m", local.BOTHY_OIDC_ISSUER)}`), { subject: "reviewer", roles: ["reviewer"] });
+  await assert.rejects(verifier.authenticate(`Bearer ${await fixture.token("reviewer", "wrong", "5m", local.BOTHY_OIDC_ISSUER)}`));
+});
+
 test("OIDC verifies signatures, issuer, audience, expiry, and configured subjects; token roles are ignored", async () => {
   const { auth, token } = await authFixture();
   assert.deepEqual(await auth.authenticate(`Bearer ${await token("analyst")}`), { subject: "analyst", roles: ["analyst"] });

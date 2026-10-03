@@ -26,7 +26,10 @@ export function createAuth(env: Env = process.env, keys?: JWTVerifyGetKey) {
     }
     const jwks = new URL(env.BOTHY_OIDC_JWKS_URL ?? "");
     const origin = new URL(issuer ?? "");
-    if (!audience || jwks.protocol !== "https:" || origin.protocol !== "https:" ||
+    const localDemo = env.NODE_ENV === "development" && env.BOTHY_OIDC_ALLOW_LOCAL_DEMO === "true";
+    const approvedUrl = (url: URL) => url.protocol === "https:" ||
+      (localDemo && url.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname));
+    if (!audience || !approvedUrl(jwks) || !approvedUrl(origin) ||
         jwks.username || jwks.password || origin.username || origin.password ||
         !Object.keys(principals).length) throw new Error();
     resolver = keys ?? createRemoteJWKSet(jwks, { timeoutDuration: 5000, cacheMaxAge: 300000 });

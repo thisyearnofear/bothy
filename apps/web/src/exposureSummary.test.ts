@@ -36,6 +36,12 @@ test("other scenarios do not inherit gallium interpretation", () => {
   assert.equal(summary.heading, "1 captured dependency row");
 });
 
+test("chain scenario remains a bounded row sample rather than a platform count", () => {
+  const summary = exposureSummary(run([{ "p.name": "Synthetic platform", "c.name": "Synthetic component" }], "gallium-chain"));
+  assert.equal(summary.heading, "1 captured dependency row");
+  assert.match(summary.gaps.join(" "), /not a total/);
+});
+
 test("catalogue labels distinguish loading, unavailable, and empty", () => {
   assert.equal(catalogueLabel("unavailable"), "Exposure questions unavailable");
   assert.equal(catalogueLabel("empty"), "No exposure questions configured");

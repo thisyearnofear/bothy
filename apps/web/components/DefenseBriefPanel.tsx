@@ -35,6 +35,8 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
   const [dueAt, setDueAt] = useState("");
   const [outcome, setOutcome] = useState("");
   const alive = useRef(true);
+  const [returnTo, setReturnTo] = useState("/defense");
+  useEffect(() => { setReturnTo(window.location.pathname + window.location.search); }, [brief?.id]);
   const authenticated = session.authenticated && !sessionExpired;
   const reviewer = authenticated && !conflicted && session.roles.includes("reviewer");
   const assignedOwner = authenticated && !conflicted && session.roles.includes("action-owner") && brief?.action?.owner === session.subject;
@@ -110,18 +112,18 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
           <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? "Saving…" : savedCase && !brief ? "Reopening saved case" : briefStage(brief, Boolean(run))}</p>
           <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-strong)" }}>{brief?.title ?? (savedCase ? "Saved verification brief" : "Prepare a cited verification brief")}</h2>
         </div>
-        <button className={control} style={card} disabled={busy || !run || Boolean(brief)}
+        <button className={control} style={card} disabled={busy || !authenticated || !run || Boolean(brief)}
           onClick={() => { if (run) void update(() => api.draftDefenseBrief(run.runId)); }}>{busy ? "Saving…" : "Draft cited brief"}</button>
       </div>
       <div className="mt-3 space-y-2 text-sm">
         {session.error ?? (authenticated
           ? <p>Verified subject: <span className="mono break-all">{session.subject}</span>. Assigned roles: {session.roles.join(", ")}.</p>
           : session.configured
-            ? <p>Sign in with an approved SSO account to review, decide, and own actions. Public/synthetic drafts remain available without it.</p>
-            : <p>OIDC is not configured. Public/synthetic drafts are available, but review, simulation, and action updates are disabled.</p>)}
+            ? <p>Sign in to draft or reopen browser cases. Review and ownership actions additionally require the assigned roles.</p>
+            : <p>OIDC is not configured. Browser drafting, review, simulation, and action updates are unavailable; the agent's synthetic draft endpoint is separate.</p>)}
         {!authenticated && session.configured && (
           <a className={control} style={{ ...card, display: "inline-block", textDecoration: "none" }}
-            href={`/api/auth/login?returnTo=${encodeURIComponent(typeof window === "undefined" ? "/defense" : window.location.pathname + window.location.search)}`}>
+            href={`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`}>
             Sign in to review
           </a>
         )}

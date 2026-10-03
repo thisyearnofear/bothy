@@ -16,6 +16,8 @@ test("witness uses a captured run and retains its provenance and all rows", () =
   assert.equal(entry.pack.approval, "unapproved");
   assert.equal(entry.pack.rows.length, 60);
   assert.match(entry.pack.sourceBoundary, /Query rows may be limited/);
+  assert.match(entry.pack.sourceBoundary, /identities are synthetic/);
+  assert.match(entry.pack.sourceBoundary, /not verified procurement evidence/);
   const hash = createHash("sha256").update(JSON.stringify({ prev: entry.prev, pack: entry.pack })).digest("hex");
   assert.equal(entry.hash, hash);
 });
