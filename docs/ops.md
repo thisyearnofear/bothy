@@ -221,13 +221,65 @@ reset.
 
 
 
-## Deploy to Railway (recommended)
+## Deploy to Fly.io (recommended — free tier)
 
-Railway runs both services from Docker, manages environment variables, and
-offers a built-in Postgres add-on. It replaces Netlify + VPS for the hackathon
-and post-hackathon run.
+Fly.io runs real Docker containers on 3 shared VMs, has persistent volumes,
+and doesn't sleep like Render/Railway. It replaces Netlify + VPS entirely.
 
 ### Quick start
+
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Authenticate
+fly auth login
+
+# Create apps
+cd /path/to/bothy
+fly apps create bothy-agent --org personal
+fly apps create bothy-web --org personal
+
+# Set secrets (never committed)
+fly secrets set DATABASE_URL="<your-postgres-url>" \
+  WEB_ORIGIN="https://bothy.fly.dev" \
+  PUBLIC_WEB_URL="https://bothy.fly.dev" \
+  PORT=8787 \
+  --app bothy-agent
+
+fly secrets set AGENT_URL="http://bothy-agent.internal:8787" \
+  PORT=8080 \
+  --app bothy-web
+
+# Deploy
+cp fly/agent.toml fly.toml && fly deploy --app bothy-agent
+cp fly/web.toml fly.toml && fly deploy --app bothy-web
+```
+
+Full guide: [`fly/DEPLOY.md`](fly/DEPLOY.md)
+
+### Free tier
+
+| Resource | Allowance |
+|----------|-----------|
+| Shared VMs | 3 |
+| RAM | 512MB/VM |
+| Bandwidth | 160GB/month |
+| Volumes | 3GB |
+
+### Fly.io + free Postgres
+
+Use an existing managed Postgres (Neon free tier, Supabase, etc.) or create one on Fly:
+
+```bash
+fly postgres create --name bothy-db --org personal
+fly postgres attach --app bothy-agent --database-app bothy-db
+```
+
+## Deploy to Railway (paid, simpler)
+
+Railway has managed Postgres and a simpler DX. Good if you want zero-config
+hosting without Fly's volume setup.
 
 ```bash
 npm install -g @railway/cli
@@ -235,71 +287,25 @@ railway login
 railway init -p bothy-production
 railway add -s agent --service apps/agent/railway.toml
 railway add -s web --service apps/web/railway.toml
+# Set DATABASE_URL, WEB_ORIGIN, PUBLIC_WEB_URL, AGENT_URL
+railway up -s agent && railway up -s web
 ```
 
-Set required variables in the Railway dashboard or via CLI:
+## Local Docker Compose (self-hosted)
 
-```bash
-railway variables set DATABASE_URL=<your-postgres-connection-string>
-railway variables set WEB_ORIGIN=https://<your-domain>
-railway variables set PUBLIC_WEB_URL=https://<your-domain>
-railway variables set AGENT_URL=http://agent.internal   # internal DNS
-railway variables set NEBIUS_API_KEY=<key-if-needed>   # optional
-railway variables set BOTHY_OIDC_ISSUER=<issuer>       # optional, blanks = review disabled
-railway variables set BOTHY_OIDC_AUDIENCE=<audience>
-railway variables set BOTHY_OIDC_JWKS_URL=<jwks-endpoint>
-railway variables set BOTHY_OIDC_PRINCIPALS=<json>
-```
-
-Add a Postgres database if you don't have one:
-
-```bash
-railway add postgres -p bothy-production
-railway variables -s agent DATABASE_URL=<railway-provided-postgres-url>
-```
-
-Deploy:
-
-```bash
-railway up -s agent   # rebuilds and deploys the agent
-railway up -s web     # rebuilds and deploys the Next.js frontend
-```
-
-Verify health:
-
-```bash
-curl https://agent.<project>.railway.app/api/health
-curl https://<your-domain>/api/health
-```
-
-Automated deploys run on push to `main` via `.github/workflows/deploy-railway.yml`.
-Add `RAILWAY_TOKEN` and set `AGENT_SERVICE_ID` / `WEB_SERVICE_ID` /
-`RAILWAY_PROJECT_ID` as GitHub repository secrets/variables.
-
-### Local Docker Compose (self-hosted)
-
-For a quick local or self-hosted test without Railway:
+For a quick local or self-hosted test:
 
 ```bash
 cd deploy
 cp .env.production.example .env.production
-# Set DATABASE_URL to a reachable Postgres instance
 docker compose -f docker-compose.local.yml up -d --build
 curl http://localhost:8787/api/health
 open http://localhost:3001
 ```
 
-### Existing VPS + Coolify/Traefik
+## Existing VPS + Coolify/Traefik
 
-The agent already ships with a VPS profile (`deploy/docker-compose.vps.yml`).
-Keep the Postgres tunnel or attach a managed database. Update the compose file
-to replace the external `coolify` network with your proxy network, and set
-`WEB_ORIGIN` / `PUBLIC_APP_URL` to the new public domain.
-
-See the "Public demo deployment" section below for the original VPS instructions.
-
-
-## Public demo deployment (VPS + Netlify)
+See the "Public demo deployment" section below.
 
 The public watch room runs on Netlify; the agent runs as `bothy-agent` on the
 VPS, where Coolify's existing Traefik proxy terminates TLS for

@@ -1,9 +1,11 @@
-FROM node:22-bookworm-slim
-
+# Stage 1: Build
+FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --legacy-peer-deps
+COPY apps/web/package.json apps/web/package.json
+COPY apps/agent/package.json apps/agent/package.json
+RUN npm ci --legacy-peer-deps
 
 COPY packages/shared packages/shared
 COPY apps/web apps/web
@@ -11,12 +13,27 @@ COPY apps/web apps/web
 WORKDIR /app/apps/web
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Railway injects PORT; fall back to 3000 for local runs
-ENV PORT=${PORT:-3000}
+ENV PORT=3000
 
-# Pre-build static assets (Next.js 16 SSG)
 RUN npm run build
 
-EXPOSE ${PORT}
+# Stage 2: Production
+FROM node:22-slim AS runner
+WORKDIR /app
 
-CMD ["npm", "start"]
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8080
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./.next/static
+
+WORKDIR /app
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["node", "server.js"]

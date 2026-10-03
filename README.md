@@ -82,6 +82,39 @@ The earlier road agent uses Strands / OpenAI-compatible providers with a
 deterministic scripted fallback. Its defence brief integration and bounded
 Strands handoff are subsequent roadmap gates, not completed claims.
 
+## Deploy (Fly.io — free tier, recommended)
+
+Fly.io runs real Docker on 3 shared VMs, has persistent volumes, and doesn't sleep
+like Render/Railway free tiers. Bothy uses internal networking over Fly's private
+network — no reverse proxy needed.
+
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+# Create apps
+fly apps create bothy-agent --org personal
+fly apps create bothy-web --org personal
+
+# Set secrets (never committed)
+fly secrets set DATABASE_URL="<your-postgres-url>" \
+  WEB_ORIGIN="https://bothy.fly.dev" \
+  PUBLIC_WEB_URL="https://bothy.fly.dev" \
+  PORT=8787 --app bothy-agent
+
+fly secrets set AGENT_URL="http://bothy-agent.internal:8787" \
+  PORT=8080 --app bothy-web
+
+# Deploy
+cp fly/agent.toml fly.toml && fly deploy --app bothy-agent
+cp fly/web.toml fly.toml && fly deploy --app bothy-web
+```
+
+Full guide: [`fly/DEPLOY.md`](fly/DEPLOY.md).
+
+Free tier: 3 shared VMs, 512MB RAM/VM, 160GB bandwidth/month, 3GB volumes.
+
 ## Validate
 
 ```bash
