@@ -30,6 +30,17 @@ Remaining limitations must stay visible. Do not ship a new identity system,
 remote deployment, or paid integration without the relevant configuration and
 authorization.
 
+### Workspace follow-up: 3 October 2026
+
+Implemented catalogue recovery, a captured-name gallium summary, brief-first
+layout, clickable citation inspection, typed recovery, and synthetic-demo
+creator/owner/reviewer case access. See [slice one](defense-workspace-slice-one.md)
+and [slice two](defense-workspace-slice-two.md) for verification.
+
+Owner selection/directory, saved-case queues, customer tenancy, committed browser
+coverage, and real buyer identity/data validation remain outstanding. These
+changes do not complete the operational Phase 1/2 gates.
+
 ### Submission gates
 
 - **EDTH first:** one scenario, native graph versioning, readable evidence,

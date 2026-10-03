@@ -35,6 +35,12 @@ These are qualitative engineering/product ratings, not customer research.
 Browser layout checks used isolated fixtures when the local API failed;
 screenshot capture was unavailable, so the UI rating is provisional.
 
+Follow-up on 3 October 2026: desktop/mobile screenshots and tab-only synthetic
+browser rehearsals now cover catalogue recovery, gallium summary, row citation
+focus, and conflict-note retention. Those checks do not rerate the historical
+baseline or establish customer usability, real-IdP readiness, or live graph
+validation. See the [implementation notes](defense-workspace-slice-two.md).
+
 | Area | /10 | Main insight |
 |---|---|---|
 | Product design | 8 | Replayable evidence is stronger than another alert dashboard. |

@@ -73,16 +73,30 @@ const post = <T,>(path: string, body: unknown, signal?: AbortSignal): Promise<T>
 
 // Lets the UI distinguish "your session expired, sign in again" from a genuine
 // authorization failure without parsing the message text.
-export class ApiAuthError extends Error {
-  constructor(message: string) {
-    super(message);
+export class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
+export class ApiAuthError extends ApiError {
+  constructor(message: string) { super(401, message); }
+}
+
+export function recoveryMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return "Your session expired. Sign in again to reopen this case. Unsaved text remains here until you leave the page.";
+    if (error.status === 403) return "Your account is not permitted to perform this action. No changes were saved.";
+    if (error.status === 404) return "This case is unavailable or outside your access scope.";
+    if (error.status === 409) return "The case or evidence changed. Reload the saved case before deciding again. Your unsaved text has been retained.";
+    if (error.status >= 500) return "The service is unavailable or not configured. Retry when it is available; your case has not been deleted.";
+    if (error.status === 400) return "Check the supplied fields before trying again. No changes were saved.";
   }
+  return "The request could not be completed. Check your connection and retry.";
 }
 
 async function apiError(response: Response, path: string): Promise<never> {
   const body = await response.json().catch(() => null) as { error?: unknown } | null;
   const message = typeof body?.error === "string" ? body.error : `${response.status} ${path}`;
-  throw response.status === 401 ? new ApiAuthError(message) : new Error(message);
+  throw response.status === 401 ? new ApiAuthError(message) : new ApiError(response.status, message);
 }
 
 export const api = {

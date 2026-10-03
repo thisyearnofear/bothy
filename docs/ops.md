@@ -83,9 +83,17 @@ the agent with no token.
   Returns no token either way.
 - `POST /api/defense/briefs`: only `{runId}`; public/synthetic deterministic
   draft, bound to complete evidence hash, graph revision, query hash, and
-  `defense-brief-v1`. Legacy unpinned runs return 409.
-- `GET /api/defense/briefs/:id`, `/evidence`, `/audit`: verified workspace role
-  required; no-store responses. Saved brief URLs require SSO to reopen.
+  `defense-brief-v1`. Legacy unpinned runs return 409. The agent permits anonymous
+  synthetic drafting; a supplied bearer must verify, and its subject is recorded
+  as creator. The browser bridge requires a session even for drafting.
+- `GET /api/defense/briefs/:id`, `/evidence`, `/audit`: case access and a verified
+  workspace role required; no-store responses. Creator analysts, assigned action
+  owners, and reviewers of synthetic-demo records may read. Out-of-scope IDs
+  return 404. Legacy records have no inferred creator and remain reviewer-accessible
+  synthetic demos. Unknown scope fails closed. This is not customer tenancy.
+  Saved brief URLs require SSO to reopen. Citations fetch stored, hash-checked
+  evidence and validate run/revision/query/row/column identity, without rerunning
+  the graph. No owner-directory or saved-case list endpoint exists.
 - `POST …/:id/review`: reviewer; only decision and optional note, pending-only.
 - `POST …/:id/action`: reviewer; approved brief, configured owner subject and
   ISO `dueAt`; an assigned action cannot be overwritten.

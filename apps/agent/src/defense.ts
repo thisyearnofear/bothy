@@ -35,12 +35,22 @@ export class DefenseStore {
     this.get(id);
     return this.db.prepare("SELECT subject, action, at FROM defense_audit WHERE brief_id = ? ORDER BY id").all(id);
   }
-  draft(runId: string): DefenseBrief {
+  authorizeRead(id: string, principal: Principal): DefenseBrief {
+    const brief = this.get(id);
+    const demo = brief.accessScope === undefined || brief.accessScope === "synthetic-demo";
+    const allowed = demo && (principal.roles.includes("reviewer") ||
+      (principal.roles.includes("analyst") && brief.createdBySubject === principal.subject) ||
+      (principal.roles.includes("action-owner") && brief.action?.owner === principal.subject));
+    if (!allowed) throw new AccessError(404, "brief not found");
+    return brief;
+  }
+  draft(runId: string, creator?: Principal): DefenseBrief {
     const run = this.run(runId);
     if (!run.graphCommit || !run.queryHash) throw new AccessError(409, "rerun the question to capture pinned evidence");
     const scenario = getScenarioDef(run.scenarioId);
     if (!scenario || scenario.cypher !== run.cypher || scenario.graph !== run.graph) throw new AccessError(409, "evidence does not match the reviewed catalogue");
     const brief: DefenseBrief = {
+      accessScope: "synthetic-demo", ...(creator ? { createdBySubject: creator.subject } : {}),
       id: randomUUID(), runId, title: `${scenario.title}: verification brief`,
       createdAt: new Date().toISOString(), evidenceHash: evidenceHash(run),
       graphCommit: run.graphCommit, queryHash: run.queryHash, resultCount: run.count,
@@ -63,7 +73,7 @@ export class DefenseStore {
   private transition(id: string, principal: Principal, action: string, change: (brief: DefenseBrief) => void) {
     this.db.exec("BEGIN IMMEDIATE");
     try {
-      const brief = this.get(id);
+      const brief = this.authorizeRead(id, principal);
       change(brief);
       this.db.prepare("UPDATE defense_briefs SET status = ?, brief = ? WHERE id = ?").run(brief.status, JSON.stringify(brief), id);
       this.db.prepare("INSERT INTO defense_audit (brief_id, subject, action, at) VALUES (?, ?, ?, ?)").run(id, principal.subject, action, new Date().toISOString());
@@ -132,16 +142,22 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     catch (e) { const error = e as AccessError; res.status(error.status).json({ error: error.message }); }
   });
   // Public/synthetic demo drafts only. Private customer evidence is a later gate.
-  router.post("/briefs", (req, res) => {
+  router.post("/briefs", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     const runId = witnessRunId(req.body);
     if (!runId) return res.status(400).json({ error: "only runId is accepted" });
-    handle(() => store.draft(runId), res, true);
+    let creator: Principal | undefined;
+    if (req.headers.authorization) {
+      try { creator = await auth.authenticate(req.headers.authorization); }
+      catch (e) { const error = e as AccessError; return res.status(error.status).json({ error: error.message }); }
+    }
+    handle(() => store.draft(runId, creator), res, true);
   });
   router.use(auth.require("analyst", "reviewer", "action-owner"));
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
-  router.get("/briefs/:id", (req, res) => handle(() => store.get(req.params.id), res));
-  router.get("/briefs/:id/evidence", (req, res) => handle(() => store.evidence(req.params.id), res));
-  router.get("/briefs/:id/audit", (req, res) => handle(() => ({ entries: store.audit(req.params.id) }), res));
+  router.get("/briefs/:id", (req, res) => handle(() => store.authorizeRead(req.params.id, res.locals.principal), res));
+  router.get("/briefs/:id/evidence", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.evidence(req.params.id); }, res));
+  router.get("/briefs/:id/audit", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return { entries: store.audit(req.params.id) }; }, res));
   router.post("/briefs/:id/review", (req, res) => {
     const parsed = reviewBody.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "decision and optional note required; identity/evidence fields are forbidden" });

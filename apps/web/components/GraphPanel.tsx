@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
 import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
+import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
@@ -14,6 +15,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
   const [activeId, setActiveId] = useState("");
   const [rows, setRows] = useState<GraphRun | null>(null);
   const [health, setHealth] = useState<boolean | null>(null);
+  const [catalogue, setCatalogue] = useState<CatalogueState>("loading");
+  const [catalogueError, setCatalogueError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [commits, setCommits] = useState<string[]>([]);
@@ -28,13 +31,16 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
   // rather than flashing a signed-out state before hydration resolves.
   const [session, setSession] = useState<DefenseSession>(initialSession ?? ANONYMOUS);
   const active = scenarios.find((scenario) => scenario.id === activeId);
+  const summary = rows ? exposureSummary(rows) : null;
 
   useEffect(() => {
     const ctl = new AbortController();
     setHealth(null);
+    setCatalogue("loading");
+    setCatalogueError(null);
     setError(null);
-    api.graphHealth(ctl.signal).then((result) => setHealth(result.ok)).catch((e) => {
-      if (!isAbortError(e)) setHealth(false);
+    api.graphHealth(ctl.signal).then((result) => { if (!ctl.signal.aborted) setHealth(result.ok); }).catch((e) => {
+      if (!ctl.signal.aborted && !isAbortError(e)) setHealth(false);
     });
     api.defenseSession(ctl.signal).then((result) => { if (!ctl.signal.aborted) setSession(result); }).catch(() => {
       if (!ctl.signal.aborted) setSession({ configured: false, authenticated: false, roles: [], error: "SSO session could not be verified. Review and action updates are disabled." });
@@ -42,13 +48,17 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
     api.graphScenarios(ctl.signal).then((list) => {
       if (ctl.signal.aborted) return;
       setScenarios(list);
+      setCatalogue(list.length ? "ready" : "empty");
       const requested = new URLSearchParams(window.location.search).get("scenario");
       setActiveId((previous) => list.some((item) => item.id === previous) ? previous
         : list.find((item) => item.id === requested)?.id
         ?? list.find((item) => item.id === "gallium-exposure")?.id
         ?? list[0]?.id ?? "");
     }).catch((e) => {
-      if (!isAbortError(e)) setError(e instanceof Error ? e.message : String(e));
+      if (!ctl.signal.aborted && !isAbortError(e)) {
+        setCatalogue("unavailable");
+        setCatalogueError(e instanceof Error ? e.message : String(e));
+      }
     });
     return () => ctl.abort();
   }, [retry]);
@@ -105,29 +115,58 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         <div className="flex flex-wrap items-end justify-between gap-4">
           <label className="min-w-0 flex-1 text-sm">
             Exposure question
-            <select value={activeId} disabled={busy || !scenarios.length} onChange={(e) => select(e.target.value)}
+            <select value={activeId} disabled={busy || catalogue !== "ready"} onChange={(e) => select(e.target.value)}
               className="mt-2 block w-full rounded-lg border px-3 py-3 text-sm" style={{ ...card, color: "var(--text-strong)" }}>
-              {!scenarios.length && <option value="">Loading questions…</option>}
+              {!scenarios.length && <option value="">{catalogueLabel(catalogue)}</option>}
               {scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}
             </select>
           </label>
           <button className={control} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
-            disabled={busy || !active || health !== true} onClick={() => run()}>
+            disabled={busy || catalogue !== "ready" || !active || health !== true} onClick={() => run()}>
             {busy ? "Working…" : "Analyze exposure"}
           </button>
         </div>
         {active && <p className="mt-3 max-w-3xl text-sm leading-relaxed">{active.stakes}</p>}
-        {health === false && (
-          <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
-            <p className="text-sm">Graph unavailable or sidecar upgrade required. No results have been fabricated. Start TuringDB and the request-isolated sidecar, then retry.</p>
-            <button className={control} style={card} disabled={busy} onClick={() => setRetry((value) => value + 1)}>Retry connection</button>
+        {(catalogue === "unavailable" || catalogue === "empty" || health === false) && (
+          <div role="status" className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
+            <p className="text-sm">{catalogue === "unavailable"
+              ? "Exposure questions are unavailable. Reconnect to the analysis service to continue."
+              : catalogue === "empty" ? "No exposure questions are configured. Contact your deployment administrator."
+              : "The analysis service is unavailable. Reconnect before running another analysis."}
+              {rows && " Your previously captured evidence remains available below."}</p>
+            <button className={control} style={card} disabled={busy || catalogue === "loading"} onClick={() => setRetry((value) => value + 1)}>Retry connection</button>
+            {catalogueError && <details className="text-xs"><summary className="cursor-pointer">Connection diagnostics</summary><p className="mt-2 break-all">{catalogueError}</p></details>}
           </div>
         )}
-        {error && <p role="alert" className="mt-3 text-sm" style={{ color: "oklch(80% 0.06 25)" }}>{error}</p>}
+        {catalogue === "loading" && <p role="status" className="mt-3 text-sm">Connecting to the analysis service…</p>}
+        {error && <div role="alert" className="mt-3 text-sm" style={{ color: "oklch(80% 0.06 25)" }}>
+          <p>The operation could not be completed. Captured evidence has not been replaced. Retry the operation when the service is available.</p>
+          <details className="mt-2 text-xs"><summary className="cursor-pointer">Operation diagnostics</summary><p className="mt-2 break-all">{error}</p></details>
+        </div>}
       </div>
 
+      <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
+        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
+        <p className="mt-3 text-sm leading-relaxed">{summary?.explanation ?? "Analyze an exposure question to prepare a cited verification brief."}</p>
+        {rows && <p className="mt-3 text-sm">Captured {new Date(rows.capturedAt).toLocaleString()}. {busy && "Showing the previous capture while the operation completes."}</p>}
+        {summary && <>
+          {summary.names.length > 0 && <div className="mt-4">
+            <h3 className="text-sm font-semibold">Observed platform names</h3>
+            <ul className="mt-2 flex flex-wrap gap-2">{summary.names.slice(0, 10).map((name) => <li key={name} className="max-w-full break-words rounded border px-3 py-2 text-sm" style={{ borderColor: "var(--rule)" }}>{name}</li>)}</ul>
+            {summary.names.length > 10 && <p className="mt-2 text-sm">Showing 10 of {summary.names.length} observed names. Inspect the captured evidence below for the remaining names.</p>}
+          </div>}
+          <h3 className="mt-4 text-sm font-semibold">What still needs verification</h3>
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+          <p className="mt-3 text-sm"><strong>Next step:</strong> Draft a cited brief, then ask the supply-chain owner to verify inventory, substitutes, and timing.</p>
+        </>}
+      </section>
+
+      <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
+
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
-        <section className="min-w-0 rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure results" aria-live="polite">
+        <details className="min-w-0 rounded-lg border p-4 sm:p-5" style={card}>
+          <summary className="cursor-pointer text-sm font-semibold" style={{ color: "var(--text-strong)" }}>Inspect captured evidence{rows ? ` (${rows.rows.length} rows)` : ""}</summary>
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Exposure, not confirmed stoppage</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
             {rows ? `${rows.count} query result${rows.count === 1 ? "" : "s"}` : "Start with one dependency question."}
@@ -152,7 +191,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
               {rows.count > 50 && <p className="mt-2 text-xs">Showing 50 rows; the export retains the captured query result.</p>}
             </>
           )}
-        </section>
+        </details>
 
         <aside className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Evidence snapshot</p>
@@ -188,8 +227,6 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
           )}
         </aside>
       </div>
-
-      <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
 
       <details className="rounded-lg border p-4 sm:p-5" style={card}>
         <summary className="cursor-pointer text-sm font-medium" style={{ color: "var(--text-strong)" }}>Advanced: query, replay, and simulation</summary>

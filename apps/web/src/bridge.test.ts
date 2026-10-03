@@ -130,8 +130,8 @@ describe("bridge to agent end to end", () => {
     await call("POST", `/briefs/${briefId}/review`, { decision: "approved" }, "reviewer");
     await call("POST", `/briefs/${briefId}/action`, { owner: "owner", dueAt: new Date(Date.now() + 86_400_000).toISOString() }, "reviewer");
     const stolen = await call("POST", `/briefs/${briefId}/action/acknowledge`, {}, "other");
-    assert.equal(stolen.status, 403);
-    assert.match(JSON.parse(stolen.body).error, /assigned owner/);
+    assert.equal(stolen.status, 404);
+    assert.match(JSON.parse(stolen.body).error, /not found/);
   });
 
   it("refuses to assign an owner who is not a configured action-owner", async () => {

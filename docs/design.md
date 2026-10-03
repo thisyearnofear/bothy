@@ -8,7 +8,11 @@ exposure question, results, and evidence boundary. Reveal Cypher, benchmarks,
 commit IDs, and simulation controls only when requested. Do not interleave pilot
 marketing with an operational approval gate.
 
-Mobile places the result before diagnostic/supporting content. Important small
+The implemented order is scenario/service state, exposure summary, brief/current
+stage and next action, collapsed captured evidence/export, then advanced controls.
+Citation inspection focuses the exact stored row and keeps provenance expandable.
+
+Mobile places the brief before exports and diagnostic/supporting content. Important small
 text must meet 4.5:1 contrast; the faint token is raised to 60% lightness.
 Graph exports are labelled unapproved analysis. Modeled replay lead times and
 heuristic thresholds must never be described as proven prediction or inevitability.

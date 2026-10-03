@@ -60,6 +60,9 @@ export interface BriefClaim {
 }
 
 export interface DefenseBrief {
+  // Missing metadata denotes a legacy synthetic demo case, not customer tenancy.
+  accessScope?: "synthetic-demo";
+  createdBySubject?: string;
   id: string;
   runId: string;
   title: string;

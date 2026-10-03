@@ -79,6 +79,11 @@ test("OIDC-protected HTTP journey rejects forged fields, wrong roles, duplicate 
     const { data: brief } = await request("/briefs", { runId: run.runId });
     const path = `/briefs/${brief.id}`;
     assert.equal((await request(path)).status, 401);
+    for (const suffix of ["", "/evidence", "/audit"]) {
+      assert.equal((await request(path + suffix, undefined, "other")).status, 404);
+      assert.equal((await request(path + suffix, undefined, "analyst")).status, 404);
+      assert.equal((await request(path + suffix, undefined, "reviewer")).status, 200);
+    }
     assert.equal((await request(path + "/review", { decision: "approved" }, "analyst")).status, 403);
     assert.equal((await request(path + "/review", { decision: "approved", actor: "forged" }, "reviewer")).status, 400);
     assert.equal((await request(path + "/action", { owner: "owner", dueAt: "2026-10-30T12:00:00Z" }, "reviewer")).status, 409);
@@ -89,13 +94,13 @@ test("OIDC-protected HTTP journey rejects forged fields, wrong roles, duplicate 
     assert.deepEqual(decisions.map((result) => result.status).sort(), [200, 409]);
     assert.equal(store.audit(brief.id).length, 1);
     // Regardless of scheduling, use a fresh approved record for the action journey.
-    const approved = store.draft(run.runId);
+    const approved = store.draft(run.runId, { subject: "analyst", roles: ["analyst"] });
     store.review(approved.id, { subject: "reviewer", roles: ["reviewer"] }, "approved", "");
     const action = `/briefs/${approved.id}/action`;
     assert.equal((await request(action, { owner: "unassigned", dueAt: "2026-10-30T12:00:00Z" }, "reviewer")).status, 400);
     assert.equal((await request(action, { owner: "owner", dueAt: "2026-10-30T12:00:00Z" }, "reviewer")).status, 200);
     assert.equal((await request(action + "/outcome", { outcome: "Too early" }, "owner")).status, 409);
-    assert.equal((await request(action + "/acknowledge", {}, "other")).status, 403);
+    assert.equal((await request(action + "/acknowledge", {}, "other")).status, 404);
     assert.equal((await request(action + "/acknowledge", {}, "owner")).status, 200);
     assert.equal((await request(action + "/acknowledge", {}, "owner")).status, 409);
     assert.equal((await request(action + "/outcome", { outcome: "Reference inventory checked; follow-up required." }, "owner")).status, 200);
@@ -111,6 +116,28 @@ test("OIDC-protected HTTP journey rejects forged fields, wrong roles, duplicate 
     await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
     db.close();
   }
+});
+
+test("case access is limited to creator, assigned owner and synthetic-demo reviewer", () => {
+  const { db, store, run } = fixture();
+  try {
+    const analyst = { subject: "analyst", roles: ["analyst"] as ("analyst")[] };
+    const reviewer = { subject: "reviewer", roles: ["reviewer"] as ("reviewer")[] };
+    const brief = store.draft(run.runId, analyst);
+    assert.equal(store.authorizeRead(brief.id, analyst).id, brief.id);
+    assert.throws(() => store.authorizeRead(brief.id, { subject: "other-analyst", roles: ["analyst"] }), /not found/);
+    assert.throws(() => store.authorizeRead(brief.id, { subject: "owner", roles: ["action-owner"] }), /not found/);
+    store.review(brief.id, reviewer, "approved", "");
+    store.assign(brief.id, reviewer, "owner", "2026-10-30T12:00:00Z");
+    assert.equal(store.authorizeRead(brief.id, { subject: "owner", roles: ["action-owner"] }).id, brief.id);
+    assert.throws(() => store.authorizeRead(brief.id, { subject: "other", roles: ["action-owner"] }), /not found/);
+    const legacy = store.draft(run.runId);
+    db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify({ ...legacy, accessScope: undefined }), legacy.id);
+    assert.equal(store.authorizeRead(legacy.id, reviewer).id, legacy.id);
+    assert.throws(() => store.authorizeRead(legacy.id, analyst), /not found/);
+    db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify({ ...brief, accessScope: "restricted" }), brief.id);
+    assert.throws(() => store.authorizeRead(brief.id, reviewer), /not found/);
+  } finally { db.close(); }
 });
 
 test("unconfigured adapter never enables decisions", async () => {

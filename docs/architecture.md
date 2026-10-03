@@ -26,6 +26,18 @@ pending-only; assignment requires approval; only the verified assigned owner may
 acknowledge and complete the action. This workflow records a verification step,
 not an operational intervention or automatically dispatched notification.
 
+Synthetic-demo briefs record a verified creator when supplied. A shared case
+access check protects brief/evidence/audit reads and transactional transitions:
+creator analysts, assigned action owners, and reviewers of the synthetic demo
+collection are allowed. Legacy records have no inferred creator; unknown scopes
+fail closed. This policy does not establish customer tenancy. No owner directory
+or saved-case list API exists.
+
+The workspace puts an evidence-bounded gallium summary and brief before exports.
+Citation inspection fetches hash-checked stored evidence, validates its identity,
+and focuses the selected row. Status-bearing API errors support session recovery
+and conflict reloads while retaining typed notes in component memory.
+
 `auth.ts` verifies OIDC API access-token signatures, issuer, audience, and time
 claims via `jose`; only RS256/ES256 are enabled. Roles are an explicit server-side
 subject allowlist, not claims accepted from the browser. Missing/invalid config

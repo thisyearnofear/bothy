@@ -10,6 +10,11 @@ with the decision.
 The target workflow is exposure → cited brief → authorized review → owned
 action → recorded outcome. **The current defence prototype captures pinned
 graph evidence and generates deterministic, row-cited verification briefs.**
+The workspace includes a gallium exposure summary, clickable stored-evidence
+citations, brief-first layout, and status-specific recovery. Saved-case access
+is limited to creator analysts, assigned owners, and reviewers of the synthetic
+demo collection. This is not customer tenancy; queues and an owner directory
+are not implemented.
 A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
 cookie, server-side bearer forwarding) is implemented, but review and owned-action
 APIs still fail closed until OIDC and SSO are configured, and the bridge has not
@@ -34,8 +39,11 @@ The defence route does not require the Postgres road catalogue. SQLite captures
 graph runs and witness artifacts in `apps/agent/data/bothy-loop.db`.
 
 1. Choose an exposure question and run the catalogue query.
-2. Inspect query rows and source/coverage caveats.
-3. Export an unapproved witness or draft a cited verification brief.
+2. Inspect the exposure summary and source/coverage caveats. Gallium results
+   identify captured platform names, not full paths or programme identities.
+3. Sign in to draft through the browser session bridge, then inspect citations
+   against stored evidence. The agent's synthetic draft endpoint remains public;
+   the browser bridge requires a session. Exported witnesses remain unapproved.
 4. With configured OIDC **and** a confidential OIDC client able to mint a
    token for the API audience, sign in, review the brief, assign a configured
    action owner, acknowledge it, and record an outcome.

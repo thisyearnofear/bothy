@@ -38,7 +38,7 @@ export default function Landing() {
             {[
               ["01", "Trace the exposure", "Which programmes depend on the disrupted material or lane?"],
               ["02", "Keep the evidence", "Inspect the query and captured result. Make missing coverage explicit."],
-              ["03", "Own the decision", "Next delivery gate: authorized review, assigned action, and recorded outcome."],
+              ["03", "Own the decision", "Review, assignment, and recorded outcomes are implemented in the prototype. Buyer identity and operational validation remain pending."],
             ].map(([number, title, text]) => (
               <li key={number} className="flex gap-4 border-t pt-4" style={rule}>
                 <span className="mono text-sm" style={{ color: "var(--cursor)" }}>{number}</span>

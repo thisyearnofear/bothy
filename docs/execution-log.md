@@ -1,5 +1,30 @@
 # Execution log
 
+## 3 October 2026: defence workspace and case-access follow-up
+
+Recorded using this session's local date; the existing SSO entry below retains
+its original 4 October heading. See [slice one](defense-workspace-slice-one.md)
+and [slice two](defense-workspace-slice-two.md) for detailed changes and limits.
+
+Implemented catalogue recovery, captured-platform gallium summary, brief-first
+ordering, stored-evidence citation navigation, status-specific recovery, and
+synthetic-demo creator/assigned-owner/reviewer case access. Browser drafting
+requires the existing session bridge; the agent permits anonymous synthetic
+drafts and records a verified creator when a bearer is supplied.
+
+Verification: 76 web tests and 21 agent tests passed; typecheck, production web
+build, and diff checks passed. Lint had zero errors and the existing `CaseList`
+unused-argument warning. Browser-tab synthetic rehearsals checked reconnect,
+duplicate-name counts, row-60 selection/focus, conflict-note retention, and
+390px layout without horizontal overflow. The final conflict-control lock was
+checked by build/types rather than another browser rehearsal.
+
+No real IdP/live graph rehearsal, customer-data import, deployment, external
+messages, or paid inference was performed. No queues, owner directory, customer
+tenancy, or committed browser suite is claimed. Phase 1/2 operational gates remain
+open. Reviewer access is explicitly deployment-wide for synthetic demo records;
+legacy records receive no inferred creator.
+
 ## 4 October 2026: browser SSO session bridge
 
 **Baseline:** `b56e188`. This slice closes the browser sign-in gap only. It does
