@@ -125,6 +125,13 @@ the agent with no token.
   ISO `dueAt`; an assigned action cannot be overwritten.
 - `POST …/:id/action/acknowledge`: only assigned owner; empty body.
 - `POST …/:id/action/outcome`: only acknowledged owner; nonempty outcome.
+- `POST …/:id/reassessment`: verified reviewer; strict `decision` (`accepted` or
+  `further-verification`) and nonempty `note`. Requires approved brief, completed
+  owner finding, unchanged evidence, and no prior reassessment. Decision and audit
+  persist transactionally. The owner outcome is immutable. Completed findings
+  without reassessment appear in the review queue. Further work is not assigned
+  automatically; use a separately reviewed linked revision. Neither decision
+  authorizes operational closure or asserts risk eliminated.
 
 Bridge routes, served by the web app rather than the agent:
 

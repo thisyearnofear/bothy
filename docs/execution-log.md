@@ -1,5 +1,27 @@
 # Execution log
 
+## 3 October 2026: workspace commit and reviewer finding reassessment
+
+Committed the role-aware workspace, pilot onboarding, and presentation pass as
+`bf8d979` locally. No push was requested for this step.
+
+Implemented reviewer-only reassessment of completed owner findings. A nonempty
+rationale records acceptance or further-verification required, without altering
+owner outcome, task state, or the original approval. Evidence is checked and the
+decision/audit persist transactionally. Duplicate reassessment is rejected.
+Completed findings without reassessment return to the reviewer queue. Further
+verification does not assign a new task automatically; the existing linked
+revision flow provides a separately reviewed follow-up. Operational incident
+closure and risk elimination remain outside this transition.
+
+Verification: 89 web and 27 agent tests passed; typecheck, production build,
+and diff checks passed. Lint retains the existing CaseList warning. Tests cover
+wrong roles, duplicate decisions, evidence changes, audit rollback, immutable
+owner findings, queue inclusion, and real proxy-to-agent acceptance. Browser
+fixtures checked rationale/acceptance, retained owner finding, closure boundary,
+and 390px layout without page overflow. This is not a new live IdP rehearsal.
+Temporary preview was stopped; reassessment changes remain uncommitted.
+
 ## 3 October 2026: role-aware product entry and pilot onboarding
 
 Changed `/defense` to a role-aware workspace, with explicit investigation mode

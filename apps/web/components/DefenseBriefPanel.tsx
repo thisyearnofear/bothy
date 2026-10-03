@@ -34,6 +34,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
   const [ownerRetry, setOwnerRetry] = useState(0);
   const [dueAt, setDueAt] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [findingNote, setFindingNote] = useState("");
   const alive = useRef(true);
   const [returnTo, setReturnTo] = useState("/defense");
   useEffect(() => { setReturnTo(window.location.pathname + window.location.search); }, [brief?.id]);
@@ -148,7 +149,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
             <div><dt className="text-xs uppercase tracking-wide">Verification owner</dt><dd className="mt-2 break-words text-sm">{brief.action?.owner ?? "Not assigned yet"}</dd></div>
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
-          {brief.action?.status === "completed" && <p className="text-sm">Owner finding recorded. Reviewer acceptance, reassessment, and case closure are not yet implemented; this is not a closed operational incident.</p>}
+          {brief.action?.status === "completed" && <p className="text-sm">Owner finding recorded. A reviewer may accept this verification or require further work. Neither decision closes an operational incident or proves risk eliminated.</p>}
           <details><summary className="cursor-pointer text-sm">Evidence receipt and version</summary>
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>
             {brief.status.toUpperCase()} · {brief.resultCount} captured query rows · {brief.generator.version}<br />
@@ -238,6 +239,22 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
               </label>
               <button className={control} style={card} disabled={busy || !assignedOwner || !outcome.trim()} onClick={() => void update(() => api.recordDefenseOutcome(brief.id, outcome))}>Record outcome</button>
             </>}
+            {brief.action.status === "completed" && !brief.reassessment && <div className="space-y-3 border-t pt-4" style={{ borderColor: "var(--rule)" }}>
+              <h3 className="font-semibold">Review the returned finding</h3>
+              <label className="block text-sm">Reassessment rationale
+                <textarea value={findingNote} maxLength={2000} onChange={(e) => setFindingNote(e.target.value)} disabled={busy || !reviewer} className="mt-2 block w-full rounded-lg border p-3" style={card} />
+              </label>
+              <div className="flex flex-wrap gap-3">
+                <button className={control} style={card} disabled={busy || !reviewer || !findingNote.trim()} onClick={() => void update(() => api.reassessDefenseFinding(brief.id, "accepted", findingNote))}>Accept verification finding</button>
+                <button className={control} style={card} disabled={busy || !reviewer || !findingNote.trim()} onClick={() => void update(() => api.reassessDefenseFinding(brief.id, "further-verification", findingNote))}>Require further verification</button>
+              </div>
+              {!reviewer && <p className="text-sm">A verified reviewer must reassess the finding.</p>}
+            </div>}
+            {brief.reassessment && <div className="space-y-2 text-sm">
+              <p>Reviewer decision: {brief.reassessment.decision === "accepted" ? "Verification finding accepted" : "Further verification required"} by {brief.reassessment.subject} at {new Date(brief.reassessment.at).toLocaleString()}.</p>
+              <p className="break-words">Rationale: {brief.reassessment.note}</p>
+              {brief.reassessment.decision === "further-verification" && <p>Create a linked pending revision from retained exposure context to plan the next verification. No new task has been assigned automatically; the previous finding remains intact.</p>}
+            </div>}
             {brief.action.outcome && <p className="break-words text-sm">Owner-recorded outcome: {brief.action.outcome}. This is not independently verified operational effectiveness.</p>}
           </div>}
         </div>

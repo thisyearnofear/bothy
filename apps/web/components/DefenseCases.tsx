@@ -26,7 +26,7 @@ export default function DefenseCases({ session, initialFilter = "all" }: { sessi
       <h2 className="text-lg font-semibold">Saved cases and verification work</h2>
       <button className="coarse-target rounded border px-3 py-2 text-sm" disabled={loading} onClick={() => setRetry((value) => value + 1)}>Refresh cases</button>
     </div>
-    <p className="mt-2 text-sm">{session.roles.includes("reviewer") ? "Synthetic demo review collection. Pending cases need review; approved cases without an owner need assignment." : "Your created cases and assigned verification work, within your verified roles."}</p>
+    <p className="mt-2 text-sm">{session.roles.includes("reviewer") ? "Synthetic demo review collection. Pending briefs and returned findings need review; approved cases without an owner need assignment." : "Your created cases and assigned verification work, within your verified roles."}</p>
     <label className="mt-3 block text-sm">Case view
       <select className="mt-2 block max-w-full rounded border px-3 py-2" style={{ background: "var(--panel)" }} value={filter} onChange={(event) => { setFilter(event.target.value as DefenseCaseFilter); setOffset(0); }}>
         <option value="all">All accessible cases</option>
@@ -39,7 +39,7 @@ export default function DefenseCases({ session, initialFilter = "all" }: { sessi
     {page && !page.cases.length && <p role="status" className="mt-3 text-sm">No accessible cases on this page.</p>}
     {page && <ul className="mt-4 space-y-3">{page.cases.map((item) => <li key={item.id} className="border-t pt-3" style={{ borderColor: "var(--rule)" }}>
       <a className="break-words text-sm font-semibold underline" href={`/defense?brief=${encodeURIComponent(item.id)}`}>{item.title}</a>
-      <p className="mt-1 text-sm">{item.status === "pending" ? "Awaiting review" : item.status === "rejected" ? "Rejected" : !item.action ? "Approved · awaiting assignment" : `Verification ${item.action.status}`}</p>
+      <p className="mt-1 text-sm">{item.status === "pending" ? "Awaiting review" : item.status === "rejected" ? "Rejected" : !item.action ? "Approved · awaiting assignment" : item.reassessment ? item.reassessment.decision === "accepted" ? "Verification finding accepted" : "Further verification required" : item.action.status === "completed" ? "Finding awaiting reassessment" : `Verification ${item.action.status}`}</p>
       {item.action && <p className="mt-1 break-words text-sm">Owner: {item.action.owner}. Due {new Date(item.action.dueAt).toLocaleString()}{item.action.status !== "completed" && Date.parse(item.action.dueAt) < Date.now() ? " · overdue" : ""}.</p>}
     </li>)}</ul>}
     <div className="mt-4 flex gap-3">

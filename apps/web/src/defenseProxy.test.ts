@@ -41,7 +41,7 @@ describe("allowPath", () => {
       ["GET", "/briefs/page/review/0"], ["GET", "/briefs/page/work/20"], ["GET", "/briefs/page/assignment/0"],
       ["POST", "/briefs/abc/revisions"],
       ["GET", "/briefs/abc/evidence"], ["GET", "/briefs/abc/audit"],
-      ["POST", "/briefs/abc/review"], ["POST", "/briefs/abc/action"],
+      ["POST", "/briefs/abc/reassessment"], ["POST", "/briefs/abc/review"], ["POST", "/briefs/abc/action"],
       ["POST", "/briefs/abc/action/acknowledge"], ["POST", "/briefs/abc/action/outcome"],
     ] as const) {
       assert.equal(allowPath(method, path).ok, true, `${method} ${path}`);
@@ -79,6 +79,10 @@ describe("filterBody", () => {
 
   it("revision bodies contain only captured run identity", () => {
     assert.deepEqual(filterBody("POST /briefs/:id/revisions", { runId: "capture", parentBriefId: "forged", subject: "forged", status: "approved" }), { runId: "capture" });
+  });
+
+  it("reassessment strips authority, owner finding and evidence fields", () => {
+    assert.deepEqual(filterBody("POST /briefs/:id/reassessment", { decision: "accepted", note: "Checked", subject: "forged", outcome: "overwrite", evidenceHash: "forged" }), { decision: "accepted", note: "Checked" });
   });
 
   it("returns undefined for reads", () => {

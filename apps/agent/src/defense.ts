@@ -56,7 +56,7 @@ export class DefenseStore {
       WHERE COALESCE(json_extract(brief, '$.accessScope'), 'synthetic-demo') = 'synthetic-demo'
       AND (? = 1 OR (? = 1 AND json_extract(brief, '$.createdBySubject') = ?)
         OR (? = 1 AND json_extract(brief, '$.action.owner') = ?))
-      AND (? = 'all' OR (? = 'review' AND status = 'pending')
+      AND (? = 'all' OR (? = 'review' AND (status = 'pending' OR (json_extract(brief, '$.action.status') = 'completed' AND json_extract(brief, '$.reassessment') IS NULL)))
         OR (? = 'assignment' AND status = 'approved' AND json_extract(brief, '$.action') IS NULL)
         OR (? = 'work' AND json_extract(brief, '$.action.owner') = ? AND json_extract(brief, '$.action.status') IN ('assigned', 'acknowledged')))
       ORDER BY json_extract(brief, '$.createdAt') DESC, id DESC LIMIT 21 OFFSET ?`).all(
@@ -65,8 +65,8 @@ export class DefenseStore {
     ) as { brief: string }[];
     return {
       cases: rows.slice(0, 20).map(({ brief }) => {
-        const { id, title, createdAt, status, action } = JSON.parse(brief) as DefenseBrief;
-        return { id, title, createdAt, status, ...(action ? { action: { owner: action.owner, dueAt: action.dueAt, status: action.status } } : {}) };
+        const { id, title, createdAt, status, action, reassessment } = JSON.parse(brief) as DefenseBrief;
+        return { id, title, createdAt, status, ...(reassessment ? { reassessment: { ...reassessment, note: "" } } : {}), ...(action ? { action: { owner: action.owner, dueAt: action.dueAt, status: action.status } } : {}) };
       }),
       nextOffset: rows.length > 20 ? offset + 20 : null,
     };
@@ -150,6 +150,15 @@ export class DefenseStore {
       brief.action = { owner, dueAt, status: "assigned" };
     });
   }
+  reassess(id: string, principal: Principal, decision: "accepted" | "further-verification", note: string) {
+    if (!principal.roles.includes("reviewer")) throw new AccessError(403, "reviewer role required");
+    return this.transition(id, principal, `finding_${decision}`, (brief) => {
+      if (brief.status !== "approved" || brief.action?.status !== "completed" || !brief.action.outcome) throw new AccessError(409, "a completed owner finding is required");
+      if (brief.reassessment) throw new AccessError(409, "finding already reassessed");
+      this.evidence(id);
+      brief.reassessment = { subject: principal.subject, decision, note, at: new Date().toISOString() };
+    });
+  }
   advanceAction(id: string, principal: Principal, outcome?: string) {
     if (!principal.roles.includes("action-owner")) throw new AccessError(403, "action-owner role required");
     return this.transition(id, principal, outcome === undefined ? "action_acknowledged" : "action_completed", (brief) => {
@@ -168,6 +177,7 @@ export class DefenseStore {
 
 const reviewBody = z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(2000).default("") }).strict();
 const assignmentBody = z.object({ owner: z.string().trim().min(1).max(200), dueAt: z.iso.datetime() }).strict();
+const reassessmentBody = z.object({ decision: z.enum(["accepted", "further-verification"]), note: z.string().trim().min(1).max(2000) }).strict();
 const outcomeBody = z.object({ outcome: z.string().trim().min(1).max(2000) }).strict();
 
 export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAuth>) {
@@ -234,6 +244,11 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
   router.post("/briefs/:id/action/acknowledge", (req, res) => {
     if (!req.body || Object.keys(req.body).length) return res.status(400).json({ error: "acknowledgment body must be empty" });
     handle(() => store.advanceAction(req.params.id, res.locals.principal), res);
+  });
+  router.post("/briefs/:id/reassessment", (req, res) => {
+    const parsed = reassessmentBody.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "finding decision and nonempty rationale required; identity fields forbidden" });
+    handle(() => store.reassess(req.params.id, res.locals.principal, parsed.data.decision, parsed.data.note), res);
   });
   router.post("/briefs/:id/action/outcome", (req, res) => {
     const parsed = outcomeBody.safeParse(req.body);

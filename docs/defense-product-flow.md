@@ -16,7 +16,9 @@ The sample workspace is not a preloaded customer environment. Graph analysis nee
 
 A saved case leads with its verified brief stage, case identity, verification owner, due time, and available actions. Captured findings and provenance are expandable. Retained exposure context and linked revision creation follow, with the dependency explanation available separately.
 
-The existing lifecycle remains: captured analysis, pending brief, approved/rejected verification, assignment, acknowledgment, owner-recorded outcome. No new authority or state transition was added in this presentation pass. Reviewer acceptance of an owner finding, reassessment, and operational case closure remain unimplemented and are explicitly disclosed. A completed owner action must not be presented as a closed operational incident.
+The lifecycle now includes reviewer reassessment after an owner-recorded outcome. Completed findings return to the reviewer queue until a verified reviewer records a nonempty rationale and accepts the verification or requires further work. Reassessment is pending-only, evidence-checked, and audited transactionally. The original owner action and finding remain unchanged.
+
+Further verification records the need for follow-up; it does not automatically create or assign a new task. The reviewer can use the existing linked-revision flow, with independent review/assignment. Neither acceptance nor further verification closes an operational incident or proves risk eliminated.
 
 New investigations and linked revisions do not replace evidence supporting an earlier decision. Case access remains enforced by the existing server policy; role-specific default views do not grant additional permissions.
 
@@ -32,6 +34,10 @@ Indicative pricing remains a proposal, not proof of demand. The pilot is not rep
 
 Production-preview browser checks verified sample-to-investigation navigation, four onboarding steps without a file input, reviewer default awaiting-review view using isolated response fixtures, and 390px layout without page overflow. A final service-error copy refinement was type/test checked after the initial preview build. These checks do not establish customer usability or constitute a new live identity/graph rehearsal.
 
+### Finding reassessment follow-up
+
+The reassessment increment passed 89 web and 27 agent tests, typecheck and production build. Tests verify immutable owner outcomes, evidence checks, duplicate/role denial, audit rollback, and reviewer queue behavior. Isolated browser fixtures verified acceptance with rationale and a retained owner finding, with no horizontal overflow at 390px. No new live identity-provider rehearsal was performed for this transition.
+
 ## Next validation
 
-Rehearse the exact analyst/reviewer/owner journey with the local SSO setup after committing. Agree finding acceptance and closure semantics before implementing them. Validate the pilot boundary, roles, and reference dataset with a design partner before private ingestion or operational deployment.
+Rehearse the exact analyst/reviewer/owner journey with the local SSO setup after committing. Rehearse finding acceptance and follow-up with the local identity provider; agree operational closure semantics separately before implementing closure. Validate the pilot boundary, roles, and reference dataset with a design partner before private ingestion or operational deployment.

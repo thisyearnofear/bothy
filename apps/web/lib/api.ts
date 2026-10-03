@@ -221,6 +221,8 @@ export const api = {
   defenseEvidence: (id: string) => get<GraphRun>(`/api/defense/briefs/${encodeURIComponent(id)}/evidence`),
   reviewDefenseBrief: (id: string, decision: "approved" | "rejected", note: string) =>
     post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/review`, { decision, note }),
+  reassessDefenseFinding: (id: string, decision: "accepted" | "further-verification", note: string) =>
+    post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/reassessment`, { decision, note }),
   assignDefenseAction: (id: string, owner: string, dueAt: string) =>
     post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/action`, { owner, dueAt }),
   acknowledgeDefenseAction: (id: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/action/acknowledge`, {}),

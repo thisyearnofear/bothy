@@ -7,5 +7,7 @@ export function briefStage(brief: DefenseBrief | null, analyzed: boolean) {
   if (!brief.action) return "Approved · awaiting assignment";
   if (brief.action.status === "assigned") return "Assigned · awaiting owner acknowledgment";
   if (brief.action.status === "acknowledged") return "Acknowledged · verification in progress";
-  return "Outcome recorded · owner observation";
+  if (brief.reassessment?.decision === "accepted") return "Verification finding accepted";
+  if (brief.reassessment?.decision === "further-verification") return "Further verification required";
+  return "Finding recorded · awaiting reviewer reassessment";
 }

@@ -120,11 +120,21 @@ describe("bridge to agent end to end", () => {
     assert.equal(completed.status, 200);
     assert.equal(JSON.parse(completed.body).action.status, "completed");
 
+    const reviewQueue = await call("GET", "/briefs/page/review/0", undefined, "reviewer");
+    assert.ok(JSON.parse(reviewQueue.body).cases.some((item: { id: string }) => item.id === brief.id));
+    assert.equal((await call("POST", `/briefs/${brief.id}/reassessment`, { decision: "accepted", note: "Checked" }, "owner")).status, 403);
+    assert.equal((await call("POST", `/briefs/${brief.id}/reassessment`, { decision: "accepted", note: "" }, "reviewer")).status, 400);
+    const accepted = await call("POST", `/briefs/${brief.id}/reassessment`, { decision: "accepted", note: "Reference finding accepted", subject: "forged" }, "reviewer");
+    assert.equal(accepted.status, 200);
+    assert.equal(JSON.parse(accepted.body).reassessment.subject, "reviewer");
+    assert.equal(JSON.parse(accepted.body).action.outcome, "Inventory confirmed via the programme office.");
+    assert.equal((await call("POST", `/briefs/${brief.id}/reassessment`, { decision: "further-verification", note: "Overwrite" }, "reviewer")).status, 409);
+
     const audit = await call("GET", `/briefs/${brief.id}/audit`, undefined, "reviewer");
     assert.equal(audit.status, 200);
     const entries = (JSON.parse(audit.body) as { entries: { subject: string; action: string }[] }).entries;
-    assert.deepEqual(entries.map((entry) => entry.action), ["approved", "action_assigned", "action_acknowledged", "action_completed"]);
-    assert.deepEqual(entries.map((entry) => entry.subject), ["reviewer", "reviewer", "owner", "owner"]);
+    assert.deepEqual(entries.map((entry) => entry.action), ["approved", "action_assigned", "action_acknowledged", "action_completed", "finding_accepted"]);
+    assert.deepEqual(entries.map((entry) => entry.subject), ["reviewer", "reviewer", "owner", "owner", "reviewer"]);
   });
 
   it("filters review/work by verified role and creates an independent linked revision", async () => {

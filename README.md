@@ -20,8 +20,9 @@ and parent-linked, separately reviewed revisions are implemented.
 The `/defense` front door is role-aware; investigation and saved-case modes are
 separate. Pilot onboarding agrees the decision, evidence/access boundary, process
 rehearsal, and acceptance before any private data transfer. Owner outcome recording
-is not reviewer acceptance or operational case closure; those transitions remain
-unimplemented. See [domain workspaces](docs/domain-workspaces.md) for the defence/flood split.
+is not reviewer acceptance or operational case closure. Reviewer reassessment now
+accepts the verification finding or requires further verification while preserving
+the original outcome; operational closure remains unimplemented. See [domain workspaces](docs/domain-workspaces.md) for the defence/flood split.
 A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
 cookie, server-side bearer forwarding) is implemented, but review and owned-action
 APIs still fail closed until OIDC and SSO are configured. A real disposable local

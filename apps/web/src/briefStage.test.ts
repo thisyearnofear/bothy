@@ -20,8 +20,11 @@ test("case stages reflect server transitions including rejection and recorded ou
   for (const [status, expected] of [
     ["assigned", "Assigned · awaiting owner acknowledgment"],
     ["acknowledged", "Acknowledged · verification in progress"],
-    ["completed", "Outcome recorded · owner observation"],
+    ["completed", "Finding recorded · awaiting reviewer reassessment"],
   ] as const) {
     assert.equal(briefStage({ ...approved, action: { owner: "owner", dueAt: "2026-10-03T12:00:00Z", status } }, true), expected);
   }
+  const completed = { ...approved, action: { owner: "owner", dueAt: "2026-10-03T12:00:00Z", status: "completed" as const } };
+  assert.equal(briefStage({ ...completed, reassessment: { subject: "reviewer", decision: "accepted", note: "Accepted", at: "2026-10-03T12:00:00Z" } }, true), "Verification finding accepted");
+  assert.equal(briefStage({ ...completed, reassessment: { subject: "reviewer", decision: "further-verification", note: "Check timing", at: "2026-10-03T12:00:00Z" } }, true), "Further verification required");
 });

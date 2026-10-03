@@ -232,6 +232,56 @@ test("linked revisions preserve parent evidence, state and audit and require a d
   } finally { db.close(); }
 });
 
+test("reviewer finding reassessment preserves outcome, requires completion, and rolls back with audit", () => {
+  const { db, store, run } = fixture();
+  const reviewer = { subject: "reviewer", roles: ["reviewer"] as "reviewer"[] };
+  const owner = { subject: "owner", roles: ["action-owner"] as "action-owner"[] };
+  try {
+    const brief = store.draft(run.runId);
+    assert.throws(() => store.reassess(brief.id, reviewer, "accepted", "Check"), /completed owner/);
+    store.review(brief.id, reviewer, "approved", "Verify");
+    store.assign(brief.id, reviewer, owner.subject, "2026-10-30T12:00:00Z");
+    store.advanceAction(brief.id, owner);
+    store.advanceAction(brief.id, owner, "Recorded owner finding");
+    const action = store.get(brief.id).action;
+    assert.ok(store.list(reviewer, 0, "review").cases.some((item) => item.id === brief.id));
+    assert.throws(() => store.reassess(brief.id, owner, "accepted", "No"), /reviewer role/);
+    db.exec("CREATE TRIGGER fail_finding_audit BEFORE INSERT ON defense_audit BEGIN SELECT RAISE(ABORT, 'finding audit failure'); END;");
+    assert.throws(() => store.reassess(brief.id, reviewer, "accepted", "Reference checked"), /audit failure/);
+    assert.equal(store.get(brief.id).reassessment, undefined);
+    assert.equal(store.audit(brief.id).length, 4);
+    db.exec("DROP TRIGGER fail_finding_audit");
+    const result = store.reassess(brief.id, reviewer, "further-verification", "Check substitute qualification");
+    assert.equal(result.reassessment?.subject, reviewer.subject);
+    assert.deepEqual(result.action, action);
+    assert.equal(result.status, "approved");
+    assert.equal(store.audit(brief.id).at(-1)?.action, "finding_further-verification");
+    assert.ok(!store.list(reviewer, 0, "review").cases.some((item) => item.id === brief.id));
+    assert.throws(() => store.reassess(brief.id, reviewer, "accepted", "Overwrite"), /already reassessed/);
+    const summary = store.list(reviewer, 0).cases.find((item) => item.id === brief.id)!;
+    assert.equal(summary.reassessment?.note, "");
+  } finally { db.close(); }
+});
+
+test("finding acceptance refuses changed evidence and retains the completed owner action", () => {
+  const { db, store, run } = fixture();
+  const reviewer = { subject: "reviewer", roles: ["reviewer"] as "reviewer"[] };
+  const owner = { subject: "owner", roles: ["action-owner"] as "action-owner"[] };
+  try {
+    const brief = store.draft(run.runId);
+    store.review(brief.id, reviewer, "approved", "Verify");
+    store.assign(brief.id, reviewer, owner.subject, "2026-10-30T12:00:00Z");
+    store.advanceAction(brief.id, owner);
+    store.advanceAction(brief.id, owner, "Reference checked");
+    db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify({ ...run, count: 99 }), run.runId);
+    assert.throws(() => store.reassess(brief.id, reviewer, "accepted", "Accept"), /evidence changed/);
+    assert.equal(store.get(brief.id).reassessment, undefined);
+    db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify(run), run.runId);
+    assert.equal(store.reassess(brief.id, reviewer, "accepted", "Reference verified").reassessment?.decision, "accepted");
+    assert.equal(store.get(brief.id).action?.outcome, "Reference checked");
+  } finally { db.close(); }
+});
+
 test("unconfigured adapter never enables decisions", async () => {
   const auth = createAuth({});
   await assert.rejects(auth.authenticate("Bearer not-a-real-token"), /approval is disabled/);
