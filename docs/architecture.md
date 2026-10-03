@@ -29,8 +29,13 @@ not an operational intervention or automatically dispatched notification.
 `auth.ts` verifies OIDC API access-token signatures, issuer, audience, and time
 claims via `jose`; only RS256/ES256 are enabled. Roles are an explicit server-side
 subject allowlist, not claims accepted from the browser. Missing/invalid config
-disables review/simulation. The browser SSO login/session bridge is not yet
-provided; no password system or pasted-token UI has been introduced.
+disables review/simulation. The browser SSO login/session bridge is implemented in
+the web app as a backend-for-frontend (`app/api/auth/*` + `app/api/defense/*`,
+see `ops.md`): authorization code + PKCE, an encrypted HttpOnly session cookie,
+and server-side forwarding of `Authorization: Bearer …`. The agent still receives
+only a bearer token and never a cookie, and no password system or pasted-token UI
+exists. It is unvalidated against a live IdP: the bridge has tests and a local
+HTTP check, but no real buyer identity provider has been exercised yet.
 
 Email queueing and sending require approved assessments; legacy queued pending
 drafts are excluded at the sender. Road approvals also require a verified OIDC

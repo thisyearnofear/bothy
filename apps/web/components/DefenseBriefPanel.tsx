@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api, isAbortError, type DefenseBrief, type DefenseSession, type GraphRun } from "../lib/api";
+import { ApiAuthError, api, isAbortError, type DefenseBrief, type DefenseSession, type GraphRun } from "../lib/api";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" };
 const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
+
+const SIGN_IN_ERRORS: Record<string, string> = {
+  sso_not_configured: "SSO is not configured on this deployment, so sign-in is disabled.",
+  callback_rejected: "The identity provider did not return an authorization code.",
+  transaction_missing: "The sign-in transaction expired or was already used. Start again.",
+  state_mismatch: "The sign-in response did not match the request. Start again.",
+  sign_in_failed: "Sign-in failed. Check the SSO configuration and try again.",
+  token_endpoint_unreachable: "The SSO token endpoint is unreachable.",
+};
 
 export default function DefenseBriefPanel({ run, session }: { run: GraphRun | null; session: DefenseSession }) {
   const [brief, setBrief] = useState<DefenseBrief | null>(null);
@@ -18,6 +27,9 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
   const alive = useRef(true);
   const reviewer = session.authenticated && session.roles.includes("reviewer");
   const assignedOwner = session.authenticated && session.roles.includes("action-owner") && brief?.action?.owner === session.subject;
+
+  const signInError = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("authError");
+  const signInNotice = signInError ? SIGN_IN_ERRORS[signInError] ?? "Sign-in did not complete. Start again." : null;
 
   useEffect(() => {
     alive.current = true;
@@ -47,7 +59,12 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
       const url = new URL(window.location.href);
       url.searchParams.set("brief", result.id);
       window.history.replaceState(null, "", url.pathname + url.search);
-    } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) {
+      // An expired session is not a decision failure; drop the stale brief
+      // rather than leaving controls that can only fail again.
+      if (e instanceof ApiAuthError && alive.current) { setBrief(null); setEvidence(null); }
+      if (alive.current) setError(e instanceof Error ? e.message : String(e));
+    }
     finally { if (alive.current) setBusy(false); }
   };
 
@@ -61,11 +78,25 @@ export default function DefenseBriefPanel({ run, session }: { run: GraphRun | nu
         <button className={control} style={card} disabled={busy || !run || Boolean(brief)}
           onClick={() => { if (run) void update(() => api.draftDefenseBrief(run.runId)); }}>Draft cited brief</button>
       </div>
-      <p className="mt-3 text-sm leading-relaxed">
-        {session.error ?? (session.authenticated ? `Verified subject: ${session.subject}. Assigned roles: ${session.roles.join(", ")}.`
-          : session.configured ? "OIDC verification is configured. A trusted SSO sign-in/session bridge must supply an API access token; this browser is not signed in."
-          : "OIDC is not configured. Public/synthetic drafts are available, but review, simulation, and action updates are disabled.")}
-      </p>
+      <div className="mt-3 space-y-2 text-sm">
+        {session.error ?? (session.authenticated
+          ? <p>Verified subject: <span className="mono break-all">{session.subject}</span>. Assigned roles: {session.roles.join(", ")}.</p>
+          : session.configured
+            ? <p>Sign in with an approved SSO account to review, decide, and own actions. Public/synthetic drafts remain available without it.</p>
+            : <p>OIDC is not configured. Public/synthetic drafts are available, but review, simulation, and action updates are disabled.</p>)}
+        {!session.authenticated && session.configured && (
+          <a className={control} style={{ ...card, display: "inline-block", textDecoration: "none" }}
+            href={`/api/auth/login?returnTo=${encodeURIComponent(typeof window === "undefined" ? "/defense" : window.location.pathname + window.location.search)}`}>
+            Sign in to review
+          </a>
+        )}
+        {session.authenticated && (
+          <a className={control} style={{ ...card, display: "inline-block", textDecoration: "none" }} href="/api/auth/logout">
+            Sign out
+          </a>
+        )}
+        {signInNotice && <p role="alert">{signInNotice}</p>}
+      </div>
       {!brief && <p className="mt-2 text-sm" style={{ color: "var(--text-faint)" }}>Analyze exposure first. The deterministic brief quotes captured rows; it makes no production-loss prediction and runs no cloud model.</p>}
       {error && <p role="alert" className="mt-3 text-sm">{error}</p>}
       {brief && (

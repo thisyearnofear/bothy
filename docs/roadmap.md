@@ -20,9 +20,12 @@ Phase 0 is the first implementation slice, not production certification.
 **Phases 1/2 foundations are implemented:** isolated catalogue-only/pinned graph
 reads, fail-closed OIDC bearer verifier, transactional defence review/audit, and
 a deterministic cited brief → assigned verification → acknowledgment → recorded
-outcome path. They are **not complete operational gates**: real browser SSO/
-session integration, road audit/outbox transactions, abandoned-change reclamation,
-customer privacy, and live model-version binding remain outstanding.
+outcome path. A browser SSO session bridge (authorization code + PKCE, encrypted
+HttpOnly cookie, server-side bearer forwarding) is also implemented and tested in
+the web app. They are **not complete operational gates**: the bridge has never
+been exercised against a real buyer identity provider, and road audit/outbox
+transactions, abandoned-change reclamation, customer privacy, and live
+model-version binding remain outstanding.
 Remaining limitations must stay visible. Do not ship a new identity system,
 remote deployment, or paid integration without the relevant configuration and
 authorization.

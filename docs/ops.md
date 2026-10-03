@@ -52,14 +52,35 @@ issuer, audience, `sub`, `iat`, and `exp`; token age is limited to one hour.
 Missing/invalid configuration returns 503 on protected operations. Bad tokens
 return 401, unassigned/wrong-role subjects 403, conflicting transitions 409.
 
-This is a bearer API adapter, **not an implemented browser login flow**. Use a
-trusted OIDC client/SSO session bridge that obtains an API access token and
-forwards it as `Authorization: Bearer …`. Use a dedicated API audience, not the
+The agent side of this is a bearer API adapter. The browser login flow lives in
+the web app as a backend-for-frontend: `app/api/auth/{login,callback,logout}`
+performs authorization code + PKCE (S256) against your IdP, exchanges the code
+server-side for an API access token, and stores that token in an encrypted
+(HttpOnly, Secure, SameSite=Lax) `bt_sess` cookie keyed by
+`BOTHY_SESSION_SECRET`. `app/api/defense/[...path]` reads the cookie and forwards
+`Authorization: Bearer …` to the agent. Use a dedicated API audience, not the
 browser application's ID-token audience. Do not paste tokens into this demo UI,
 put them in localStorage, logs, commands, or public artifacts. No cookies are
-accepted directly by the agent and no identity headers are trusted.
+accepted directly by the agent and no identity headers are trusted: the bridge
+strips any browser-supplied `Authorization` header, and the agent never sees a
+cookie.
 
-- `GET /api/defense/session`: configuration/verified-session state, no token.
+Set `BOTHY_SSO_*` and `BOTHY_SESSION_SECRET` (see `.env.example`). This requires
+a **confidential** OIDC client able to mint a token for the API audience; a
+browser-only public/SPA registration usually cannot. Incomplete configuration
+fails closed: `/api/auth/login` returns 503 and there is no dev bypass. Rotate
+`BOTHY_SESSION_SECRET` to invalidate every live session.
+
+`next.config.ts` excludes `/api/defense` and `/api/auth` from the `/api/:path*`
+agent rewrite. This is load-bearing, not an optimisation: a bare array is an
+`afterFiles` rewrite, which Next checks *before* dynamic routes, so the rewrite
+would otherwise shadow the defence route handler and forward review traffic to
+the agent with no token.
+
+- `GET /api/defense/session`: configuration/verified-session state. Public on
+  the agent (so an anonymous visitor can still tell "not configured" from "not
+  signed in"); the bridge forwards a bearer only when a session cookie exists.
+  Returns no token either way.
 - `POST /api/defense/briefs`: only `{runId}`; public/synthetic deterministic
   draft, bound to complete evidence hash, graph revision, query hash, and
   `defense-brief-v1`. Legacy unpinned runs return 409.
@@ -70,6 +91,17 @@ accepted directly by the agent and no identity headers are trusted.
   ISO `dueAt`; an assigned action cannot be overwritten.
 - `POST …/:id/action/acknowledge`: only assigned owner; empty body.
 - `POST …/:id/action/outcome`: only acknowledged owner; nonempty outcome.
+
+Bridge routes, served by the web app rather than the agent:
+
+- `GET /api/auth/login`: 302 to the IdP with PKCE/state/nonce; **503** when SSO
+  is not configured.
+- `GET /api/auth/callback`: verifies state, exchanges the code, sets/clears the
+  session cookie, then redirects to a same-origin relative `returnTo`. On any
+  failure it clears both cookies and redirects to `/defense?authError=<code>`
+  with a coarse code only — never an IdP response body.
+- `GET|POST /api/auth/logout`: clears the session and transaction cookies.
+- `/api/defense/*`: the allowlisted subset above; anything else returns 404.
 
 Defence review/action + audit are one SQLite transaction, including rollback
 when audit persistence fails. Outcome text is an owner assertion, not independently

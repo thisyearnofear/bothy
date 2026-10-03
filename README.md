@@ -10,9 +10,11 @@ with the decision.
 The target workflow is exposure → cited brief → authorized review → owned
 action → recorded outcome. **The current defence prototype captures pinned
 graph evidence and generates deterministic, row-cited verification briefs.**
-OIDC-protected review and owned-action APIs are implemented but fail closed
-until configured. Browser sign-in/session integration, continuous monitoring,
-and independent operational validation are still outstanding.
+A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
+cookie, server-side bearer forwarding) is implemented, but review and owned-action
+APIs still fail closed until OIDC and SSO are configured, and the bridge has not
+been exercised against a real identity provider. Continuous monitoring and
+independent operational validation are still outstanding.
 Dependencies are not proof of stoppage; query row limits are not total impact.
 
 ## Run the defence demo
@@ -34,8 +36,9 @@ graph runs and witness artifacts in `apps/agent/data/bothy-loop.db`.
 1. Choose an exposure question and run the catalogue query.
 2. Inspect query rows and source/coverage caveats.
 3. Export an unapproved witness or draft a cited verification brief.
-4. With configured OIDC and a trusted SSO session bridge, review the brief,
-   assign a configured action owner, acknowledge it, and record an outcome.
+4. With configured OIDC **and** a confidential OIDC client able to mint a
+   token for the API audience, sign in, review the brief, assign a configured
+   action owner, acknowledge it, and record an outcome.
 5. Advanced controls expose pinned replay/comparison. The temporary-marker
    simulation requires an analyst/reviewer and cannot submit changes.
 
@@ -128,13 +131,17 @@ git diff --check
 
 Tests cover OIDC signature/role failures, atomic review/audit, cited brief/action
 transitions, evidence tampering, concurrent sidecar state, read-only enforcement,
-witness provenance, email gates, API contracts, and opt-in provider configuration.
-No external email or inference is required.
+witness provenance, email gates, API contracts, and opt-in provider
+configuration. The web suite additionally covers the session bridge: fail-closed
+SSO config, PKCE, encrypted-cookie tamper/wrong-key rejection, the path and body
+allowlist, CSRF origin checks, upstream status passthrough, and a full
+brief → review → assign → acknowledge → outcome journey driven through the real
+agent router. No external email or inference is required.
 
 ## Repository
 
 ```text
-apps/web        Next.js · defence workspace + earlier MapLibre road demos
+apps/web        Next.js · defence workspace · SSO session bridge + earlier MapLibre road demos
 apps/agent      Express · graph sidecar client · road agent · local SQLite artifacts
 packages/shared shared domain/API types
 scripts/        venue startup · witness QR sheet · DB bootstrap · secret scanning

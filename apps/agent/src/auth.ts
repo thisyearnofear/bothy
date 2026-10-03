@@ -3,13 +3,16 @@ import type { RequestHandler } from "express";
 
 export type Role = "analyst" | "reviewer" | "action-owner";
 export interface Principal { subject: string; roles: Role[] }
+// Structural rather than NodeJS.ProcessEnv, so callers can pass a literal env
+// without inheriting framework-specific required keys such as NODE_ENV.
+export type Env = Record<string, string | undefined>;
 const ROLES = new Set<Role>(["analyst", "reviewer", "action-owner"]);
 
 export class AccessError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export function createAuth(env: NodeJS.ProcessEnv = process.env, keys?: JWTVerifyGetKey) {
+export function createAuth(env: Env = process.env, keys?: JWTVerifyGetKey) {
   let principals: Record<string, Role[]> = Object.create(null);
   let resolver: JWTVerifyGetKey | undefined;
   const issuer = env.BOTHY_OIDC_ISSUER;

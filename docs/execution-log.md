@@ -1,5 +1,71 @@
 # Execution log
 
+## 4 October 2026: browser SSO session bridge
+
+**Baseline:** `b56e188`. This slice closes the browser sign-in gap only. It does
+not touch the road/flood track, the agent loop, or the graph sidecar.
+
+### Implemented
+
+- Web app is now a backend-for-frontend. `app/api/auth/{login,callback,logout}`
+  performs authorization code + PKCE (S256) with state and nonce, exchanges the
+  code server-side, and stores the access token in an encrypted HttpOnly/Secure/
+  SameSite=Lax `bt_sess` cookie (A256GCM, key derived from
+  `BOTHY_SESSION_SECRET`). Expired sessions refresh once, then fail to 401.
+- `app/api/defense/[...path]` forwards `Authorization: Bearer …` to the agent.
+  It allowlists the nine defence route shapes, allowlists request body fields,
+  strips any browser-supplied `Authorization` header, checks `Origin` on writes,
+  and preserves the agent's 401/403/409/503 verbatim rather than collapsing
+  them to 502. The agent never receives a cookie.
+- `/defense` resolves the session server-side so the first paint is correct, and
+  surfaces explicit sign-in / "SSO not configured" states, the verified subject,
+  and sign-out.
+- `next.config.ts` now excludes `/api/defense` and `/api/auth` from the
+  `/api/:path*` agent rewrite.
+
+### Correction made during this slice
+
+The first implementation assumed a filesystem route handler would outrank the
+`/api/:path*` rewrite. That was wrong. Per Next's documented routing order a
+bare-array rewrite is `afterFiles` (step 6), checked **before** dynamic routes
+(step 7), so it shadowed `app/api/defense/[...path]` and forwarded review
+traffic to the agent with no token — `/api/auth/*` only worked because it is a
+static route served at step 5. Caught by a local HTTP check against the running
+app, not by unit tests, and fixed with an explicit rewrite exclusion.
+
+Also fixed: `A256GCM` requires exactly 32 bytes, so a longer
+`BOTHY_SESSION_SECRET` threw at seal time. The key is now SHA-256-derived from
+the configured secret, domain-separated per purpose.
+
+### Validation
+
+- `npm test`: **87 passing** (67 new web + 20 agent), 0 failing.
+- `npm run typecheck`, production web build, `git diff --check`,
+  `scripts/check-secrets.sh`: passed.
+- `npm run lint`: zero errors; the same pre-existing unused `compact` warning
+  in `CaseList.tsx`.
+- New web suite: fail-closed SSO config matrix, PKCE S256, encrypted-cookie
+  round-trip plus wrong-key and tamper rejection, route/body allowlist, CSRF
+  origin checks, status passthrough, and a full brief → review → assign →
+  acknowledge → outcome journey driven through the **real** agent
+  `defenseRouter` (not a mock).
+- Local HTTP check against a running build with a stub agent: cookie was
+  converted to `Authorization: Bearer …`; the agent saw **no** cookie; a client
+  `Authorization: Bearer ATTACKER` header was stripped; smuggled `subject` and
+  `evidenceHash` were dropped from the forwarded body; cross-origin write
+  returned 403; a non-allowlisted path returned 404; `/api/graph/health` still
+  proxied to the agent; unconfigured `/api/auth/login` returned 503.
+
+### Not done / not claimed
+
+- Never exercised against a real identity provider. No buyer IdP, no live
+  authorization code exchange. All identity testing used locally minted
+  test-only keys.
+- No live graph writes/simulation, paid inference, external message, deployment,
+  or hackathon submission.
+- Phase 2 walkthrough packaging, EDTH submission evidence, freezing the road
+  demo, and the Phase 4 freshness worker are all still outstanding.
+
 ## 3 October 2026: focus and trust foundation
 
 **Baseline:** `a1b97ca`. Pre-existing: winter/flood scoring and replay, Strands
@@ -124,10 +190,12 @@ adapter selected by the user, rather than adding local passwords.
 
 ### Remaining gates
 
-Real OIDC issuer/subjects and browser sign-in/session bridge; tenant/private-data
-sharing and legacy digest-wall privacy; transactional Postgres road outbox;
-abandoned-change reclamation and coordination with administrative graph writers;
-Nebius eligible model verification plus budget-approved live inference and
-model-version binding; bounded Strands handoff; monitoring/freshness; independently
-validated buyer data and operational outcomes. This is a verification workflow,
-not a certified defence operations system.
+Real OIDC issuer/subjects exercised against a live identity provider (the session
+bridge itself is implemented and tested, but unvalidated against a real IdP);
+tenant/private-data sharing and legacy digest-wall privacy; transactional
+Postgres road outbox; abandoned-change reclamation and coordination with
+administrative graph writers; Nebius eligible model verification plus
+budget-approved live inference and model-version binding; bounded Strands
+handoff; monitoring/freshness; independently validated buyer data and
+operational outcomes. This is a verification workflow, not a certified defence
+operations system.

@@ -7,8 +7,9 @@ import DefenseBriefPanel from "./DefenseBriefPanel";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
+const ANONYMOUS: DefenseSession = { configured: false, authenticated: false, roles: [] };
 
-export default function GraphPanel() {
+export default function GraphPanel({ initialSession }: { initialSession?: DefenseSession }) {
   const [scenarios, setScenarios] = useState<GraphScenario[]>([]);
   const [activeId, setActiveId] = useState("");
   const [rows, setRows] = useState<GraphRun | null>(null);
@@ -23,7 +24,9 @@ export default function GraphPanel() {
   const [witness, setWitness] = useState<GraphWitness | null>(null);
   const [copyNote, setCopyNote] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
-  const [session, setSession] = useState<DefenseSession>({ configured: false, authenticated: false, roles: [] });
+  // Seeded from the server so the first paint already reflects the session
+  // rather than flashing a signed-out state before hydration resolves.
+  const [session, setSession] = useState<DefenseSession>(initialSession ?? ANONYMOUS);
   const active = scenarios.find((scenario) => scenario.id === activeId);
 
   useEffect(() => {

@@ -71,9 +71,18 @@ const post = <T,>(path: string, body: unknown, signal?: AbortSignal): Promise<T>
     return r.json() as Promise<T>;
   });
 
+// Lets the UI distinguish "your session expired, sign in again" from a genuine
+// authorization failure without parsing the message text.
+export class ApiAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 async function apiError(response: Response, path: string): Promise<never> {
   const body = await response.json().catch(() => null) as { error?: unknown } | null;
-  throw new Error(typeof body?.error === "string" ? body.error : `${response.status} ${path}`);
+  const message = typeof body?.error === "string" ? body.error : `${response.status} ${path}`;
+  throw response.status === 401 ? new ApiAuthError(message) : new Error(message);
 }
 
 export const api = {
