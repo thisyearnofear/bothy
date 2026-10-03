@@ -8,12 +8,17 @@ COPY apps/agent/package.json apps/agent/package.json
 RUN npm ci --legacy-peer-deps
 
 COPY packages/shared packages/shared
+COPY apps/agent apps/agent
 COPY apps/web apps/web
 
 WORKDIR /app/apps/web
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+
+# Next bakes rewrites at build time, so the agent URL must be known here.
+ARG AGENT_URL=http://localhost:8787
+ENV AGENT_URL=${AGENT_URL}
 
 RUN npm run build
 

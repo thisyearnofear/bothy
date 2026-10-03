@@ -35,3 +35,11 @@ apps/demo-video/
 
 # CommandCode / local agent cache
 .commandcode/
+
+# Locally installed agent skills (npx skills add)
+/.agents/
+/.claude/
+/.kimchi/
+/.kiro/skills/
+/data/skills/
+/skills-lock.json

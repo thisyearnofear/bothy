@@ -444,3 +444,28 @@ curl https://api.bothy.trustfall.xyz/api/llm
 provider reachability; provider failures are traced during an LLM assessment
 and fall through to the next provider and then to the deterministic scripted
 brain.
+
+## Demo on a plain VPS (Docker + Caddy)
+
+`deploy/docker-compose.demo.yml` is a stand-alone stack for a fresh VPS: Caddy
+(automatic HTTPS) -> web -> agent -> PostGIS. Only ports 80/443 are published.
+It does not need Coolify/Traefik.
+
+1. DNS: add an `A` record `bothy.trustfall.xyz` -> the VPS IPv4 address (DNS only,
+   not proxied, if using Cloudflare). Wait until `dig +short bothy.trustfall.xyz` returns it.
+2. On the VPS, clone the repo, then:
+
+   ```bash
+   cd deploy
+   cp .env.production.example .env.production
+   # edit: POSTGRES_PASSWORD, WEB_ORIGIN/PUBLIC_WEB_URL/PUBLIC_APP_URL=https://bothy.trustfall.xyz,
+   # and any LLM keys. DATABASE_URL in this file is ignored (compose overrides it).
+   docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
+   docker compose -f docker-compose.demo.yml --env-file .env.production run --rm agent npm run seed
+   curl https://bothy.trustfall.xyz/api/health
+   ```
+
+3. Update: `git pull`, then re-run the `up -d --build` command.
+
+The web image bakes the agent URL in at build time (Next rewrites), so changing
+`AGENT_URL` requires a rebuild.
