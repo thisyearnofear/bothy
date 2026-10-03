@@ -35,7 +35,7 @@ The agent permits HTTP issuer/JWKS only with both `NODE_ENV=development` and `BO
 7. Reopen the saved URL, sign in as owner, authorize, and verify subject owner with action-owner role.
 8. Acknowledge, enter a synthetic verification observation, and record outcome. Reopen/refresh to check completed status and audit.
 
-The provider session and application encrypted HttpOnly session are separate. Never publish cookies, authorization codes, tokens, private JWKs, or temporary realm state. The fixed-account identity selector must never be exposed beyond this loopback demonstration.
+The provider session and application encrypted HttpOnly session are separate. Never publish cookies, authorization codes, tokens, private JWKs, or temporary realm state. The fixed-account identity selector must never be exposed beyond this loopback demonstration, except in the invite-gated hosted variant described under "Sign-in for testers" in `docs/ops.md` (synthetic data only, passphrase-protected at the reverse proxy).
 
 ## Observed results
 

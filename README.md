@@ -131,6 +131,7 @@ curl https://bothy.<your-domain>/api/graph/health
 ```
 
 The `graphs/` stores (about 470 MB) are not in Git; see `graphs/README.md`.
+Tester sign-in (invite-gated synthetic SSO) is described in `docs/ops.md`.
 Details: "Demo on a plain VPS" in [`docs/ops.md`](docs/ops.md).
 
 ### Option B: Fly.io (pay-as-you-go, about $8/month for two always-on 512 MB apps)

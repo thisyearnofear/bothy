@@ -31,6 +31,19 @@ services:
     networks:
       - bothy-demo
 
+  idp:
+    build:
+      context: ..
+      dockerfile: deploy/idp/Dockerfile
+    container_name: bothy-idp
+    restart: unless-stopped
+    env_file:
+      - .env.sso
+    volumes:
+      - bothy-idp-data:/data
+    networks:
+      - bothy-demo
+
   agent:
     build:
       context: ..
@@ -39,6 +52,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+      - .env.sso
     environment:
       DATABASE_URL: postgres://bothy:${POSTGRES_PASSWORD}@db:5432/bothy
       PORT: "8787"
@@ -70,6 +84,8 @@ services:
         AGENT_URL: http://agent:8787
     container_name: bothy-web
     restart: unless-stopped
+    env_file:
+      - .env.sso
     environment:
       AGENT_URL: http://agent:8787
       PUBLIC_WEB_URL: https://${BOTHY_DOMAIN:-bothy.trustfall.xyz}
@@ -90,12 +106,17 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./invite.caddy:/etc/caddy/invite:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
       - web
     networks:
-      - bothy-demo
+      bothy-demo:
+        # Containers (web code exchange, agent JWKS fetch) reach the public
+        # hostname through Caddy instead of hairpinning via the host IP.
+        aliases:
+          - ${BOTHY_DOMAIN:-bothy.trustfall.xyz}
 
 networks:
   bothy-demo:
@@ -104,5 +125,6 @@ networks:
 volumes:
   bothy-pgdata:
   bothy-agent-data:
+  bothy-idp-data:
   caddy-data:
   caddy-config:

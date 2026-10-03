@@ -474,3 +474,35 @@ prebuilt stores from the repo's `graphs/` directory, which is not in Git (see
 
 The web image bakes the agent URL in at build time (Next rewrites), so changing
 `AGENT_URL` requires a rebuild.
+
+### Sign-in for testers (hosted demo identity provider)
+
+The demo stack includes `idp` (`deploy/idp/`), the same synthetic
+analyst/reviewer/owner accounts as `docs/demo-sso-rehearsal.md`, served at
+`https://<domain>/idp`. It has no passwords, so Caddy puts `/idp/interaction/*`
+(the account picker) behind an invite passphrase (HTTP basic auth, username
+`tester`). Token, JWKS and authorize endpoints stay open for the redirect and
+the server-side code exchange. Synthetic data only; never use it for real
+identities.
+
+Per-deployment secrets (never committed, both ignored by Git):
+
+```bash
+cd deploy
+cp .env.sso.example .env.sso        # fill hostnames and generate secrets with openssl rand -hex 32
+openssl rand -base64 18 | tr -d '=+/' > .invite-passphrase
+echo "tester $(docker run --rm caddy:2 caddy hash-password --plaintext "$(cat .invite-passphrase)")" > invite.caddy
+chmod 600 .env.sso .invite-passphrase invite.caddy
+docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
+```
+
+Share the passphrase with testers out of band (`cat deploy/.invite-passphrase`
+on the server). Rotate by regenerating `invite.caddy` and restarting `caddy`.
+Verified end to end in production: reviewer sign-in, graph analysis, cited
+brief, approval, owner assignment, owner sign-in, acknowledgment and recorded
+outcome. Provider state is in memory (sessions reset when `idp` restarts); the
+signing key persists in the `bothy-idp-data` volume.
+
+When syncing the repo to the server, quote exclusions so the shell does not
+expand them (`--exclude '.env*' --exclude invite.caddy --exclude .invite-passphrase`);
+an unquoted `.env*` once deleted the server's `.env.production`.

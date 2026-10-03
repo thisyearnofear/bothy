@@ -43,3 +43,7 @@ apps/demo-video/
 /.kiro/skills/
 /data/skills/
 /skills-lock.json
+
+# Per-deployment secrets for the hosted demo identity provider
+/deploy/.env.sso
+/deploy/invite.caddy
