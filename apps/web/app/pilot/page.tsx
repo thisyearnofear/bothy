@@ -15,9 +15,24 @@ export default function PilotPage() {
       <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
         For a European defence-prime supply-chain team: investigate one material or lane disruption,
         trace the programme dependencies, and keep the evidence with the decision.
-        The current prototype explores exposure and exports unapproved analysis; the pilot builds
-        toward a cited brief, authorized review, and tracked action.
+        The prototype includes cited briefs, review, and owned verification with synthetic data.
+        A private pilot starts by agreeing the use case, reference evidence, and identity/data boundaries;
+        it is not an immediate production deployment.
       </p>
+
+      <section className="mt-6 space-y-4" aria-label="Pilot onboarding">
+        <h2 className="text-xl font-semibold">A clear route from sample to scoped pilot</h2>
+        <ol className="space-y-3">
+          {[
+            ["1. Agree the decision", "Name one analyst, one reviewer, and one recurring material or lane exposure question. Agree what an approval authorizes."],
+            ["2. Approve the evidence boundary", "Agree permitted BOM/dependency fields, source versions, programme identifiers and a reference set. Confirm hosting, access, retention, export controls, and any model egress before transfer."],
+            ["3. Rehearse with your process", "Validate identity roles and case access, check dependencies and coverage gaps, and compare time to a review-ready brief with the current process."],
+            ["4. Review acceptance together", "Agree targets before the pilot. Record accuracy issues, handoff completion and remaining security/reliability gaps before deciding on operational use."],
+          ].map(([title, text]) => <li key={title} className="rounded-lg border p-4" style={card}><h3 className="font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed">{text}</p></li>)}
+        </ol>
+        <p className="text-sm leading-relaxed">This page collects contact interest only. Do not provide sensitive BOMs, programme details, credentials, or files here. Private data transfer and customer tenancy must be designed and approved separately.</p>
+        <Link href="/defense?mode=investigate&scenario=gallium-chain" className="inline-block text-sm underline">Explore the synthetic sample before scoping</Link>
+      </section>
 
       <section className="mt-6 grid gap-2" aria-label="Scenario teasers">
         {[
@@ -58,9 +73,7 @@ export default function PilotPage() {
       <section className="mt-2 rounded-lg border p-3" style={card} aria-label="Contact">
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Contact</p>
         <PilotInterestForm />
-        <p className="mono mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
-          Prefer lanes over forms? <Link href="/digest" className="underline" style={{ color: "var(--cursor)" }}>Watch a lane on the digest wall →</Link>
-        </p>
+        <p className="mt-3 text-sm">An expression of interest is not a signed pilot, secure data-transfer agreement, or deployment commitment.</p>
         <Link href="/defense" className="mono mt-2 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>← open the defence workspace</Link>
       </section>
     </main>

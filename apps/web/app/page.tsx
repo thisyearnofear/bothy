@@ -25,7 +25,7 @@ export default function Landing() {
             into programme exposure, and keep the evidence with the decision.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/defense?scenario=gallium-exposure" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Explore gallium exposure</Link>
+            <Link href="/defense" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Open the resilience workspace</Link>
             <Link href="/pilot" className="coarse-target rounded-lg border px-5 py-3 text-sm" style={rule}>Scope a two-week pilot</Link>
           </div>
           <p className="mt-5 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>

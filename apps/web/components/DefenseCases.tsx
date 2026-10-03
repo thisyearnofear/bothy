@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { api, isAbortError, recoveryMessage, type DefenseSession } from "../lib/api";
 import type { DefenseCasePage, DefenseCaseFilter } from "../../../packages/shared/src/types";
 
-export default function DefenseCases({ session }: { session: DefenseSession }) {
+export default function DefenseCases({ session, initialFilter = "all" }: { session: DefenseSession; initialFilter?: DefenseCaseFilter }) {
   const [page, setPage] = useState<DefenseCasePage | null>(null);
   const [offset, setOffset] = useState(0);
-  const [filter, setFilter] = useState<DefenseCaseFilter>("all");
+  const [filter, setFilter] = useState<DefenseCaseFilter>(initialFilter);
   const [retry, setRetry] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

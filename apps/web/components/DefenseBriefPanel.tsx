@@ -143,13 +143,21 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
       </div>}
       {brief && (
         <div className="mt-5 space-y-5 border-t pt-5" style={{ borderColor: "var(--rule)" }}>
-          <p className="mono break-all text-xs" style={{ color: "var(--text-faint)" }}>
+          <dl className="grid gap-3 rounded-lg border p-4 sm:grid-cols-3" style={card} aria-label="Case responsibility">
+            <div><dt className="text-xs uppercase tracking-wide">Case</dt><dd className="mt-2 break-all text-sm">{brief.id}</dd></div>
+            <div><dt className="text-xs uppercase tracking-wide">Verification owner</dt><dd className="mt-2 break-words text-sm">{brief.action?.owner ?? "Not assigned yet"}</dd></div>
+            <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
+          </dl>
+          {brief.action?.status === "completed" && <p className="text-sm">Owner finding recorded. Reviewer acceptance, reassessment, and case closure are not yet implemented; this is not a closed operational incident.</p>}
+          <details><summary className="cursor-pointer text-sm">Evidence receipt and version</summary>
+          <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>
             {brief.status.toUpperCase()} · {brief.resultCount} captured query rows · {brief.generator.version}<br />
             graph {brief.graphCommit} · query {brief.queryHash}<br />
             evidence {brief.evidenceHash}
-          </p>
+          </p></details>
           {brief.parentBriefId && <p className="text-sm">Linked revision of <a className="underline" href={`/defense?brief=${encodeURIComponent(brief.parentBriefId)}`}>the prior case</a>. Access to that case is checked separately. This revision requires its own review.</p>}
-          <ol className="space-y-3">
+          <details><summary className="cursor-pointer text-sm font-medium">Inspect {brief.claims.length} cited findings</summary>
+          <ol className="mt-4 space-y-3">
             {brief.claims.map((claim, index) => <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
               <p className="break-words text-sm">{claim.text}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -170,7 +178,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
                   }}>Inspect row {citation.row + 1}, {citation.column}</button>)}
               </div>
             </li>)}
-          </ol>
+          </ol></details>
           {!brief.claims.length && <p className="text-sm">No claims are recorded in this brief. Inspect its retained evidence; an empty claim list does not establish no exposure.</p>}
           <div>
             <h3 className="text-sm font-semibold">Known gaps</h3>

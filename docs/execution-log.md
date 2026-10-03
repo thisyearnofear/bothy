@@ -1,5 +1,45 @@
 # Execution log
 
+## 3 October 2026: role-aware product entry and pilot onboarding
+
+Changed `/defense` to a role-aware workspace, with explicit investigation mode
+and compatible scenario links. Saved cases lead with brief stage, responsibility,
+and permitted actions; retained evidence/revision controls follow. Home navigation
+now opens the workspace. Reviewers default to awaiting review, owners to active
+work, and analysts to accessible cases. These are UI defaults, not new authority.
+
+Pilot onboarding now describes decision scope, evidence/access agreement, process
+rehearsal, and acceptance. It collects contact interest only; no sensitive upload
+or private deployment is implied. Owner outcome recording is explicitly distinct
+from reviewer acceptance, reassessment, or operational case closure, which remain
+unimplemented. See [product flow](defense-product-flow.md).
+
+Verification: 88 web and 25 agent tests passed. Web types, production build and
+diff checks passed; lint retains the existing CaseList warning. Combined checks
+initially timed out and were rerun separately. Browser fixtures checked role entry,
+sample navigation, onboarding without uploads, and 390px layout without overflow.
+No new live graph/IdP rehearsal or buyer readiness claim is made. Temporary preview
+was stopped; no data import, publication, or submission occurred.
+
+## 3 October 2026: audience-facing presentation polish
+
+Added a three-step investigation rail, captured platform/component/material
+overview, presenter-controlled hierarchy reveal, selectable captured samples,
+and short reduced-motion-aware stagger. Gallium-chain replaces its duplicate
+summary; saved-work navigation, raw findings, and version hashes use disclosure.
+Evidence, persisted claims, role checks, and decision transitions are unchanged.
+The overview explicitly groups connectivity rather than asserting direct edges;
+synthetic identity and bounded traversal limits remain visible.
+
+Verification: 84 web and 25 agent tests passed; types, production build, and diff
+checks passed. Lint has the existing `CaseList` warning. Production-preview
+browser fixtures confirmed reveal, sample reset, eight stages, disabled animation
+under reduced motion, and 390px layout without horizontal overflow. Editing-time
+hot reload produced duplicate UI; clean production preview verification passed.
+This was a presentation fixture rehearsal, not a new live graph/IdP validation.
+See [demo stagecraft](edth-demo-stagecraft.md) for presenter beats. No audience
+reaction study, final PDF/video, external publication, or submission is claimed.
+
 ## 3 October 2026: real local browser SSO and owned-action rehearsal
 
 Added a disposable loopback OIDC-provider launcher with ephemeral signing/client/

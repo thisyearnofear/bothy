@@ -31,10 +31,13 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
   const summary = run ? exposureSummary(run) : null;
   return <div className="space-y-5">
     <nav className="flex flex-wrap gap-4 text-sm" aria-label="Defence case navigation">
-      <a href="/defense" className="underline">Start a separate analysis</a>
+      <a href="/defense" className="underline">Back to workspace</a>
+      <a href="/defense?mode=investigate&scenario=gallium-chain" className="underline">Start a separate investigation</a>
       <a href="#saved-cases" className="underline">Saved cases and work</a>
     </nav>
-    <section className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-label="Saved exposure context">
+    <DefenseBriefPanel key={id} run={null} session={session} savedCase />
+    <details className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
+      <summary className="cursor-pointer text-sm font-semibold">Retained exposure context and new revision</summary>
       <p className="text-sm font-semibold">Saved case · retained evidence</p>
       <p className="mt-2 text-sm">This case uses its stored capture. Starting a separate analysis does not replace an approved decision's evidence.</p>
       {summary && <><h2 className="mt-3 text-xl font-semibold">{summary.heading}</h2><p className="mt-2 text-sm">{summary.explanation}</p><p className="mt-2 text-sm">Captured {new Date(run!.capturedAt).toLocaleString()}.</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul></>}
@@ -54,9 +57,8 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
       </div>}
       {error && <p role="alert" className="mt-3 text-sm">{error}</p>}
       <button className="coarse-target mt-3 rounded border px-3 py-2 text-sm" onClick={() => setRetry((value) => value + 1)}>Refresh saved evidence and session</button>
-    </section>
-    {run?.scenarioId === "gallium-chain" && <GalliumExplanation run={run} />}
-    <DefenseBriefPanel key={id} run={null} session={session} savedCase />
+    </details>
+    {run?.scenarioId === "gallium-chain" && <GalliumExplanation key={run.runId} run={run} />}
     <div id="saved-cases"><DefenseCases session={session} /></div>
   </div>;
 }

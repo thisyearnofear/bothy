@@ -3,8 +3,12 @@
 ## Defence-first workspace (October 2026)
 
 The [product vision](product-vision.md) is the forward UI contract. The primary
-surface is `/defense`, independent of road/Postgres loading. Lead with the
-exposure question, results, and evidence boundary. Reveal Cypher, benchmarks,
+surface is `/defense`, independent of road/Postgres loading. It opens a role-aware
+workspace: reviewer decisions, owner verification work, or analyst investigations.
+Anonymous visitors choose synthetic sample exploration or scoped pilot onboarding.
+Investigation is explicit via `?mode=investigate`; existing scenario links remain
+compatible. Saved cases via `?brief=...` lead with status, responsibility, and the
+next permitted action before retained exposure context. Reveal Cypher, benchmarks,
 commit IDs, and simulation controls only when requested. Do not interleave pilot
 marketing with an operational approval gate.
 

@@ -113,7 +113,10 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
 
   return (
     <section className="space-y-5" aria-label="Defence exposure workspace">
-      <DefenseCases session={session} />
+      {session.authenticated && <details className="rounded-lg border p-3" style={card}><summary className="cursor-pointer text-sm">Return to saved cases and verification work</summary><div className="mt-3"><DefenseCases session={session} /></div></details>}
+      <ol className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Investigation steps" style={{ color: "var(--text-faint)" }}>
+        <li style={{ color: "var(--cursor)" }}>01 / Ask one question</li><li>02 / Follow the dependency</li><li>03 / Own the verification</li>
+      </ol>
       <div className="rounded-lg border p-4 sm:p-5" style={card}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <label className="min-w-0 flex-1 text-sm">
@@ -148,7 +151,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         </div>}
       </div>
 
-      <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
+      {rows?.scenarioId !== "gallium-chain" && <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
         <p className="mt-3 text-sm leading-relaxed">{summary?.explanation ?? "Analyze an exposure question to prepare a cited verification brief."}</p>
@@ -163,9 +166,9 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
           <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
           <p className="mt-3 text-sm"><strong>Next step:</strong> Draft a cited brief, then ask the supply-chain owner to verify inventory, substitutes, and timing.</p>
         </>}
-      </section>
+      </section>}
 
-      {rows?.scenarioId === "gallium-chain" && <GalliumExplanation run={rows} />}
+      {rows?.scenarioId === "gallium-chain" && <GalliumExplanation key={rows.runId} run={rows} />}
       <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
