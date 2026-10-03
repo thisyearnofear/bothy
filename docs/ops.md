@@ -465,7 +465,13 @@ It does not need Coolify/Traefik.
    curl https://bothy.trustfall.xyz/api/health
    ```
 
-3. Update: `git pull`, then re-run the `up -d --build` command.
+3. Update: re-sync the repo, then re-run the `up -d --build` command.
+
+The stack includes a `graph` container (TuringDB daemon plus the loopback-only
+read bridge, republished on the private compose network by socat). It reads the
+prebuilt stores from the repo's `graphs/` directory, which is not in Git (see
+`graphs/README.md`) and must be present on the VPS. Check it with
+`curl https://bothy.trustfall.xyz/api/graph/health`.
 
 The web image bakes the agent URL in at build time (Next rewrites), so changing
 `AGENT_URL` requires a rebuild.

@@ -20,6 +20,17 @@ services:
     networks:
       - bothy-demo
 
+  graph:
+    build:
+      context: ..
+      dockerfile: deploy/graph/Dockerfile
+    container_name: bothy-graph
+    restart: unless-stopped
+    volumes:
+      - ../graphs:/turing/graphs
+    networks:
+      - bothy-demo
+
   agent:
     build:
       context: ..
@@ -32,6 +43,7 @@ services:
       DATABASE_URL: postgres://bothy:${POSTGRES_PASSWORD}@db:5432/bothy
       PORT: "8787"
       BOTHY_DATA_DIR: /app/data
+      TURING_SIDECAR_URL: http://graph:6778
     volumes:
       - bothy-agent-data:/app/data
     depends_on:
