@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PageHero from "../../components/PageHero";
 import { cookies } from "next/headers";
 import GraphPanel from "../../components/GraphPanel";
 import DefenseSavedCase from "../../components/DefenseSavedCase";
@@ -45,20 +46,19 @@ export default async function DefensePage({ searchParams }: { searchParams: Prom
   const mode = defenseMode(params);
   const savedId = typeof brief === "string" && brief ? brief : null;
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-      <header className="mb-8 border-b pb-6" style={{ borderColor: "var(--rule)" }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/" className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>Bothy</Link>
-          <nav className="flex flex-wrap gap-4 text-sm" aria-label="Defence navigation"><Link href="/defense" className="underline">Workspace</Link><Link href="/pilot" className="underline">Pilot onboarding</Link></nav>
-        </div>
-        <p className="mono mt-6 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Defence supply-chain analysis</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: "var(--text-strong)" }}>{mode === "workspace" ? "A supply disruption. A defensible next decision." : mode === "onboarding" ? "Try the workflow with your team." : mode === "case" ? "Evidence, decision, and responsibility in one case." : "Investigate a disruption. Prepare the next decision."}</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed">For defence-prime supply-chain teams: establish what might be exposed, why the evidence supports it, and who checks the consequences. The sample uses synthetic dependencies; it is not live operational intelligence.</p>
-      </header>
+    <main className="min-h-screen">
+      <PageHero
+        eyebrow="Defence supply-chain analysis"
+        title={mode === "workspace" ? "A supply disruption. A defensible next decision." : mode === "onboarding" ? "Try the workflow with your team." : mode === "case" ? "Evidence, decision, and responsibility in one case." : "Investigate a disruption. Prepare the next decision."}
+        lede="Establish what might be exposed, why the evidence supports it, and who checks it. Synthetic dependencies; not live intelligence."
+        image={mode === "workspace" ? "5-material" : mode === "onboarding" ? "3-assembly" : mode === "case" ? "4-component" : "2-system"}
+      />
+      <div className="enter mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : mode === "onboarding" ? <DefenseOnboarding /> : mode === "investigation" ? <><p className="mb-4 text-sm"><Link href="/defense" className="underline">Back to workspace</Link> · New investigation · public/synthetic evidence</p><GraphPanel initialSession={session} /></> : <DefenseWorkspace initialSession={session} />}
       <footer className="mt-8 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
         Prototype boundary: synthetic/public evidence and deterministic briefs. Review and owned-action APIs fail closed unless OIDC and the SSO session bridge are configured. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.
       </footer>
+      </div>
     </main>
   );
 }

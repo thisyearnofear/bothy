@@ -1,25 +1,21 @@
 export const metadata = { title: "Pilot — Programme-impact briefs in two weeks" };
 
 import Link from "next/link";
+import PageHero from "../../components/PageHero";
 import { PilotInterestForm } from "../../components/EyPilotBand";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 
 export default function PilotPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Bothy pilot one-pager</p>
-      <h1 className="mt-2 text-3xl font-semibold" style={{ color: "var(--text-strong)" }}>
-        A trusted programme-impact brief. Not another alert.
-      </h1>
-      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-        For a European defence-prime supply-chain team: investigate one material or lane disruption,
-        trace the programme dependencies, and keep the evidence with the decision.
-        The prototype includes cited briefs, review, and owned verification with synthetic data.
-        A private pilot starts by agreeing the use case, reference evidence, and identity/data boundaries;
-        it is not an immediate production deployment.
-      </p>
-
+    <main>
+      <PageHero
+        eyebrow="Two-week pilot"
+        title="A trusted programme-impact brief. Not another alert."
+        lede="Investigate one material or lane disruption, trace the programme dependencies, and keep the evidence with the decision. A private pilot starts by agreeing the use case, evidence and data boundaries."
+        image="6-source"
+      />
+      <div className="enter mx-auto max-w-3xl px-4 py-10">
       <section className="mt-6 space-y-4" aria-label="Pilot onboarding">
         <h2 className="text-xl font-semibold">A clear route from sample to scoped pilot</h2>
         <ol className="space-y-3">
@@ -76,6 +72,7 @@ export default function PilotPage() {
         <p className="mt-3 text-sm">An expression of interest is not a signed pilot, secure data-transfer agreement, or deployment commitment.</p>
         <Link href="/defense" className="mono mt-2 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>← open the defence workspace</Link>
       </section>
+      </div>
     </main>
   );
 }

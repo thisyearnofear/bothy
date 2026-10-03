@@ -492,3 +492,40 @@ button:not(:disabled):hover {
   transition: transform var(--dur-standard) var(--ease-base), border-color var(--dur-standard) var(--ease-base);
 }
 .proof-card:hover { transform: translateY(-4px); border-color: var(--cursor); }
+
+/* ---- Inner pages: compact hero + staged entrance ---- */
+.page-hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--rule); }
+.page-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.4;
+  transform: scale(1.04);
+  animation: hero-drift 40s ease-in-out infinite alternate;
+}
+.page-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 50%, transparent 0%, var(--page) 80%),
+    linear-gradient(to bottom, transparent 45%, var(--page));
+}
+.page-hero-body { position: relative; z-index: 1; }
+
+.enter > * {
+  animation: enter-up 600ms var(--ease-expo) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes enter-up {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-hero-bg { animation: none; transform: none; }
+  .enter > * { animation: none; }
+}
+.enter > :nth-child(2) { --i: 1; }
+.enter > :nth-child(3) { --i: 2; }
+.enter > :nth-child(4) { --i: 3; }
+.enter > :nth-child(5) { --i: 4; }
