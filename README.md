@@ -1,111 +1,116 @@
-# Bothy — Winter Watch
+# Bothy — Accountable programme-impact briefs
 
-> Agents, but accountable.
+[MIT license](LICENSE) · [Product vision](docs/product-vision.md) ·
+[Execution roadmap](docs/roadmap.md)
 
-Bothy turns fragmented public **weak signals** (weather warnings, forecasts,
-road operations, incident history) into a **specific, evidence-backed,
-human-approved intervention** — not a chatbot, not an alert. Every number is
-traceable to a cited source + timestamp; nothing publishes without a human
-sign-off. Live weather is an optional frozen API snapshot and stays **off the
-score**. Audio, radio, and social are not ingested in this build.
+**For European defence-prime supply-chain teams:** investigate a material,
+supplier, or transit disruption, trace programme exposure, and keep the evidence
+with the decision.
 
-**Demo wedge:** winter access risk on UK upland roads (Lake District). The
-pipeline generalizes to any *time-evolving weak signals → accountable
-intervention* problem — proven with an Environment Agency river-gauge flood
-scenario (see [roadmap.md](docs/roadmap.md) §2).
+The target workflow is exposure → cited brief → authorized review → owned
+action → recorded outcome. **The current defence prototype explores graph
+exposure and exports unapproved evidence snapshots.** It does not yet provide
+authenticated review, a completed intervention loop, or continuous monitoring.
+Dependencies are not proof of stoppage; query row limits are not total impact.
 
-## Quick start
+## Run the defence demo
+
+Prerequisites: Node **22.13+** (or current Node 24), npm, Python + TuringDB,
+and the graph pack described in [graphs/README.md](graphs/README.md).
 
 ```bash
 npm install
-cp .env.example .env     # DATABASE_URL defaults to the tunneled remote DB (:5433)
-bash scripts/db-tunnel.sh # SSH tunnel: remote Postgres (Docker + PostGIS) -> localhost:5433
-npm run seed             # agent loads root .env; refresh catalogue; keeps signed ledger
-npm run dev              # agent API :8787 · web :3000
+cp .env.example .env
+bash scripts/venue.sh        # TuringDB :6677 → sidecar :6777 → agent :8787 → web :3001
+bash scripts/venue.sh status
 ```
 
-> Prefer a fully local DB? `npm run db:local` installs Postgres 17 + PostGIS via
-> Homebrew (downloads ~GBs — not the default on a disk-constrained machine).
-> See [`docs/ops.md`](docs/ops.md) for hosting, production, and security.
+Open **http://localhost:3001/defense?scenario=gallium-exposure**.
+The defence route does not require the Postgres road catalogue. SQLite captures
+graph runs and witness artifacts in `apps/agent/data/bothy-loop.db`.
 
-No API key needed. The agent loop runs on the **Strands Agents SDK
-(TypeScript)** — `apps/agent/src/agent/strands.ts` wraps the 8 narrow tools as
-Strands `tool({ name, inputSchema: zod, callback })`, points Strands
-`OpenAIModel` at the free-first OpenAI-compatible provider chain (public Qwen HF
-endpoint → optional Venice AI / OpenRouter / any OpenAI-compatible URL / local
-Ollama), and enforces cited sources with a `BeforeToolCallEvent` provenance
-hook. Each provider is tried in order with the trace marked `strands:<provider>`
-+ `engine:strands`, falling back to the deterministic **scripted** brain if none
-respond. Configure providers in `.env` (copy `.env.example`); provider keys are
-server-only and must never be committed or exposed to the browser. See
-[`docs/architecture.md`](docs/architecture.md).
+1. Choose an exposure question and run the catalogue query.
+2. Inspect query rows and source/coverage caveats.
+3. Export a server-captured, explicitly unapproved evidence snapshot.
+4. Open the share link or download its hash-linked JSON.
+5. Advanced controls expose replay, comparison, and a temporary-marker branch
+   demonstration. This is not a production-loss simulation.
 
-## Repo layout
+Graph unavailable is an explicit failure state, not fabricated fallback data.
+This remains a **single-operator prototype**: authenticated access, read/write
+enforcement, and concurrent graph-state isolation are outstanding. Do not expose
+it to sensitive customer data or treat public witness links as private sharing.
+See [ops.md](docs/ops.md).
 
+## Earlier winter-road / flood demos
+
+These retain deterministic scoring, timestamped citations, and an illustrative
+replay. They are not predictive validation. Live Open-Meteo context is frozen
+and score-neutral; audio, radio, and social are not ingested.
+
+```bash
+bash scripts/db-tunnel.sh    # remote Postgres/PostGIS → localhost:5433
+npm run seed                # writes the demo catalogue; inspect seed.ts and protect existing data first
+npm run dev                 # agent :8787 · web :3000
 ```
-apps/web        Next.js · Tailwind · (MapLibre)      — demo surface
-apps/agent      TypeScript API · Strands 5-phase agent loop
-packages/shared shared domain types + helpers
-scripts/        local Postgres bootstrap · pre-commit secret scan
-docs/           architecture, engineering decisions, alignment, roadmap
+
+Open `/watch?replay=1` or `/watch?case=flood`. A typed officer name is demo
+attribution, not authenticated authority. Email queueing and sending require an
+approved assessment; log-only mode never marks an email delivered. External
+dispatch also requires `DIGEST_TOKEN`.
+
+## EDTH and Nebius × NVIDIA
+
+One product, two demonstrations:
+
+- **EDTH / TuringDB:** exposure reasoning, native versioning, and inspectable
+  evidence. [Track plan and historical weekend bright line](docs/hackathon-turingdb-defense.md).
+- **Nebius × NVIDIA:** the same workflow with an actually exercised eligible
+  NVIDIA model on Nebius. [Integration and submission gates](docs/hackathon-nebius-nvidia.md).
+
+Nebius provider wiring is **opt-in**, server-only, and connected/cloud mode.
+Set `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, and a verified `NEBIUS_MODEL` in the
+ignored runtime environment. All three are required; no model ID is guessed.
+Configuration alone does not establish a successful live integration or
+hackathon eligibility. No paid inference runs merely by opening `/defense`.
+
+The earlier road agent uses Strands / OpenAI-compatible providers with a
+deterministic scripted fallback. Its defence brief integration and bounded
+Strands handoff are subsequent roadmap gates, not completed claims.
+
+## Validate
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm -w @bothy/web run build
+git diff --check
 ```
 
-## License
+Tests cover witness provenance/request boundaries, approval-gated email,
+pending-only decision updates, API envelope contracts, and opt-in provider
+configuration without external email or inference.
 
-MIT — see [LICENSE](LICENSE). Required for the Agents for Humans hackathon
-submission (Good Neighbor Agents track); full pack in
-[`docs/hackathon-agents-for-humans.md`](docs/hackathon-agents-for-humans.md).
+## Repository
 
-## Documentation
+```text
+apps/web        Next.js · defence workspace + earlier MapLibre road demos
+apps/agent      Express · graph sidecar client · road agent · local SQLite artifacts
+packages/shared shared domain/API types
+scripts/        venue startup · witness QR sheet · DB bootstrap · secret scanning
+docs/           vision · architecture · design · delivery gates · hackathon evidence
+```
 
-Full details live in [`docs/`](docs/):
+## Documentation and project steering
 
-- [architecture.md](docs/architecture.md) — agent loop, tools, data model, risk engine
-- [dashboard.md](docs/dashboard.md) — the Decision-Replay concept & demo storyboard
-- [design.md](docs/design.md) — UI language, tokens, micro‑interactions & motion spec
-- [ops.md](docs/ops.md) — hosting, DB topology/credentials, security & production
-- [decisions.md](docs/decisions.md) — why hand-rolled loop, PostGIS vs pgvector, scripted brain
-- [alignment.md](docs/alignment.md) — the original challenge brief and product guardrails
-- [roadmap.md](docs/roadmap.md) — where the project goes next (signals, generalization, reliability)
+- [Product vision and review insights](docs/product-vision.md)
+- [Roadmap](docs/roadmap.md) and [dated execution log](docs/execution-log.md)
+- [Architecture](docs/architecture.md), [design](docs/design.md), [operations](docs/ops.md)
+- [Pilot scope and acceptance](docs/pilot-one-pager.md)
+- [Historical decision-replay concept](docs/dashboard.md) and [alignment](docs/alignment.md)
 
-## Built with Kiro
-
-This repository commits project steering in [`.kiro/steering/`](.kiro/steering/)
-so Kiro sessions share Bothy’s product contract, replay/provenance boundaries,
-and validation workflow. The implementation has been developed and verified with
-Kiro-guided agent workflows; the demo should show these steering files alongside
-the reproducible scripted-agent and validation path.
-
-## Hygiene
-
-- `npm run lint` / `npm run typecheck` — ESLint + TS across both apps.
-- Pre-commit (Husky): **lint-staged** (eslint --fix) + **`scripts/check-secrets.sh`**
-  (blocks secret files, scans the staged diff).
-
-## Status
-
-Bothy is an active submission to the **Agents for Humans** hackathon (AWS,
-Good Neighbor Agents track — full pack in
-[`docs/hackathon-agents-for-humans.md`](docs/hackathon-agents-for-humans.md)).
-The agent loop now runs on the **Strands Agents SDK**: 8 narrow tools wrapped
-as zod `tool()`s, a `BeforeToolCallEvent` provenance hook that blocks any
-`create_human_review` without timestamped cited sources, and `OpenAIModel`
-pointed at the free-first provider chain. **Watch-my-road** turns the demo into
-a product: an email input per route, `subscriptions` + `notifications` tables
-(AgentCore Memory pattern), notify-on-`HIGH` digest queue, and shareable
-`/case/:id` pages a stakeholder can forward and sign.
-
-The Kiro Ready, Spec, Ship hackathon is complete; Bothy continues as an ongoing
-project. The agent backend, seed data, API, and the interactive decision-replay
-dashboard are implemented and locally verified. The supplied scenarios are demo
-data; the A66 backtest distinguishes its sourced closure from illustrative model
-inputs. The post-hackathon [roadmap](docs/roadmap.md) is implemented: live-LLM
-reliability hardening (provider-chain health probe + scripted-fallback
-rehearsal), an Environment Agency flood scenario proving the generalization
-claim, and a traffic-speed signal that moves the score earlier — each scored
-against the intake filter. A design/UX pass also tightened the watch-room
-interactions — custom scrubber with beat ticks and magnetic snap, keyboard
-controls, a self-explanatory approval gate, and clear recovery/landing doors —
-without adding dependencies or drifting the token palette.
-
-_See [`docs/architecture.md`](docs/architecture.md) for the deep dive._
+The Kiro Ready, Spec, Ship submission is complete. Committed
+[`.kiro/steering/`](.kiro/steering/) preserves the product/evidence boundaries
+and validation workflow. Keep secrets and private customer data out of the repo,
+browser, public artifacts, and logs. Pre-commit runs lint-staged and a secret scan.

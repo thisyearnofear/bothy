@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bothy — Winter Watch",
+    name: "Bothy — Programme impact",
     short_name: "Bothy",
-    description: "Evidence-backed, human-approved winter access decisions for UK upland roads.",
+    description: "Inspect defence supply-chain exposure and keep the evidence with the decision.",
     start_url: "/",
     display: "standalone",
     background_color: "#1d1f26",

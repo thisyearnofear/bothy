@@ -3,16 +3,7 @@
  * before being written here (2026-10-02). Read-only only — no CREATE/SET.
  */
 
-export interface GraphScenario {
-  id: string;
-  title: string;
-  stakes: string;
-  graph: string;
-  cypher: string;
-  kind: string;
-  howToRead: string;
-  eyAngle: string;
-}
+import type { GraphScenario } from "../../../../packages/shared/src/types";
 
 export const SCENARIOS: GraphScenario[] = [
   {

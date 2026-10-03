@@ -1,5 +1,10 @@
 # Alignment brief
 
+Current commercial direction: [programme-impact briefs](product-vision.md),
+with delivery gates in [roadmap.md](roadmap.md). The brief below documents the
+earlier winter-road submission; it is not a claim of production authorization,
+dispatch safety, continuous monitoring, or a completed defence decision loop.
+
 > Historical document: this is the brief Bothy was built against for the Kiro
 > Ready, Spec, Ship hackathon (completed Aug 2026). The challenge mapping and
 > guardrails still describe the product contract; for forward-looking direction

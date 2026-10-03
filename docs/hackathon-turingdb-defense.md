@@ -1,5 +1,30 @@
 # TuringDB Defense — Submission Plan (Connected Data in Defense)
 
+## Current product and claim boundary (3 October 2026)
+
+Use [product-vision.md](product-vision.md) and the current
+[roadmap.md](roadmap.md) for execution. Lead with **a defence-prime supply-chain
+analyst investigating primary-gallium programme exposure**, not a winter-road
+desk with a graph panel attached.
+
+Demo spine: disruption hypothesis → catalogue query → inspect exposure and
+coverage caveats → replay / temporary simulation / diff → export an explicitly
+unapproved evidence snapshot. Cited brief → authenticated approval → owned action
+is the next delivery gate, not something the present graph demo proves.
+
+The venue measurements below are historical observations, not fresh benchmarks.
+Limited query rows are samples, not total exposed entities. Witness hash linkage
+is not an authenticated signature. A supplied officer name is demo attribution.
+Native graph analysis can run locally; cloud inference and map tiles are network
+dependencies. Local inference, offline maps, and the full offline decision loop
+have not been certified. Replication has infrastructure/support costs.
+
+These boundaries supersede stronger “full loop”, “nothing leaves”, “offline”,
+“zero cost”, and traction claims in the historical pitch material below.
+Keep the weekend bright line, and record subsequent work in
+[execution-log.md](execution-log.md). EDTH event/deck details below come from the
+venue brief; confirm them with organizers before submission.
+
 > Track: **4 — Connected Data In Defense: Using Graphs For Real-Time Intelligence**
 > Source: https://github.com/turing-db/turingdb-hackathon-defense
 > Status: **built & verified (venue floor)** — Postgres + PostGIS ledger intact;

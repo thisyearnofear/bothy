@@ -1,5 +1,17 @@
 # Bothy architecture boundaries
 
+## Defence-first additions
+
+- `/defense` must load independently of the road/Postgres catalogue.
+- Graph catalogue API contracts and witness/run types live in `packages/shared`.
+- A witness references a server-captured `runId`; reject browser-authored rows,
+  approval, and officer claims. Label artifacts unapproved and disclose an
+  unpinned HEAD rather than claiming reproducibility.
+- Only approved road assessments enter the external email queue/sender.
+- Nebius is opt-in connected cloud inference, never an offline claim.
+- Role authorization, graph request isolation, immutable commit/model binding,
+  and the complete defence brief/action loop remain roadmap gates.
+
 ## Repository map
 
 - `apps/web`: Next.js watch-room UI. Browser calls `/api/*` through the Next rewrite; keep provider keys and direct third-party fetches out of the browser.

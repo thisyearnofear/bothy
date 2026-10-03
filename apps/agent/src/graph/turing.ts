@@ -99,9 +99,9 @@ export const BLAST_QUERIES = {
 /** Defense scenario catalogue runner (see ./scenarios.ts). BLAST_QUERIES above untouched. */
 import { getScenarioDef } from "./scenarios";
 
-export async function runScenario(id: string): Promise<GraphRows & { scenario: string }> {
+export async function runScenario(id: string, commit?: string): Promise<GraphRows & { scenario: string }> {
   const def = getScenarioDef(id);
   if (!def) throw new Error(`unknown scenario: ${id}`);
-  const r = await graphQuery(def.graph, def.cypher);
+  const r = await graphQuery(def.graph, def.cypher, commit);
   return { ...r, scenario: def.id };
 }

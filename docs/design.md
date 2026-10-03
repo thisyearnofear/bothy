@@ -1,5 +1,19 @@
 # Design language & interface craft
 
+## Defence-first workspace (October 2026)
+
+The [product vision](product-vision.md) is the forward UI contract. The primary
+surface is `/defense`, independent of road/Postgres loading. Lead with the
+exposure question, results, and evidence boundary. Reveal Cypher, benchmarks,
+commit IDs, and simulation controls only when requested. Do not interleave pilot
+marketing with an operational approval gate.
+
+Mobile places the result before diagnostic/supporting content. Important small
+text must meet 4.5:1 contrast; the faint token is raised to 60% lightness.
+Graph exports are labelled unapproved analysis. Modeled replay lead times and
+heuristic thresholds must never be described as proven prediction or inevitability.
+The road/cinema specification below remains useful for the earlier demo only.
+
 The concept (Decide-Replay) lives in [dashboard.md](dashboard.md). This file is
 the *craft* layer: how Bothy should look, move, and prioritise a decision.
 
@@ -247,7 +261,7 @@ when needed):
 - page `oklch(13% 0.008 255)` · panel `oklch(17% 0.008 255)` · rule
   `oklch(28% 0.008 255)`
 - text: strong `oklch(92% 0 0)` · body `oklch(70% 0 0)` · faint
-  `oklch(52% 0 0)`
+  `oklch(60% 0 0)`
 - LOW `oklch(72% 0.16 155)` · MODERATE `oklch(80% 0.14 85)` · ELEVATED
   `oklch(72% 0.17 55)` · HIGH `oklch(64% 0.21 25)`
 - cursor `oklch(75% 0.11 230)`

@@ -8,7 +8,7 @@
   --rule: oklch(28% 0.008 255);
   --text-strong: oklch(92% 0 0);
   --text-body: oklch(70% 0 0);
-  --text-faint: oklch(52% 0 0);
+  --text-faint: oklch(60% 0 0);
   --cursor: oklch(75% 0.11 230);
 
   /* motion tokens (durations never hardcoded in components) */

@@ -18,6 +18,7 @@
     "dev": "concurrently -k -n agent,web -c cyan,yellow \"npm run dev:agent\" \"npm run dev:web\"",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm -w @bothy/agent run test",
     "demo": "npm run seed && npm run dev"
   },
   "devDependencies": {

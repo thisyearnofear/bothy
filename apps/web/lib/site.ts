@@ -2,6 +2,6 @@ export const site = {
   name: "Bothy",
   url: "https://bothyapp.netlify.app",
   description:
-    "Evidence-backed, human-approved winter access decisions for UK upland roads — every risk score traceable to timestamped signals.",
-  socialImageAlt: "Bothy watch room: evidence-backed winter access decisions for UK upland roads.",
+    "Defence programme-impact briefs: inspect supply-chain exposure and keep the evidence with the decision. Public/synthetic prototype data.",
+  socialImageAlt: "Bothy: accountable programme-impact briefs for defence supply-chain teams.",
 } as const;

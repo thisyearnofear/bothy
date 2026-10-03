@@ -115,7 +115,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </p>
       {c.leadText && (
         <p className="mono mt-4 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}>
-          flagged <span className="font-semibold tnum">{c.leadText}</span> before it happened
+          modeled lead time <span className="font-semibold tnum">{c.leadText}</span> · illustrative replay, not predictive validation
         </p>
       )}
       {c.awake ? (

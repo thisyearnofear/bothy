@@ -216,6 +216,23 @@ function builder(e: NodeJS.ProcessEnv): ProviderDef[] {
     if (d) out.push(d);
   };
 
+  // Connected-mode only. Require an explicitly verified catalogue model and
+  // endpoint rather than silently guessing a Nemotron SKU or another provider.
+  if (e.NEBIUS_API_KEY && e.NEBIUS_BASE_URL?.trim() && e.NEBIUS_MODEL?.trim()) {
+    put({
+      id: "nebius",
+      label: "Nebius Token Factory (connected)",
+      baseUrl: e.NEBIUS_BASE_URL.trim(),
+      apiKey: e.NEBIUS_API_KEY,
+      model: e.NEBIUS_MODEL.trim(),
+      reqPerMin: num(e.NEBIUS_RPM, 20),
+      burst: num(e.NEBIUS_BURST, 4),
+      maxTokens: num(e.BOTHY_LLM_MAX_TOKENS, 1500),
+      timeoutMs: num(e.NEBIUS_TIMEOUT, 25_000),
+      temperature: 0.2,
+    });
+  }
+
   // free public Hugging Face endpoint (no key, rate-limited ~30/min)
   put({
     id: "qwen-hf",
@@ -297,18 +314,14 @@ function builder(e: NodeJS.ProcessEnv): ProviderDef[] {
   return out;
 }
 
-let cacheInfo: { at: number; defs: ProviderDef[] } | null = null;
-
 /** Configured providers in priority order (env BOTHY_LLM_PROVIDERS). */
 export function getProviders(e = process.env): ProviderDef[] {
-  if (cacheInfo && Date.now() - cacheInfo.at < 10_000) return cacheInfo.defs;
   const all = builder(e);
-  const order = (e.BOTHY_LLM_PROVIDERS ?? "qwen-hf,venice,openrouter,openai,ollama").split(",").map((s) => s.trim()).filter(Boolean);
+  const order = (e.BOTHY_LLM_PROVIDERS ?? "nebius,qwen-hf,venice,openrouter,openai,ollama").split(",").map((s) => s.trim()).filter(Boolean);
   const byId = new Map(all.map((d) => [d.id, d]));
   const sorted = order.map((id) => byId.get(id)).filter((d): d is ProviderDef => !!d);
   // keep any configured provider not mentioned in order, appended at end
   for (const d of all) if (!sorted.some((x) => x.id === d.id)) sorted.push(d);
-  cacheInfo = { at: Date.now(), defs: sorted };
   return sorted;
 }
 

@@ -1,146 +1,66 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect } from "react";
-import LandingBackdrop from "../components/LandingBackdrop";
 import CaseList from "../components/CaseList";
 
-// Landing = brand + thesis + the door, on the first paint. The story (the turn,
-// the full definition, the generality close) is opt-in depth below the fold —
-// progressive disclosure for judges with 10 seconds and judges with 10 minutes.
+const rule = { borderColor: "var(--rule)" } as const;
+
 export default function Landing() {
-  useReveal();
-
   return (
-    <main className="relative min-h-screen">
-      <LandingBackdrop />
+    <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-5" style={rule}>
+        <Link href="/" className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</Link>
+        <nav className="flex gap-5 text-sm" aria-label="Main navigation">
+          <Link href="/defense" className="underline">Defence workspace</Link>
+          <Link href="/pilot" className="underline">Pilot</Link>
+        </nav>
+      </header>
 
-      <div className="relative z-10">
-        {/* hero — the whole pitch in ten words, and the door, zero scroll required.
-            camera keyframes (Bothy-legal scroll cinema): wide over the fells while the reader is still */}
-        <section
-          data-cam='{"id":"hero","center":[-3.1,54.5],"zoom":9,"pitch":35,"bearing":-18}'
-          className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
-        >
-          <div className="fade-up" style={{ animationDelay: "80ms" }}>
-            <h1 className="text-[clamp(5rem,17vw,10rem)] font-semibold leading-[0.8] tracking-[-0.075em]" style={{ color: "var(--text-strong)" }}>
-              Bothy
-            </h1>
-            <p className="mono mt-5 text-xs uppercase tracking-[0.22em] sm:text-sm" style={{ color: "var(--cursor)" }}>
-              Accountable winter access decisions
-            </p>
+      <section className="grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.3fr_1fr]">
+        <div>
+          <p className="mono text-xs uppercase tracking-[0.18em]" style={{ color: "var(--cursor)" }}>Accountable programme-impact briefs</p>
+          <h1 className="mt-5 text-[clamp(2.75rem,6vw,5rem)] font-semibold leading-[1.02] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>
+            The disruption is local.<br />The impact isn’t.
+          </h1>
+          <p className="mt-6 max-w-xl text-base leading-relaxed">
+            For defence supply-chain teams: trace a material, supplier, or transit dependency
+            into programme exposure, and keep the evidence with the decision.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/defense?scenario=gallium-exposure" className="coarse-target rounded-lg border-2 px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>Explore gallium exposure</Link>
+            <Link href="/pilot" className="coarse-target rounded-lg border px-5 py-3 text-sm" style={rule}>Scope a two-week pilot</Link>
           </div>
-          <p
-            className="mono fade-up mt-7 text-sm tracking-[0.18em]"
-            style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "180ms" }}
-          >
-            both·y &nbsp;/ˈbɒθi/&nbsp; n. Scottish
+          <p className="mt-5 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            Prototype · public/synthetic demo data · exports are unapproved analysis.
           </p>
-          <h2 className="fade-up mt-4 text-3xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--text-strong)", animationDelay: "280ms" }}>
-            The agent watches the hill.
-            <br />
-            The human owns the call.
-          </h2>
-          {/* two doors above the fold — the rewind (the money shot) and the live
-              desk (the shift tool). A judge with ten seconds picks one and lands
-              in a populated room; neither requires scrolling. */}
-          <div className="fade-up mt-8 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "240ms" }}>
-            <Link
-              href="/watch?replay=1"
-              prefetch
-              transitionTypes={["nav-forward"]}
-              className="inline-block rounded-lg border-2 px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.96]"
-              style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
-            >
-              Rewind the A66 in 20s
-            </Link>
-            <Link
-              href="/watch?case=live"
-              prefetch
-              transitionTypes={["nav-forward"]}
-              className="inline-block rounded-lg border px-5 py-2.5 text-sm transition-transform active:scale-[0.96]"
-              style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
-            >
-              Sit the Lake District desk
-            </Link>
-          </div>
-          <p className="mono fade-up mt-16 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)", animationDelay: "480ms" }}>
-            ↓ the story
-          </p>
-        </section>
+        </div>
+        <aside className="rounded-lg border p-6 sm:p-8" style={{ ...rule, background: "var(--panel)" }} aria-label="Product workflow">
+          <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>The case, not another alert</p>
+          <ol className="mt-6 space-y-6">
+            {[
+              ["01", "Trace the exposure", "Which programmes depend on the disrupted material or lane?"],
+              ["02", "Keep the evidence", "Inspect the query and captured result. Make missing coverage explicit."],
+              ["03", "Own the decision", "Next delivery gate: authorized review, assigned action, and recorded outcome."],
+            ].map(([number, title, text]) => (
+              <li key={number} className="flex gap-4 border-t pt-4" style={rule}>
+                <span className="mono text-sm" style={{ color: "var(--cursor)" }}>{number}</span>
+                <div><h2 className="font-medium" style={{ color: "var(--text-strong)" }}>{title}</h2><p className="mt-1 text-sm leading-relaxed">{text}</p></div>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </section>
 
-        {/* the turn — why this exists. camera descends toward the A66 corridor:
-            the hill becomes a place, specific and real */}
-        <section
-          data-cam='{"id":"turn","center":[-2.11,54.51],"zoom":10,"pitch":48,"bearing":10}'
-          className="reveal flex min-h-screen flex-col items-center justify-center px-6 text-center"
-        >
-          <h2 className="max-w-5xl text-[clamp(2.4rem,7vw,5.25rem)] font-semibold leading-[0.9] tracking-[-0.055em]" style={{ color: "var(--text-strong)" }}>
-            When the warning fails,
-            <br />
-            someone gets a callout.
-          </h2>
-          <p className="mono mt-8 max-w-xl text-sm uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-            warning · forecast · road · incident · live weather stays off the score
-          </p>
-        </section>
+      <section className="border-t py-10" style={rule}>
+        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Built for a useful decision</p>
+        <h2 className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>A dependency is a reason to investigate, not a prediction of failure.</h2>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed">Bothy makes the graph inspectable and the evidence portable. Inventory, substitutes, timing, and analyst review determine what the exposure means. The pilot measures time to a trusted brief, not just query speed.</p>
+      </section>
 
-        {/* the thesis — what Bothy is. camera settles over the pass:
-            landscape becoming instrument */}
-        <section
-          data-cam='{"id":"thesis","center":[-2.11,54.51],"zoom":11,"pitch":18,"bearing":-4}'
-          className="reveal flex min-h-screen flex-col items-center justify-center px-6 pb-24 text-center"
-        >
-          <h2 className="max-w-5xl text-[clamp(2.4rem,7vw,5.25rem)] font-semibold leading-[0.9] tracking-[-0.055em]" style={{ color: "var(--text-strong)" }}>
-            Not a dashboard.
-            <br />
-            A case you can rewind.
-          </h2>
-          <p className="mono mt-8 max-w-xl text-xs uppercase tracking-widest sm:text-sm" style={{ color: "var(--cursor)" }}>
-            every number cited · a human signs
-          </p>
-          <p className="mono mt-3 max-w-xl text-xs uppercase tracking-[0.18em]" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-            reports, not streams · audio · radio · social are not in this build
-          </p>
-          <CaseList />
-        </section>
-      </div>
-
-      <footer className="mono relative z-10 flex flex-wrap justify-center gap-x-6 gap-y-2 px-6 pb-8 text-sm" style={{ color: "var(--text-body)", textShadow: "0 1px 16px var(--page)" }}>
-        <Link href="/watch?replay=1" prefetch transitionTypes={["nav-forward"]} className="underline">
-          Rewind the A66
-        </Link>
-        <Link href="/watch?case=flood" prefetch transitionTypes={["nav-forward"]} className="underline">
-          Open the flood wedge
-        </Link>
-        <Link href="/watch?case=live" prefetch transitionTypes={["nav-forward"]} className="underline">
-          Sit the Lake District desk
-        </Link>
-      </footer>
+      <section className="border-t py-10" style={rule}>
+        <h2 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Earlier proof cases</h2>
+        <p className="mt-2 text-sm">Winter roads and floods established the replay-and-evidence approach. Their modeled timelines are demonstrations, not predictive validation.</p>
+        <CaseList />
+      </section>
+      <footer className="mono border-t pt-5 text-xs" style={{ ...rule, color: "var(--text-faint)" }}>Bothy · the evidence stays with the decision.</footer>
     </main>
   );
-}
-
-/** Normal-flow scroll reveal: sections lift in as they enter the viewport. */
-function useReveal() {
-  useEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>(".reveal");
-    if (!("IntersectionObserver" in window)) {
-      els.forEach((el) => el.classList.add("revealed"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            e.target.classList.add("revealed");
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
 }

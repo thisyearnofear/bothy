@@ -23,7 +23,10 @@ export function PilotInterestForm({ compact }: { compact?: boolean }) {
     try {
       const r = await api.pilotInterest({ name, org, email });
       setCount(r.count);
-      setNote("Registered — we will reply with pilot lanes.");
+      setNote(r.degraded
+        ? "Demo request counted, but contact details were not retained while the database was offline. Please retry when connected."
+        : "Registered — pilot scope will be reviewed.");
+      if (r.degraded) return;
       setName(""); setOrg(""); setEmail("");
     } catch (e) {
       setNote(String((e as Error)?.message ?? e));
@@ -43,7 +46,7 @@ export function PilotInterestForm({ compact }: { compact?: boolean }) {
         </button>
       </div>
       <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
-        {note ?? (count != null ? `${count} pilot requests so far` : "2-week pilot · your lanes, your BOM, your audit")}
+        {note ?? (count != null ? `${count} recorded requests · not validated traction` : "Two-week pilot · one dataset · one impact question")}
       </p>
     </div>
   );
@@ -54,7 +57,7 @@ export default function EyPilotBand() {
     <section aria-label="EY pilot" className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
       <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Readiness-2030 pilot</p>
       <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-        Built for the Readiness-2030 buyer: JSEC/JLSG log cells, primes, TSOs. 2-week pilot: your lanes, your BOM, your audit.
+        For a European defence-prime supply-chain team. Two-week pilot: one dataset, one impact question, and agreed evidence/decision acceptance criteria.
       </p>
       <PilotInterestForm />
       <Link href="/pilot" className="mono mt-1 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>

@@ -1,49 +1,51 @@
-# Bothy pilot one-pager — Readiness-2030 blast radius in 2 weeks
+# Bothy pilot: a programme-impact brief in two weeks
 
-> Status: indicative pricing, synthetic pack data. Leave-behind for EY A&D + log-cell conversations. No hype words; every figure measured or sourced.
+Status: prototype, public/synthetic demo data, indicative pricing.
+Direction: [product-vision.md](product-vision.md).
 
-## Problem
+## Buyer and problem
 
-A single tier-3 mineral, subsidiary, or strait transit can stall a programme — and the exposure hides across BOMs, ownership graphs, and shipment logs. Readiness 2030 + the Defence Readiness Omnibus (Jun 2025) push procurement speed; speed without exposure-mapping is risk. Teams learn the blast radius after the disruption, from spreadsheets.
+For a European defence-prime supply-chain analyst, one material restriction,
+supplier incident, or chokepoint disruption means reconstructing dependencies
+across BOMs, ownership records, and shipment logs before a programme lead can
+act. The problem is time to a defensible decision, not slow graph queries.
 
 ## Product
 
-Bothy is the accountable intervention layer on a versioned graph: fragmented signals → one fused graph → multi-hop blast-radius reasoning → a specific, evidence-backed, human-approved intervention. The agent drafts; a duty officer approves; every decision is logged with a hash-linked witness-pack.
+Bothy turns the disruption into an evidence-backed programme-impact brief:
+versioned exposure analysis → cited draft → authorized review → owned action →
+recorded outcome. The complete workflow is the target, not a shipped claim.
+The current graph demo explores exposure and exports unapproved evidence.
 
-- **Blast radius in milliseconds**, 5–12 hops, on commodity hardware.
-- **Replay / branch-to-simulate / diff** as the audit trail — `CALL db.history()`, time-travel reads, change workflow.
-- **Human gate is load-bearing**: `create_human_review` is the single exit; nothing publishes alone.
+Primary demonstration: gallium-dependent platforms. Secondary: Taiwan Strait
+transit dependencies. Dependencies alone do not establish stoppage or losses;
+inventory, substitutes, time horizon, and incomplete coverage must be disclosed.
 
-## Proof (measured live, Oct 2026, 764k-edge TuringDB graph)
+## Pilot scope and acceptance
 
-| Scenario | Result | Time |
-|---|---|---|
-| Loitering-munition platform → raw minerals (8-hop BOM) | 40 mineral pairs | ~10ms |
-| Platforms depending on primary gallium (any depth) | 34 platforms | ~8ms |
-| NATO-HQ firms with ultimate CHN parent | 20 pairs | ~3ms |
-| Final-assembly primes downstream of Taiwan Strait | 20 primes | ~7ms |
-| Sanctioned-parent facilities feeding NATO plants | 20 rows | ~7ms |
-| Red Sea D01 disruption status breakdown | 3 status rows | ~11ms |
-| Ukrainian plant proximity pairs (energy) | 12 pairs | ~4ms |
-| High-risk shipments by supplier country | 10 countries | ~13ms |
+One buyer-approved BOM/lane dataset, one recurring impact question, one team.
+Agree the reference set and targets before importing data:
 
-Bench of 4 in ~265ms total. Pack data is synthetic (MIT/Apache-2.0/WRI CC-BY); your pilot runs on your lanes + BOM.
+- Analyst-checked dependency accuracy and known coverage gaps.
+- Median disruption-to-review-ready-brief time against the existing process.
+- Evidence version and review/action ownership on every pilot brief.
+- Demonstrated rejection, unavailable-provider, and concurrent replay behavior.
+- Buyer-approved hosting, identity/access, model egress, and compliance boundaries.
 
-## Deployment
+## Deployment and pricing
 
-Software-only, no hardware. Laptop or HQ server; TuringDB embedded + Next.js + TS agent. DIL-tolerant (denied/intermittent/low-bandwidth): ingest when connected, reason locally when disconnected. No data leaves your cell. Replicate per site at ~zero marginal cost.
+Graph analysis and captured artifacts can run locally. Cloud inference is
+optional connected mode; local/offline end-to-end operation is not certified.
+No customer data enters the public demo or a cloud model without authorization.
 
-## Pricing (indicative)
-
-2-week pilot **€15k** (your lanes, your BOM, your audit, witness-packs included). Cell licence **€60k/yr**. Enterprise scoped on sites + graphs. Indicative — scoped on lanes + BOM size.
+Indicative **€15k / two-week pilot**, then **€60k/year per cell/team** as a pricing
+hypothesis. Scope integration/support and validate willingness to pay.
 
 ## Ask
 
-1. A 2-week pilot with one log cell (JSEC/JLSG-adjacent or national equivalent).
-2. An intro to the EY A&D practice for scale-up + procurement routing (EDF / Omnibus pathways).
+An introduction to one programme/supply-chain resilience lead at a European
+defence prime, plus an analyst willing to test the reference impact question.
+Military logistics cells are design partners, not additional first buyers.
 
-Contact: [pilot form in the watch room →] `/pilot` · witness-pack on every scenario run.
-
-## Landscape
-
-Ushahidi maps the crisis, OpenCTI investigates it, Timesketch replays it — Bothy closes the loop: versioned graph → cited draft → approved intervention.
+Product route: `/defense`. Pilot request: `/pilot`. Query latency, downloads,
+and signup counters are demonstration metrics, not customer traction.

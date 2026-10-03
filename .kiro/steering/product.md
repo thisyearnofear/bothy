@@ -1,5 +1,20 @@
 # Bothy product and demo contract
 
+## Current direction (3 October 2026)
+
+The primary product is an accountable programme-impact brief for a European
+defence-prime supply-chain analyst. Read `docs/product-vision.md` and the current
+section of `docs/roadmap.md` before adding features. `/defense` is the primary
+workflow; winter/flood cases remain earlier reference demos.
+
+Do not describe names as authenticated signatures, unapproved graph exports as
+approved interventions, heuristic scores as probabilities, cloud inference as
+offline, or manual assessment as continuous monitoring. Server-captured
+evidence and approval-before-external-dispatch are required foundations.
+Identity, graph commit pinning, and tracked action/outcome remain separate gates.
+
+## Historical road-demo contract
+
 Bothy is an accountable winter-access decision-support system for UK upland roads.
 It turns fragmented weather, road, terrain, and incident signals into a
 route-specific, evidence-backed **draft** for a named duty officer. It is not a

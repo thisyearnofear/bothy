@@ -1,5 +1,56 @@
 // Shared domain types for Bothy. Imported (relatively) by both apps.
 
+export interface GraphScenario {
+  id: string;
+  title: string;
+  stakes: string;
+  graph: string;
+  cypher: string;
+  kind: string;
+  howToRead: string;
+  eyAngle?: string;
+}
+
+export interface GraphRows {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  count: number;
+  ms: number;
+}
+
+export interface GraphRun extends GraphRows {
+  runId: string;
+  scenarioId: string;
+  graph: string;
+  cypher: string;
+  graphCommit: string | null;
+  capturedAt: string;
+  sourceBoundary: string;
+}
+
+export interface GraphWitnessPack {
+  version: 1;
+  runId: string;
+  scenarioId: string;
+  graph: string;
+  cypher: string;
+  graphCommit: string | null;
+  capturedAt: string;
+  sourceBoundary: string;
+  approval: "unapproved";
+  count: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  at: string;
+}
+
+export interface GraphWitness {
+  hash: string;
+  prev: string | null;
+  at: string;
+  pack: GraphWitnessPack;
+}
+
 export type Hazard = "snow" | "ice" | "wind" | "flood" | "rockfall";
 export type RiskLabel = "LOW" | "MODERATE" | "ELEVATED" | "HIGH";
 export type ScenarioId = "live" | "backtest" | "flood";

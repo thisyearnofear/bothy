@@ -102,7 +102,6 @@ export default function Detail({
   const draftLines = (assessment?.draft ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
   const draftPreview = draftLines.slice(0, 3).join("\n");
   const draftClipped = draftLines.length > 3;
-  const canSign = Boolean(assessment && officer.trim());
   const signedBy =
     assessment?.decisionNote?.match(/^signed by (.+)$/i)?.[1] ??
     audit.find((a) => a.action === "approved" || a.action === "rejected")?.actor;
@@ -143,7 +142,7 @@ export default function Detail({
         )}
         {lead && (
           <p className="mono mt-2 text-sm leading-snug" style={{ color: "var(--cursor)" }}>
-            flagged <span className="font-semibold tnum">{lead}</span> before it happened
+            modeled lead time <span className="font-semibold tnum">{lead}</span> · illustrative replay
           </p>
         )}
       </div>

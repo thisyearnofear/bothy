@@ -49,7 +49,11 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.get("/api/scenarios", async (_req, res) => {
-  res.json(await listScenarios());
+  try {
+    res.json(await listScenarios());
+  } catch {
+    res.status(503).json({ error: "road catalogue unavailable; the defence workspace uses a separate graph service" });
+  }
 });
 
 app.get("/api/scenario/:scenario", async (req, res) => {
@@ -257,7 +261,8 @@ app.post("/api/graph/simulate", async (req, res) => {
 // what survives restarts on venue floors with no tunnel. No new npm deps —
 // better-sqlite3 would be nicer but this ships via node:sqlite-free SQL using
 // the zero-dep `node:sqlite` module on Node 22+.
-import { createHash } from "crypto";
+import { captureGraphRun, createWitness, witnessRunId } from "./graph/witness";
+import type { GraphRun } from "../../../packages/shared/src/types";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -270,6 +275,7 @@ const DATA_DIR = process.env.BOTHY_DATA_DIR ?? fileURLToPath(new URL("../data/",
 mkdirSync(DATA_DIR, { recursive: true });
 const loopDb = new DatabaseSync(join(DATA_DIR, "bothy-loop.db"));
 loopDb.exec(`CREATE TABLE IF NOT EXISTS witness (hash TEXT PRIMARY KEY, prev TEXT, at TEXT, pack TEXT);
+CREATE TABLE IF NOT EXISTS graph_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS loop_subs (email TEXT, route_id TEXT, scenario TEXT, at TEXT, PRIMARY KEY (email, route_id));
 CREATE TABLE IF NOT EXISTS loop_digests (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient TEXT, subject TEXT, body TEXT, case_href TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, n INTEGER);
@@ -302,9 +308,14 @@ app.post("/api/graph/scenario/:id/run", async (req, res) => {
     const { runScenario } = await import("./graph/turing");
     const def = SCENARIOS.find((s: { id: string }) => s.id === req.params.id);
     if (!def) return res.status(404).json({ error: "unknown scenario" });
-    const r = await runScenario(def.id);
+    const commit = typeof req.body.commit === "string" && req.body.commit.trim()
+      ? req.body.commit.trim()
+      : undefined;
+    const r = await runScenario(def.id, commit);
+    const captured = captureGraphRun(def, r, commit);
+    loopDb.prepare(`INSERT INTO graph_runs (id, run) VALUES (?, ?)`).run(captured.runId, JSON.stringify(captured));
     res.json({
-      ...r,
+      ...captured,
       evidence: {
         scenario: def.id,
         title: def.title,
@@ -370,20 +381,13 @@ app.post("/api/graph/diff", async (req, res) => {
 
 app.post("/api/graph/witness", async (req, res) => {
   try {
-    const scenarioId = typeof req.body.scenarioId === "string" ? req.body.scenarioId : "";
-    if (!scenarioId) return res.status(400).json({ error: "scenarioId is required" });
-    const pack = {
-      scenarioId,
-      assessmentId: typeof req.body.assessmentId === "string" ? req.body.assessmentId : null,
-      officer: typeof req.body.officer === "string" ? req.body.officer.slice(0, 120) : null,
-      rows: Array.isArray(req.body.rows) ? (req.body.rows as unknown[]).slice(0, 50) : [],
-      at: new Date().toISOString(),
-    };
-    const prev = witnessPrev();
-    const hash = createHash("sha256").update(JSON.stringify({ prev, pack })).digest("hex");
-    const entry: WitnessEntry = { hash, prev, at: pack.at, pack };
+    const runId = witnessRunId(req.body);
+    if (!runId) return res.status(400).json({ error: "runId is required; witness evidence must come from a server-captured run" });
+    const row = loopDb.prepare(`SELECT run FROM graph_runs WHERE id = ?`).get(runId) as { run: string } | undefined;
+    if (!row) return res.status(404).json({ error: "unknown captured run; run the scenario first" });
+    const entry = createWitness(JSON.parse(row.run) as GraphRun, witnessPrev());
     saveWitness(entry);
-    res.status(201).json({ hash, prev, at: pack.at, pack });
+    res.status(201).json(entry);
   } catch (e) {
     res.status(503).json({ ok: false, error: String((e as Error)?.message ?? e) });
   }
@@ -395,7 +399,7 @@ app.get("/api/graph/witness/:hash", async (req, res) => {
   const pack = entry.pack as Record<string, unknown>;
   // Distribution shape: every witness resolves to a shareable link + a live
   // re-run path, so the artifact points back into the product (Thiel loop).
-  res.json({ ...entry, links: { page: `/witness/${entry.hash}`, rerun: pack.scenarioId ? `/watch?scenario=${pack.scenarioId}` : "/watch" } });
+  res.json({ ...entry, links: { page: `/witness/${entry.hash}`, rerun: pack.scenarioId ? `/defense?scenario=${encodeURIComponent(String(pack.scenarioId))}` : "/defense" } });
 });
 
 // ---- Digest loop (SQLite-durable; Postgres mirror best-effort) ----------------
@@ -524,10 +528,22 @@ app.post("/api/assessments/:id/decision", async (req, res) => {
     typeof req.body.note === "string" && req.body.note.trim()
       ? req.body.note.trim().slice(0, 500)
       : undefined;
-  const row = await updateDecision(req.params.id, decision, note ?? `signed by ${officer}`);
-  if (!row) return res.status(404).json({ error: "assessment not found" });
-  await logAudit(row.scenario, officer, `${decision}`, `assessment ${row.id} (${row.routeId})`);
-  res.json(row);
+  try {
+    const row = await updateDecision(req.params.id, decision, note ?? `signed by ${officer}`);
+    if (!row) {
+      const existing = await getAssessment(req.params.id);
+      return res.status(existing ? 409 : 404).json({ error: existing ? "assessment already decided" : "assessment not found" });
+    }
+    await logAudit(row.scenario, officer, `${decision}`, `assessment ${row.id} (${row.routeId})`);
+    if (decision === "approved") {
+      // A queue failure must not make a recorded decision appear unrecorded.
+      try { await (await import("./repo")).notifySubscribers(row); }
+      catch { console.warn("approved assessment notification queue unavailable"); }
+    }
+    res.json(row);
+  } catch {
+    res.status(503).json({ error: "decision could not be recorded; check the assessment before retrying" });
+  }
 });
 
 const ROAD_KINDS = new Set(["closure", "disruption", "report", "plough-complete"]);
@@ -626,11 +642,14 @@ app.get("/api/subscriptions", async (req, res) => {
 // DIGEST_TOKEN in production (cron + Coolify scheduled job call it).
 app.post("/api/digest/send", async (req, res) => {
   const token = process.env.DIGEST_TOKEN;
+  if (process.env.RESEND_API_KEY && !token) {
+    return res.status(503).json({ error: "external email dispatch requires DIGEST_TOKEN" });
+  }
   const provided = req.headers["x-digest-token"] ?? req.body.token;
   if (token && provided !== token) return res.status(401).json({ error: "unauthorized" });
   res.json({ ...(await sendDigest()), at: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, process.env.AGENT_HOST ?? "0.0.0.0", () => {
   console.log(`bothy-agent listening on :${PORT}`);
 });

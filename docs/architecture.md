@@ -1,5 +1,30 @@
 # Architecture
 
+## October 2026 direction and implementation boundary
+
+See [product-vision.md](product-vision.md) for the defence-first product and
+[roadmap.md](roadmap.md) for its delivery gates. The existing road assessment
+path uses Postgres/PostGIS; the defence graph path uses the Python/TuringDB
+sidecar and local SQLite artifacts. They are not yet one fused decision loop.
+
+The first slice introduces an independent `/defense` surface and server-captured
+graph result snapshots. Witness export references a captured run, not
+browser-supplied rows. It records scenario, graph, Cypher, retrieval time,
+result count, and source boundary, explicitly as **unapproved analysis**.
+An explicit historical commit can be replayed and retained in the capture.
+Automatic HEAD pinning and authenticated reviewer/model binding remain outstanding.
+
+Email queueing and sending require approved assessments; legacy queued pending
+drafts are excluded at the sender. A typed officer name remains demo attribution,
+not authenticated authority. Read/write isolation, role checks, atomic decision
+plus audit, private sharing, and background monitoring are subsequent gates.
+
+Nebius configuration is server-only and opt-in. It is connected cloud inference,
+not DIL/offline inference. No eligible model or successful live call is claimed
+until the configured NVIDIA model is verified and exercised.
+
+## Historical road-assessment architecture
+
 This is the deep dive. For the two-line pitch see the [README](../README.md);
 for rationale see [decisions.md](decisions.md); for the original challenge
 framing see [alignment.md](alignment.md).

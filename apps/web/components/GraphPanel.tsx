@@ -1,312 +1,210 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, type GraphDiff, type GraphRows, type GraphScenario } from "../lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
 
-const esc = (s: string) => s.replace(/'/g, "\\'");
+const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
+const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
 
-function buildCypher(kind: string): string {
-  if (kind.startsWith("material:")) {
-    const t = esc(kind.slice(9) || "Primary gallium");
-    return `MATCH (p:Platform)-[:CONTAINS]->+(:Material {name:'${t}'}) RETURN DISTINCT p.name`;
-  }
-  if (kind.startsWith("ownership:")) {
-    const t = esc(kind.slice(10) || "CHN");
-    return `MATCH (:Country {nato_member:true})<-[:HEADQUARTERED_IN]-(c:Company)-[:SUBSIDIARY_OF]->+(u:Company {hq_country:'${t}'}) RETURN DISTINCT c.name, u.name LIMIT 20`;
-  }
-  if (kind.startsWith("chokepoint:")) {
-    const t = esc(kind.slice(11) || "Taiwan Strait");
-    return `MATCH (s:Shipment)-[:TRANSITED]->(:Chokepoint {name:'${t}'}) RETURN DISTINCT s.shipment_id LIMIT 20`;
-  }
-  if (kind.startsWith("risk:")) {
-    return `MATCH (s:Shipment)-[:CLASSIFIED_AS]->(:RiskClassification {name:'High Risk'}) RETURN s.shipment_id LIMIT 20`;
-  }
-  const t = esc(kind.startsWith("bom:") ? kind.slice(4) : "Loitering munition");
-  return `MATCH (p:Platform {archetype:'${t || "Loitering munition"}'})-[:CONTAINS]->{8,8}(m:Mineral) RETURN DISTINCT p.name, m.name`;
-}
-
-const FALLBACKS: GraphScenario[] = [
-  { id: "bom-loitering", title: "Loitering munition — 8-hop BOM", stakes: "Which minerals break the build if one tier-3 supplier fails.", graph: "supply_chain_deep", kind: "bom:Loitering munition", howToRead: "Each row is one platform-to-mineral path. Count is blast radius." },
-  { id: "material-gallium", title: "Primary gallium dependency", stakes: "Which platforms stop if gallium is constrained.", graph: "supply_chain_deep", kind: "material:Primary gallium", howToRead: "Each row is a dependent platform. Short list, high leverage." },
-  { id: "ownership-chn", title: "NATO firms with CHN parents", stakes: "Ownership exposure hidden behind subsidiaries.", graph: "supply_chain_deep", kind: "ownership:CHN", howToRead: "Company pairs: NATO-housed firm left, ultimate parent right." },
-  { id: "chokepoint-taiwan", title: "Primes behind the Taiwan Strait", stakes: "Final assembly downstream of one chokepoint.", graph: "supply_chain_deep", kind: "chokepoint:Taiwan Strait", howToRead: "Each row is a prime whose lane transits the strait." },
-  { id: "risk-shipments", title: "High-risk shipments (P0353)", stakes: "Flagged lanes worth an audit before they sail.", graph: "logistics_risk", kind: "risk:P0353", howToRead: "Shipment sample. Full count in the header." },
-];
-
-function rowKey(r: Record<string, unknown>): string {
-  return JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]));
-}
-
-async function sha256Hex(input: string): Promise<string> {
-  const b = await crypto.subtle.digest("sha256", new TextEncoder().encode(input));
-  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
-}
-
-export default function GraphPanel({ compact }: { compact?: boolean }) {
-  const [health, setHealth] = useState<{ ok: boolean } | null>(null);
-  const [scenarios, setScenarios] = useState<GraphScenario[]>(FALLBACKS);
-  const [fromCat, setFromCat] = useState(false);
-  const [activeId, setActiveId] = useState(FALLBACKS[0].id);
-  const [rows, setRows] = useState<GraphRows | null>(null);
-  const [commits, setCommits] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [simNote, setSimNote] = useState<string | null>(null);
+export default function GraphPanel() {
+  const [scenarios, setScenarios] = useState<GraphScenario[]>([]);
+  const [activeId, setActiveId] = useState("");
+  const [rows, setRows] = useState<GraphRun | null>(null);
+  const [health, setHealth] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [guided, setGuided] = useState(true);
-  const [step, setStep] = useState(1);
+  const [commits, setCommits] = useState<string[]>([]);
   const [beforeCommit, setBeforeCommit] = useState("");
   const [afterCommit, setAfterCommit] = useState("");
   const [diff, setDiff] = useState<GraphDiff | null>(null);
-  const [diffNote, setDiffNote] = useState<string | null>(null);
-  const [witness, setWitness] = useState<{ hash: string; prev: string; at: string; local?: boolean } | null>(null);
-  const [bench, setBench] = useState<Record<string, number>>({});
-
-  const active = scenarios.find((s) => s.id === activeId) ?? scenarios[0];
-  const cypher = useMemo(() => buildCypher(active.kind), [active]);
+  const [simNote, setSimNote] = useState<string | null>(null);
+  const [witness, setWitness] = useState<GraphWitness | null>(null);
+  const [copyNote, setCopyNote] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  const active = scenarios.find((scenario) => scenario.id === activeId);
 
   useEffect(() => {
-    let off = false;
-    api.graphHealth().then((h) => { if (!off) setHealth({ ok: h.ok }); }).catch(() => { if (!off) setHealth({ ok: false }); });
-    api.graphScenarios().then((list) => {
-      if (!off && Array.isArray(list) && list.length > 0) {
-        setScenarios(list.slice(0, 5)); setActiveId(list[0].id); setFromCat(true);
-      }
-    }).catch(() => { /* catalogue lands later — fallback stands */ });
-    api.graphBench().then((b) => {
-      if (!off && Array.isArray(b)) {
-        const m: Record<string, number> = {};
-        for (const r of b) m[r.id] = r.ms;
-        setBench(m);
-      }
-    }).catch(() => { /* bench optional */ });
-    return () => { off = true; };
+    const ctl = new AbortController();
+    setHealth(null);
+    setError(null);
+    api.graphHealth(ctl.signal).then((result) => setHealth(result.ok)).catch((e) => {
+      if (!isAbortError(e)) setHealth(false);
+    });
+    api.graphScenarios(ctl.signal).then((list) => {
+      if (ctl.signal.aborted) return;
+      setScenarios(list);
+      const requested = new URLSearchParams(window.location.search).get("scenario");
+      setActiveId((previous) => list.some((item) => item.id === previous) ? previous
+        : list.find((item) => item.id === requested)?.id
+        ?? list.find((item) => item.id === "gallium-exposure")?.id
+        ?? list[0]?.id ?? "");
+    }).catch((e) => {
+      if (!isAbortError(e)) setError(e instanceof Error ? e.message : String(e));
+    });
+    return () => ctl.abort();
+  }, [retry]);
+
+  const execute = useCallback(async (operation: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try { await operation(); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
   }, []);
 
-  const runScenario = useCallback(async (s: GraphScenario) => {
-    setLoading(true); setError(null); setDiff(null); setDiffNote(null);
-    setActiveId(s.id); if (guided) setStep(1);
-    const q = { graph: s.graph, cypher: buildCypher(s.kind) };
-    try {
-      setRows(fromCat ? await api.runScenario(s.id) : await api.graphQuery(q));
-    } catch {
-      try { setRows(await api.graphQuery(q)); setFromCat(false); }
-      catch (e) { setError(String((e as Error)?.message ?? e)); }
-    } finally { setLoading(false); }
-  }, [fromCat, guided]);
+  const run = (commit?: string) => {
+    if (!active) return;
+    void execute(async () => {
+      const result = await api.runScenario(active.id, commit ? { commit } : {});
+      setRows(result);
+      setWitness(null);
+      setCopyNote(null);
+      setDiff(null);
+      setSimNote(null);
+    });
+  };
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const data = await api.graphHistory(active.graph);
-      const list = data.rows.map((row) => String(row.commit ?? "")).filter(Boolean);
-      setCommits(list);
-      if (list.length >= 2) {
-        setBeforeCommit((v) => v || list[list.length - 1]);
-        setAfterCommit((v) => v || list[0]);
-      }
-      if (guided) setStep(2);
-    } catch { /* history is garnish */ }
-  }, [active.graph, guided]);
-
-  const replay = useCallback(async (commit: string) => {
-    setLoading(true); setError(null);
-    try {
-      setRows(await api.graphQuery({ graph: active.graph, cypher, commit }));
-      if (guided) setStep(2);
-    } catch (e) { setError(String((e as Error)?.message ?? e)); }
-    finally { setLoading(false); }
-  }, [active.graph, cypher, guided]);
-
-  const runDiff = useCallback(async () => {
-    setLoading(true); setError(null); setDiffNote(null);
-    try {
-      setDiff(await api.graphDiff({
-        graph: active.graph, cypher,
-        beforeCommit: beforeCommit || undefined, afterCommit: afterCommit || undefined,
-      }));
-    } catch {
-      try {
-        const [b, a] = await Promise.all([
-          api.graphQuery({ graph: active.graph, cypher, commit: beforeCommit || undefined }),
-          api.graphQuery({ graph: active.graph, cypher, commit: afterCommit || undefined }),
-        ]);
-        const bs = new Set(b.rows.map(rowKey));
-        const as = new Set(a.rows.map(rowKey));
-        setDiff({
-          beforeCount: b.count, afterCount: a.count,
-          addedSample: a.rows.filter((r) => !bs.has(rowKey(r))).slice(0, 5),
-          removedSample: b.rows.filter((r) => !as.has(rowKey(r))).slice(0, 5),
-        });
-        setDiffNote("client-side diff (agent /diff not ready)");
-      } catch (e) { setError(String((e as Error)?.message ?? e)); }
-    } finally { setLoading(false); }
-  }, [active.graph, afterCommit, beforeCommit, cypher]);
-
-  const simulate = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const data = await api.graphSimulate({
-        graph: active.graph,
-        writes: ["MATCH (p:Platform {archetype:'Loitering munition'}) SET p.sim_closed = true"],
-        readCypher: "MATCH (p:Platform {archetype:'Loitering munition'}) WHERE p.sim_closed = true RETURN p.name",
-      });
-      setSimNote(`simulate: ${data.beforeCount} → ${data.afterCount} flagged in branch (abandoned, graph unchanged)`);
-      if (guided) setStep(3);
-    } catch (e) { setError(String((e as Error)?.message ?? e)); }
-    finally { setLoading(false); }
-  }, [active.graph, guided]);
-
-  const exportWitness = useCallback(async () => {
+  const select = (id: string) => {
+    setActiveId(id);
+    setRows(null);
+    setWitness(null);
+    setCopyNote(null);
+    setCommits([]);
+    setBeforeCommit("");
+    setAfterCommit("");
+    setDiff(null);
+    setSimNote(null);
     setError(null);
-    try {
-      setWitness(await api.graphWitness({ rows: rows?.rows ?? [], graph: active.graph, scenario: active.id }));
-    } catch {
-      try {
-        const at = new Date().toISOString();
-        const hash = await sha256Hex(JSON.stringify({ rows: rows?.rows ?? [], at }));
-        setWitness({ hash, prev: "local-only", at, local: true });
-      } catch (e) { setError(String((e as Error)?.message ?? e)); }
-    }
-  }, [active.graph, active.id, rows]);
+    window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(id)}`);
+  };
 
-  const exposure = useMemo(() => {
-    if (!rows) return null;
-    const costs = rows.rows.map((r) => Number(r.unit_cost ?? r.unitCost ?? NaN)).filter((n) => Number.isFinite(n));
-    return costs.length ? costs.reduce((a, b) => a + b, 0) : null;
-  }, [rows]);
+  const history = () => {
+    if (!active) return;
+    void execute(async () => {
+      const result = await api.graphHistory(active.graph);
+      const list = result.rows.map((row) => String(row.commit ?? "").replace(/\(HEAD\)$/, "")).filter(Boolean);
+      setCommits(list);
+      setBeforeCommit(list.at(-1) ?? "");
+      setAfterCommit(list[0] ?? "");
+    });
+  };
 
-  if (health && !health.ok) {
-    return (
-      <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Defense graph</p>
-        <p className="mt-1 text-sm" style={{ color: "var(--text-body)" }}>Graph offline — Postgres evidence stands. Start TuringDB + sidecar.</p>
-      </div>
-    );
-  }
-
-  const cap = compact ? 4 : 6;
-  const eur = (n: number) => n.toLocaleString("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
   return (
-    <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Defense graph · blast radius</p>
-        <label className="mono flex cursor-pointer items-center gap-2 text-xs" style={{ color: "var(--text-faint)" }}>
-          <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} aria-label="Guided mode" />
-          guided: 1 Blast → 2 Replay → 3 Simulate
-        </label>
-      </div>
-      <div className="mono mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-live="polite">
-        <span style={{ color: "var(--text-strong)" }}>{rows ? `${rows.count} affected` : "no run yet"}</span>
-        {rows && <span style={{ color: "var(--text-body)" }}>{rows.ms}ms</span>}
-        {exposure != null && <span style={{ color: "var(--text-body)" }}>est. exposure {eur(exposure)}</span>}
-      </div>
-      {guided && (
-        <ol className="mono mt-2 flex flex-wrap gap-2 text-xs" style={{ color: "var(--text-faint)" }}>
-          {[1, 2, 3].map((n) => (
-            <li key={n} className="rounded border px-2 py-1"
-              style={{ borderColor: step === n ? "var(--cursor)" : "var(--rule)", color: step === n ? "var(--text-strong)" : "var(--text-faint)" }}>
-              {n === 1 ? "1 Blast" : n === 2 ? "2 Replay" : "3 Simulate + Diff"}
-            </li>
-          ))}
-        </ol>
-      )}
-      <ul className="mt-2 grid gap-2">
-        {scenarios.map((s) => (
-          <li key={s.id} className="rounded border p-2"
-            style={{ borderColor: s.id === activeId ? "var(--cursor)" : "var(--rule)", background: "var(--page)" }}>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-medium" style={{ color: "var(--text-strong)" }}>{s.title}
-                  <span className="mono ml-2 cursor-help text-xs" style={{ color: "var(--text-faint)" }} title={s.howToRead} aria-label={`How to read: ${s.howToRead}`}>[?]</span>
-                </p>
-                <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--text-body)" }}>{s.stakes}</p>
-                <p className="mono mt-0.5 text-xs" style={{ color: "var(--text-faint)" }}>{s.graph}{bench[s.id] != null ? ` · ${bench[s.id]}ms bench` : ""}</p>
-              </div>
-              <button onClick={() => void runScenario(s)} disabled={loading}
-                className="mono shrink-0 rounded-lg border px-3 py-1.5 text-xs disabled:opacity-50"
-                style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-                {loading && s.id === activeId ? "running…" : "Run"}
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {!fromCat && <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>catalogue fallback — agent /scenarios not ready</p>}
-      <p className="mono mt-2 text-xs" style={{ color: "var(--text-faint)" }}>{cypher}</p>
-      {error && <p className="mt-2 text-sm" style={{ color: "oklch(64% 0.21 25)" }}>{error}</p>}
-      {rows && (
-        <div className="mt-2">
-          <ul className="mono mt-1 max-h-36 space-y-1 overflow-auto text-xs leading-5">
-            {rows.rows.slice(0, cap).map((r, i) => (
-              <li key={i} style={{ color: "var(--text-body)" }}>{Object.values(r).join(" ← ")}</li>
-            ))}
-          </ul>
-          {rows.count > cap && <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>… +{rows.count - cap} more</p>}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button onClick={() => void loadHistory()} className="mono rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-              2 · Load replay commits
-            </button>
-            <button onClick={() => void exportWitness()} className="mono rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>
-              Export witness-pack
-            </button>
-          </div>
+    <section className="space-y-5" aria-label="Defence exposure workspace">
+      <div className="rounded-lg border p-4 sm:p-5" style={card}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <label className="min-w-0 flex-1 text-sm">
+            Exposure question
+            <select value={activeId} disabled={busy || !scenarios.length} onChange={(e) => select(e.target.value)}
+              className="mt-2 block w-full rounded-lg border px-3 py-3 text-sm" style={{ ...card, color: "var(--text-strong)" }}>
+              {!scenarios.length && <option value="">Loading questions…</option>}
+              {scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}
+            </select>
+          </label>
+          <button className={control} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
+            disabled={busy || !active || health !== true} onClick={() => run()}>
+            {busy ? "Working…" : "Analyze exposure"}
+          </button>
         </div>
-      )}
-      {commits.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1">
-          <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>replay:</span>
-          {commits.slice(0, 4).map((c) => (
-            <button key={c} onClick={() => void replay(c)} className="mono rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", color: "var(--cursor)" }}>
-              {c.replace("(HEAD)", "").slice(0, 8) || "HEAD"}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="mt-2 rounded border p-2" style={{ borderColor: "var(--rule)", background: "var(--page)" }}>
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>3 · Simulate + diff</p>
-        <div className="mt-1 flex flex-wrap gap-2">
-          <input value={beforeCommit} onChange={(e) => setBeforeCommit(e.target.value)} placeholder="before commit" aria-label="Before commit"
-            className="mono rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-strong)" }} />
-          <input value={afterCommit} onChange={(e) => setAfterCommit(e.target.value)} placeholder="after commit" aria-label="After commit"
-            className="mono rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-strong)" }} />
-          <button onClick={() => void runDiff()} disabled={loading} className="mono rounded border px-2 py-1 text-xs disabled:opacity-50" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>Diff</button>
-          <button onClick={() => void simulate()} disabled={loading} className="mono rounded border px-2 py-1 text-xs disabled:opacity-50" style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}>Simulate branch</button>
-        </div>
-        {simNote && <p className="mono mt-1 text-xs" style={{ color: "var(--cursor)" }}>{simNote}</p>}
-        {diff && (
-          <div className="mono mt-1 text-xs" style={{ color: "var(--text-body)" }}>
-            <p>{diff.beforeCount} → {diff.afterCount}{diffNote ? ` · ${diffNote}` : ""}</p>
-            <p className="mt-1" style={{ color: "var(--text-faint)" }}>added ({diff.addedSample.length} sampled):</p>
-            <ul className="space-y-0.5">{diff.addedSample.map((r, i) => <li key={`a-${i}`}>+ {Object.values(r).join(" ← ")}</li>)}</ul>
-            <p className="mt-1" style={{ color: "var(--text-faint)" }}>removed ({diff.removedSample.length} sampled):</p>
-            <ul className="space-y-0.5">{diff.removedSample.map((r, i) => <li key={`r-${i}`}>− {Object.values(r).join(" ← ")}</li>)}</ul>
+        {active && <p className="mt-3 max-w-3xl text-sm leading-relaxed">{active.stakes}</p>}
+        {health === false && (
+          <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
+            <p className="text-sm">Graph unavailable. No results have been fabricated. Start TuringDB and the sidecar, then retry.</p>
+            <button className={control} style={card} disabled={busy} onClick={() => setRetry((value) => value + 1)}>Retry connection</button>
           </div>
         )}
+        {error && <p role="alert" className="mt-3 text-sm" style={{ color: "oklch(80% 0.06 25)" }}>{error}</p>}
       </div>
-      {witness && (
-        <div className="mono mt-2 text-xs" style={{ color: "var(--text-body)" }}>
-          <p>witness {witness.hash.slice(0, 16)}… · prev {String(witness.prev).slice(0, 12)} · {witness.at}{witness.local ? " · local-only (agent /witness not ready)" : ""}</p>
-          <div className="mt-1 flex flex-wrap gap-2">
-            <a className="underline" style={{ color: "var(--cursor)" }}
-              href={`data:application/json,${encodeURIComponent(JSON.stringify({ hash: witness.hash, prev: witness.prev, at: witness.at, rows: rows?.rows ?? [] }, null, 2))}`}
-              download={`witness-${active.id}.json`}>Download JSON</a>
-            {!witness.local && (
-              <>
-                <a className="underline" style={{ color: "var(--cursor)" }} href={`/witness/${witness.hash}`} target="_blank" rel="noreferrer">Open share link →</a>
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/witness/${witness.hash}`;
-                    void (navigator.clipboard?.writeText(url).then(() => setDiffNote(`link copied: ${url}`)).catch(() => setDiffNote(url)));
-                  }}
-                  className="underline" style={{ color: "var(--cursor)" }}
-                >
-                  Copy link
-                </button>
-              </>
-            )}
-          </div>
-          <p className="mt-1" style={{ color: "var(--text-faint)" }}>Every scan is a user you didn&apos;t pitch — print the QR at your desk.</p>
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
+        <section className="min-w-0 rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure results" aria-live="polite">
+          <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Exposure, not confirmed stoppage</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
+            {rows ? `${rows.count} query result${rows.count === 1 ? "" : "s"}` : "Start with one dependency question."}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed">
+            {rows ? active?.howToRead : "Choose a question and analyze the graph. Then inspect the relationships and export an evidence snapshot for review."}
+          </p>
+          {rows && (
+            <>
+              <p className="mono mt-3 text-xs" style={{ color: "var(--text-faint)" }}>
+                retrieved {new Date(rows.capturedAt).toLocaleString()} · {rows.ms}ms query
+              </p>
+              <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+                Query limits may truncate results. Row count is not the total number of affected programmes.
+              </p>
+              <div className="mt-4 max-h-80 overflow-auto sm:max-h-[480px]" tabIndex={0} role="region" aria-label="Captured query rows">
+                <table className="w-full border-collapse text-left text-sm">
+                  <thead><tr>{rows.columns.map((column) => <th key={column} className="border-b px-2 py-2 font-medium" style={{ borderColor: "var(--rule)", color: "var(--text-strong)" }}>{column}</th>)}</tr></thead>
+                  <tbody>{rows.rows.slice(0, 50).map((row, index) => <tr key={index}>{rows.columns.map((column) => <td key={column} className="border-b px-2 py-2 align-top" style={{ borderColor: "var(--rule)" }}>{String(row[column] ?? "—")}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+              {rows.count > 50 && <p className="mt-2 text-xs">Showing 50 rows; the export retains the captured query result.</p>}
+            </>
+          )}
+        </section>
+
+        <aside className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
+          <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Evidence snapshot</p>
+          <h2 className="mt-2 text-lg font-semibold" style={{ color: "var(--text-strong)" }}>Unapproved analysis</h2>
+          <p className="mt-2 text-sm leading-relaxed">
+            This records a server-captured graph result, not an authorized intervention.
+            Confirm inventory, substitutes, timing, and missing dependencies before making a programme decision.
+          </p>
+          {rows && <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            {rows.graphCommit ? `Pinned graph commit: ${rows.graphCommit}` : "Graph HEAD captured without a pinned commit. This is not yet a reproducible versioned decision record."}
+          </p>}
+          <button className={`${control} mt-4`} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
+            disabled={busy || !rows} onClick={() => void execute(async () => {
+              if (rows) setWitness(await api.graphWitness({ runId: rows.runId }));
+            })}>Export evidence snapshot</button>
+          {witness && (
+            <div className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
+              <p className="mono break-all text-xs" style={{ color: "var(--text-faint)" }}>hash {witness.hash}</p>
+              <div className="flex flex-wrap gap-3 text-sm" style={{ color: "var(--cursor)" }}>
+                <a className="underline" href={`/witness/${witness.hash}`}>Open share link</a>
+                <a className="underline" href={`data:application/json,${encodeURIComponent(JSON.stringify(witness, null, 2))}`} download={`witness-${witness.pack.scenarioId}.json`}>Download JSON</a>
+                <button className="underline" onClick={() => void execute(async () => {
+                  const url = `${window.location.origin}/witness/${witness.hash}`;
+                  if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(url);
+                    setCopyNote("Link copied");
+                  } else setCopyNote(url);
+                })}>Copy link</button>
+              </div>
+              {copyNote && <p role="status" className="break-all text-xs">{copyNote}</p>}
+              <p className="text-xs leading-relaxed">Hash linkage is not an authenticated signature. Public demo links must not contain customer-sensitive data.</p>
+            </div>
+          )}
+        </aside>
+      </div>
+
+      <details className="rounded-lg border p-4 sm:p-5" style={card}>
+        <summary className="cursor-pointer text-sm font-medium" style={{ color: "var(--text-strong)" }}>Advanced: query, replay, and simulation</summary>
+        {active && <pre className="mono mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>{active.cypher}</pre>}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={control} style={card} disabled={busy || !active || health !== true} onClick={history}>Load graph versions</button>
+          {commits.map((commit) => <button key={commit} className={control} style={card} disabled={busy} onClick={() => run(commit)}>Replay {commit.slice(0, 8)}</button>)}
         </div>
-      )}
-    </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="Before commit" placeholder="Before commit" value={beforeCommit} onChange={(e) => setBeforeCommit(e.target.value)} />
+          <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="After commit" placeholder="After commit" value={afterCommit} onChange={(e) => setAfterCommit(e.target.value)} />
+          <button className={control} style={card} disabled={busy || !active || !beforeCommit || !afterCommit} onClick={() => void execute(async () => {
+            if (active) setDiff(await api.graphDiff({ graph: active.graph, cypher: active.cypher, beforeCommit, afterCommit }));
+          })}>Compare versions</button>
+          <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true} onClick={() => void execute(async () => {
+            const result = await api.graphSimulate({
+              graph: "supply_chain_deep",
+              writes: ["MATCH (p:Platform {archetype:'Loitering munition'}) SET p.sim_closed = true"],
+              readCypher: "MATCH (p:Platform {archetype:'Loitering munition'}) WHERE p.sim_closed = true RETURN p.name",
+            });
+            setSimNote(`Temporary marker demonstration: ${result.beforeCount} → ${result.afterCount} rows. Branch abandoned; this does not model lost production.`);
+          })}>Demo temporary branch</button>
+        </div>
+        {simNote && <p className="mt-3 text-sm">{simNote}</p>}
+        {diff && <div className="mt-3 text-sm"><p>{diff.beforeCount} → {diff.afterCount} query rows</p><pre className="mono mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ added: diff.addedSample, removed: diff.removedSample }, null, 2)}</pre></div>}
+        <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Single-operator prototype. Concurrent graph replay/simulation and authorization are not yet hardened.</p>
+      </details>
+    </section>
   );
 }

@@ -7,24 +7,13 @@ import type {
   ScenarioId,
   ScenarioInfo,
   ToolCall,
+  GraphScenario,
+  GraphRows,
+  GraphRun,
+  GraphWitness,
 } from "../../../packages/shared/src/types";
 
-export interface GraphScenario {
-  id: string;
-  title: string;
-  stakes: string;
-  graph: string;
-  kind: string;
-  howToRead: string;
-  eyAngle?: string;
-}
-
-export interface GraphRows {
-  columns: string[];
-  rows: Record<string, unknown>[];
-  count: number;
-  ms: number;
-}
+export type { GraphScenario, GraphRows, GraphRun, GraphWitness };
 
 export interface GraphBenchRow {
   id: string;
@@ -46,12 +35,6 @@ export interface GraphDiff {
   removedSample: Record<string, unknown>[];
 }
 
-export interface GraphWitness {
-  hash: string;
-  prev: string;
-  at: string;
-}
-
 export interface PilotInterestBody {
   name: string;
   org: string;
@@ -64,7 +47,7 @@ export const isAbortError = (error: unknown) =>
 // Single source of truth for the agent API (proxied via Next rewrites -> /api).
 const get = <T,>(path: string, signal?: AbortSignal): Promise<T> =>
   fetch(path, { signal }).then((r) => {
-    if (!r.ok) throw new Error(`${r.status} ${path}`);
+    if (!r.ok) return apiError(r, path);
     return r.json() as Promise<T>;
   });
 
@@ -75,9 +58,14 @@ const post = <T,>(path: string, body: unknown, signal?: AbortSignal): Promise<T>
     body: JSON.stringify(body),
     signal,
   }).then((r) => {
-    if (!r.ok) throw new Error(`${r.status} ${path}`);
+    if (!r.ok) return apiError(r, path);
     return r.json() as Promise<T>;
   });
+
+async function apiError(response: Response, path: string): Promise<never> {
+  const body = await response.json().catch(() => null) as { error?: unknown } | null;
+  throw new Error(typeof body?.error === "string" ? body.error : `${response.status} ${path}`);
+}
 
 export const api = {
   health: (signal?: AbortSignal) => get<{ ok: boolean }>("/api/health", signal),
@@ -164,9 +152,9 @@ export const api = {
   graphHealth: (signal?: AbortSignal) =>
     get<{ ok: boolean; graphs?: string[]; error?: string }>(`/api/graph/health`, signal),
   graphScenarios: (signal?: AbortSignal) =>
-    get<GraphScenario[]>(`/api/graph/scenarios`, signal),
-  runScenario: (id: string, signal?: AbortSignal) =>
-    post<GraphRows>(`/api/graph/scenario/${encodeURIComponent(id)}/run`, {}, signal),
+    get<{ scenarios: GraphScenario[] }>(`/api/graph/scenarios`, signal).then((data) => data.scenarios),
+  runScenario: (id: string, opts: { commit?: string } = {}, signal?: AbortSignal) =>
+    post<GraphRun>(`/api/graph/scenario/${encodeURIComponent(id)}/run`, opts, signal),
   graphQuery: (
     body: { graph: string; cypher: string; commit?: string },
     signal?: AbortSignal
@@ -174,7 +162,7 @@ export const api = {
   graphHistory: (graph: string, signal?: AbortSignal) =>
     get<GraphRows>(`/api/graph/history?graph=${encodeURIComponent(graph)}`, signal),
   graphBench: (signal?: AbortSignal) =>
-    get<GraphBenchRow[]>(`/api/graph/bench`, signal),
+    get<{ results: GraphBenchRow[]; totalMs: number }>(`/api/graph/bench`, signal).then((data) => data.results),
   graphDiff: (body: GraphDiffBody, signal?: AbortSignal) =>
     post<GraphDiff>(`/api/graph/diff`, body, signal),
   graphSimulate: (
@@ -186,11 +174,11 @@ export const api = {
       body,
       signal
     ),
-  graphWitness: (body: { rows?: unknown; graph?: string; scenario?: string }, signal?: AbortSignal) =>
+  graphWitness: (body: { runId: string }, signal?: AbortSignal) =>
     post<GraphWitness>(`/api/graph/witness`, body, signal),
   witness: (hash: string, signal?: AbortSignal) =>
-    get<GraphWitness & { pack: { scenarioId?: string; rows?: Record<string, unknown>[]; at?: string }; links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
-  // ---- No-DB digest loop (venue-proof; memory is the record, Postgres mirror best-effort)
+    get<GraphWitness & { links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
+  // ---- Local log-only digest loop (SQLite record, Postgres mirror best-effort)
   loopSubscribe: (body: { email: string; routeId: string; scenario?: string }, signal?: AbortSignal) =>
     post<{ ok: boolean; count: number; total: number }>(`/api/loop/subscribe`, body, signal),
   loopNotify: (body: { routeId: string; label?: string; summary?: string; caseHref?: string }, signal?: AbortSignal) =>
@@ -198,9 +186,9 @@ export const api = {
   loopDigest: (signal?: AbortSignal) =>
     get<{ digests: { id: string; to: string; subject: string; body: string; caseHref: string; at: string }[]; subs: number }>(`/api/loop/digest`, signal),
   pilotInterest: (body: PilotInterestBody, signal?: AbortSignal) =>
-    post<{ ok: boolean; count: number }>(`/api/pilot-interest`, body, signal),
+    post<{ ok: boolean; count: number; degraded: boolean }>(`/api/pilot-interest`, body, signal),
   pilotCount: (signal?: AbortSignal) =>
-    get<{ count: number }>(`/api/pilot-interest`, signal),
+    get<{ count: number }>(`/api/pilot-interest/count`, signal),
   llm: (signal?: AbortSignal) => get<{ providers: { id: string; label: string; model: string }[] } & { scripted: boolean; now: string }>("/api/llm", signal),
   llmHealth: (signal?: AbortSignal) =>
     get<{

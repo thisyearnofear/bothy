@@ -192,12 +192,13 @@ function toAssessment(r: Row): AssessmentRow {
   };
 }
 
-export async function updateDecision(id: string, status: "approved" | "rejected", note?: string) {
-  await q(
-    `UPDATE assessments SET status = $2, decision_note = $3, decided_at = now() WHERE id = $1`,
+export async function updateDecision(id: string, status: "approved" | "rejected", note?: string, query = q) {
+  const { rows } = await query(
+    `UPDATE assessments SET status = $2, decision_note = $3, decided_at = now()
+     WHERE id = $1 AND status = 'pending' RETURNING *`,
     [id, status, note ?? null]
   );
-  return getAssessment(id);
+  return rows.length ? toAssessment(rows[0] as Row) : null;
 }
 
 export async function logAudit(scenario: string, actor: string, action: string, detail: string) {
@@ -257,6 +258,7 @@ const LABEL_RANK: Record<string, number> = { LOW: 0, MODERATE: 1, ELEVATED: 2, H
 
 /** Queue notifications for subscribers whose threshold the assessment meets. */
 export async function notifySubscribers(a: AssessmentRow): Promise<number> {
+  if (a.status !== "approved") return 0;
   if ((LABEL_RANK[a.label] ?? 0) < LABEL_RANK.ELEVATED) return 0;
   const subs = await listSubscriptions(a.scenario, a.routeId);
   let queued = 0;

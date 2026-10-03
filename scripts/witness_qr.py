@@ -76,9 +76,7 @@ def main():
             print(f"  skip {sid}: {e}")
             continue
         pack = post("/api/graph/witness", {
-            "scenarioId": sid,
-            "officer": "demo-desk",
-            "rows": res.get("rows", [])[:25],
+            "runId": res["runId"],
         })
         url = f"{BASE_APP}/witness/{pack['hash']}"
         entries.append({
@@ -94,7 +92,7 @@ def main():
     extra = [
         ("Digest wall — the forward loop", f"{BASE_APP}/digest"),
         ("Pilot one-pager + request form", f"{BASE_APP}/pilot"),
-        ("Watch room — run it yourself", f"{BASE_APP}/watch"),
+        ("Defence workspace — run it yourself", f"{BASE_APP}/defense"),
     ]
 
     cards = []

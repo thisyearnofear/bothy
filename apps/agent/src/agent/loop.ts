@@ -126,18 +126,8 @@ async function finish(ctx: AgentCtx, tools: ReturnType<typeof makeTools>, draft:
   if (!assessment) throw new Error(`assessment ${id} not persisted`);
   assessment.engine = llmUsed ? "llm" : "scripted";
   assessment.phases = ["detect", "retrieve", "reason", "recommend", "act"];
-  // Watch-my-road: queue pings for subscribers when the label is real.
-  // Best-effort — a notify failure must never fail the assessment.
-  try {
-    const { notifySubscribers } = await import("../repo");
-    const queued = await notifySubscribers(assessment);
-    if (queued) {
-      const t = Array.isArray(assessment.toolTrace) ? (assessment.toolTrace as import("../../../../packages/shared/src/types").ToolCall[]) : [];
-      t.push({ tool: "notify:queued", args: { count: queued }, at: new Date().toISOString(), ok: true, summary: `${queued} subscriber(s) queued for digest.` });
-    }
-  } catch (e) {
-    ctx.trace.push({ tool: "notify:queued", args: { error: String((e as Error)?.message ?? e) }, at: new Date().toISOString(), ok: false, summary: "notify queue failed (non-fatal)." });
-  }
+  // Pending drafts never enter the external notification queue. The human
+  // decision endpoint queues subscribers only after approval.
   return assessment;
 }
 

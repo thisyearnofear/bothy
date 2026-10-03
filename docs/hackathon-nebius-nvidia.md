@@ -1,70 +1,65 @@
-# Nebius × NVIDIA Global AI Hackathon — fit analysis
+# Nebius × NVIDIA: the same programme-impact workflow
 
-> Source: Devpost (Nebius × NVIDIA Global AI Hackathon), deadline **30 Oct 2026
-> 17:00 GMT** — 28 days out. **Sequential, not conflicting: EDTH is this weekend,
-> Nebius is after.** Recommendation below.
+Decision date: **3 October 2026**. EDTH first; Nebius follows without creating a
+second product. Product: [accountable programme-impact briefs](product-vision.md).
 
-## Verdict
+## Rules and what is actually verified
 
-**Do it — after EDTH.** Same repo, second shot at ~$20k headline + $3k Tavily +
-4× track winners (Jetson Orin Nano). Integration cost is ~20 lines for the model
-provider. Do not start it before the EDTH deck is submitted.
+Official rules: https://nebiusglobalaihackathon.devpost.com/rules
+Resources: https://nebiusglobalaihackathon.devpost.com/resources
 
-## Requirement fit (checked against this repo)
+Public rule search on 3 October returned a submission window of **26 August to
+30 October 2026, 10:00 Pacific Time** (17:00 UTC on that date). Re-check the
+official rules and timezone before submission. The repository's earlier fit
+analysis is not an organizer eligibility ruling.
 
-| Requirement | Our status |
+| Requirement / evidence | Current boundary |
 |---|---|
-| Run on **Nebius Token Factory or AI Cloud** | ✅ provider chain in `apps/agent/src/agent/providers.ts` is already OpenAI-compatible — a Nebius Token Factory endpoint is one more `ProviderDef` |
-| Use ≥1 **NVIDIA open source model** | ✅ add Nemotron (3 Ultra for reasoning / Nano or Super for cheap calls) as a provider entry |
-| Working demo URL | ✅ deployed agent + `site.url` in `apps/web/lib/site.ts`; runbook below keeps it reproducible |
-| Public repo + open-source license at top of page | ✅ MIT `LICENSE` at repo root |
-| README with setup instructions | ⚠️ **needs work** — `scripts/venue.sh` (4-service one-command start) becomes the README's "run it" section |
-| 3-min public YouTube demo | ⚠️ reuse a cut of the EDTH demo video, retold for Nemotron + Cypher |
-| Pre-existing project → write what changed in the Submission Period | ✅ already written: the TuringDB defense graph layer is the delta (see [hackathon-turingdb-defense.md](hackathon-turingdb-defense.md) § weekend bright line) |
+| Run on Nebius Token Factory or AI Cloud + use an NVIDIA open-source model | Opt-in provider wiring is the first step. Actual eligible model availability and successful inference are still required. |
+| Working public demo | Existing deployment references do not prove the new defence route is deployed or healthy. Rehearse before claiming it. |
+| Public repository / license / setup | MIT repo exists. Fresh-clone graph setup and no-private-key fallback must be rehearsed. |
+| Public video and submission fields | Prepare after the end-to-end journey works; confirm exact duration/fields with current rules. |
+| Existing project / submission-period delta | Record dated work against a baseline in `execution-log.md`; confirm reuse rules rather than assuming eligibility. |
 
-## Best track: **Best Apps and Agents**
+Candidate track: **Best Apps and Agents**, subject to the current organizer
+categories. Do not count a provider stub or unused model call as the integration.
 
-"An app or agent someone would actually use… power it with Nemotron on Nebius
-through Token Factory." Bothy is exactly that: a draft→approve→audit agent over a
-versioned graph, with a guided scenario desk. Coding-and-Agentic and Personal-AI
-are worse fits; Physical AI is out (no hardware).
+## Technical plan
 
-## Synergies (why this strengthens, not dilutes)
+1. Configure a server-only `nebius` provider with `NEBIUS_API_KEY`,
+   `NEBIUS_BASE_URL`, and an explicitly selected `NEBIUS_MODEL`.
+   Verify the model identifier and NVIDIA provenance in the current model
+   catalogue; do not guess a Nemotron SKU or silently use another vendor.
+2. Use the provider for the same primary-gallium programme-impact brief.
+   Evidence comes from a pinned graph run; the model explains, does not invent
+   dependency rows, risk scores, or an authorized decision.
+3. Bound turns, total latency, retries, and tool access. Fix the Strands result
+   handoff and avoid duplicate review persistence before the live demo.
+4. Compare against the scripted baseline: evidence coverage, unsupported claims,
+   median/p95 brief latency, and fallback behavior. Report actual measurements.
+5. Rehearse provider unavailable → labelled scripted fallback → review still
+   pending → no external dispatch.
 
-1. **Same demo, two prize pools.** The 8-scenario catalogue, witness-packs, and
-   guided mode are already built and verified — Nebius reuses them wholesale.
-2. **Nemotron hardens the EDTH DIL story.** A Token-Factory model in the provider
-   chain is a concrete answer to "does it work offline?" — worth saying in the
-   EDTH pitch even before Nebius judging.
-3. **Best Use of Tavily ($3,000) is a clean product fit.** We already used Tavily
-   for market + open-source research. To win it, put it *in* the product as a
-   **non-evidentiary** `search_context` tool — same contract as the existing
-   `get_live_weather_snapshot`: source + timestamp, score-neutral, never cited as
-   evidence. That preserves "reports, not media."
-4. **Public-repo requirement fixes our graphs problem.** `graphs/` is 465MB and
-   gitignored. For a self-contained public repo we ship the pack's MIT generator
-   (`scripts/generate_supply_chain_deep.py --scale 0.1`) so a fresh clone builds
-   a small demo graph — which also makes EDTH reproducible.
+Provider wiring is not a finished defence/Nemotron agent. The current generic
+agent remains road-oriented until the defence brief delivery gate is completed.
 
-## Scope if we take it (≈3 days, after EDTH submission)
+## Connected mode is not offline mode
 
-1. **Nebius provider** (`providers.ts`): one `ProviderDef` + `NEBIUS_*` env vars,
-   read by the existing chain. No agent-loop changes.
-2. **Tavily `search_context` tool**: read-only, explicitly non-evidentiary;
-   surfaced in the Strands tool list with a "score unchanged" line; the
-   provenance guard already blocks drafts without cited sources.
-3. **README runbook**: `bash scripts/venue.sh` + graph fetch/generate + env vars,
-   in the "clear guidance for running your project" shape the rules ask for.
-4. **Submission paragraph**: what changed in the Submission Period (graph layer,
-   provider, tool) + feedback on Token Factory / Nemotron.
+Token Factory is **cloud inference**. It cannot make an offline/DIL claim true.
+Use only synthetic/public demo data until the buyer authorizes model egress.
+Private/offline deployment requires local inference or deterministic processing,
+local evidence storage, and an explicit offline validation run.
 
-## Sequencing / risks
+## Scope and sequencing
 
-- **Time split.** EDTH = this weekend. Nebius = 30 Oct. Gate Nebius on the EDTH
-  deck + demo video being submitted first.
-- **Competition.** 16k participants vs EDTH's 4 teams — different odds; do not
-  let it creep into EDTH focus.
-- **Cost.** Token Factory credits for the reasoning path; keep the scripted brain
-  as the failsafe (already built, roadmap §1).
-- **Two narratives.** Same code, two stories: EDTH = defense/logistics +
-  versioned audit; Nebius = agentic + Nemotron + Tavily.
+- EDTH: graph exposure + native versioning + honest evidence artifact.
+- Nebius: complete the cited brief/review journey, then show actual NVIDIA
+  inference on Nebius and comparative quality/reliability evidence.
+- Do not add Tavily just to chase a prize. Research context is score-neutral,
+  frozen, and separate from operational evidence if it earns a later place.
+- Preserve the no-key scripted path. Do not run paid inference, publish a demo,
+  upload customer data, or submit on behalf of the team without authorization.
+
+Deliverables: reproducible README, graph setup, `.env.example` placeholders,
+end-to-end tests, connected-mode inference evidence, a public demo/video after
+approval, and the dated submission delta.

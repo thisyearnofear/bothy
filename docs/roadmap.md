@@ -1,5 +1,38 @@
 # Roadmap
 
+## Current priorities: defence product, October 2026
+
+The [product vision](product-vision.md) supersedes the historical backlog below.
+Build one programme-impact workflow for a European defence-prime supply-chain
+analyst. Preserve roads/floods as reference demos, not competing priorities.
+
+| Phase | Deliverable | Acceptance gate |
+|---|---|---|
+| 0: focus + correctness | Dedicated `/defense`, accurate catalogue/replay/export contracts, server-captured unapproved witness evidence, approval-before-email safeguards, opt-in Nebius configuration | Targeted regression tests, typecheck, lint, build, isolated API/browser smoke; no reset or external send |
+| 1: trustworthy decisions | Authenticated roles, pending-only transactional review + audit, pinned graph/query/model versions, request-isolated sidecar and enforced read-only/simulation boundaries | Wrong-role, duplicate approval, concurrent replay/simulation, tampered-evidence, and rejected-dispatch tests |
+| 2: complete defence journey | Gallium disruption → exposure → cited programme brief → authorized review → owned action → acknowledgment/outcome | One end-to-end, buyer-readable workflow; no unrelated road/munition tool calls |
+| 3: Nebius proof | NVIDIA model verified in Nebius catalogue; bounded tool loop and provider timeout; actual connected-mode inference | Measured evidence completeness/invalid claims/latency vs scripted baseline; demonstrate safe fallback and disclose egress |
+| 4: operational pilot | Agreed real-data reference set, freshness worker, deduplication, retries, private sharing | Two-week pilot acceptance criteria from product vision; buyer-approved data handling |
+
+Phase 0 is the first implementation slice, not production certification.
+**Phase 0 is locally implemented and validated**; see
+[execution-log.md](execution-log.md) for exact checks and limitations.
+Remaining limitations must stay visible. Do not ship a new identity system,
+remote deployment, or paid integration without the relevant configuration and
+authorization.
+
+### Submission gates
+
+- **EDTH first:** one scenario, native graph versioning, readable evidence,
+  rehearsal with graph available and unavailable, accurate weekend bright line.
+- **Nebius next:** current official rules, an exercised eligible NVIDIA model
+  on Nebius, reproducible setup, public demo/video, and a dated delta log.
+  The repo records a 30 October 2026 deadline; re-check before submission.
+- Neither a signup count, a witness download, nor synthetic query latency is
+  evidence of customer traction or operational effectiveness.
+
+## Historical August 2026 roadmap
+
 Post-hackathon direction, decided Aug 2026. The hackathon proved the core
 thesis — fragmented weak signals → cited, timeline-shaped evidence → a
 human-approved intervention. Everything below preserves the two product

@@ -4,6 +4,64 @@ How the demo is hosted, how to keep it secure, and how to run it on a
 disk-constrained machine. Nothing here contains real credentials — you keep
 those out of the repo in `.env` (never committed).
 
+## Defence workspace and witness contract
+
+Start the local stack with `bash scripts/venue.sh`, then open
+`http://localhost:3001/defense?scenario=gallium-exposure`. This path does not
+query the Postgres road catalogue. Node 22.13+ or Node 24 is required for
+`node:sqlite`. Do not seed/reset databases for a graph rehearsal.
+For an isolated local smoke, set `AGENT_HOST=127.0.0.1`, a spare `PORT`, and
+`BOTHY_DATA_DIR` to a temporary directory. Point `DATABASE_URL` at a disposable
+or unavailable local DB, never reset the user's ledger. Production containers
+retain the default `0.0.0.0` API binding behind the proxy.
+
+- `GET /api/graph/scenarios` returns `{ scenarios: [...] }`.
+- `GET /api/graph/bench` returns `{ results: [...], totalMs }`.
+- `POST /api/graph/scenario/:id/run` accepts an optional graph `commit` and
+  persists a captured run in SQLite. Its response includes `runId`, graph,
+  Cypher, capture time, result count, source boundary, and explicit commit
+  (or `null` when HEAD was not pinned).
+- `POST /api/graph/witness` accepts **only `{ runId }`**. Browser-authored rows,
+  officer, scenario, or approval fields are rejected. Unknown runs return 404.
+  The retained query result is exported without a 50-row evidence truncation.
+- Witness links survive agent restarts. Existing pre-version-1 packs remain
+  readable but are labelled legacy/unverified provenance.
+- `bash scripts/witness-qr.sh` follows run → captured `runId` → witness export.
+  It creates local artifacts; it does not submit or publish anything.
+
+Witnesses are **unapproved analysis**, not signed decisions. Hash linkage is
+not authentication or immutable storage. Public demo links must not contain
+buyer-sensitive data. The sidecar is still single-client, and arbitrary-query /
+simulation routes are not hardened for hostile or concurrent callers.
+Keep the prototype in a trusted, single-operator environment until roadmap
+phase 1 is complete; CORS is not authorization.
+
+## Approval and email rehearsal
+
+Pending/rejected assessments do not enter the external notification queue.
+Approval queues eligible subscribers, and the sender independently filters
+legacy queued rows to approved assessments. Pending-only updates return 409
+when a decision already exists. Decision + audit + queue are not yet a single
+transaction; authenticated roles and an outbox remain required.
+
+Without `RESEND_API_KEY`, the sender logs only a notification identifier, does
+not disclose recipient/body, does not call Resend, and leaves rows queued.
+Responses distinguish `sent`, `skipped`, and `logged`. With a sender key,
+`DIGEST_TOKEN` is mandatory. Do not trigger real email during an implementation
+smoke test.
+
+## Nebius connected-mode configuration
+
+Set server-only `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, and `NEBIUS_MODEL` from the
+current Nebius catalogue. Verify the model is an eligible NVIDIA open-source
+model. All three values are required to configure the provider; priority is
+controlled by `BOTHY_LLM_PROVIDERS`.
+
+`/defense` performs no cloud inference. The provider remains wiring for the
+next brief-generation slice. Cloud inference sends prompt/tool data outside
+the local process and is not offline/DIL. Do not send buyer data or incur paid
+calls without approval. Provider configuration tests use dummy values only.
+
 ## Where the databases lives
 
 To avoid (a) installing gigabytes of local Postgres and (b) exposing a database,

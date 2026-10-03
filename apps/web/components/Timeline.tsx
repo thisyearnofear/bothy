@@ -82,7 +82,7 @@ export default function Timeline({
       ? [{ key: `beat-${latest.t}`, ms: latest.t, label: `${fmt(latest.t)} ${latest.label} ${latest.delta >= 0 ? "+" : ""}${latest.delta.toFixed(2)}`, tone: "signal" as const }]
       : []),
     ...(inevitableMs != null && t >= inevitableMs
-      ? [{ key: "inevitable", ms: inevitableMs, label: "inevitable", tone: "alert" as const }]
+      ? [{ key: "inevitable", ms: inevitableMs, label: "stays above HIGH", tone: "alert" as const }]
       : []),
     ...(revealed && revealText
       ? [{ key: "outcome", ms: revealMs ?? endMs, label: revealText, tone: "alert" as const }]
