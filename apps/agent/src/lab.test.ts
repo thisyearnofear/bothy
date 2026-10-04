@@ -21,3 +21,10 @@ test("a rewritten audit entry breaks the chain at that entry", () => {
   assert.equal(last.outcome, "tamper-detected");
   assert.match(last.detail, /breaks at entry 1/);
 });
+
+test("the guided happy path completes and its audit chain verifies", () => {
+  const result = runLab("happy-path")!;
+  assert.ok(result.steps.every((step) => step.outcome === "allowed" || step.outcome === "verified"));
+  assert.equal(result.steps.at(-1)?.outcome, "verified");
+  assert.ok(!LAB_SCENARIOS.some((scenario) => scenario.id === "happy-path"));
+});

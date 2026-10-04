@@ -18,6 +18,9 @@ export const LAB_SCENARIOS: LabScenario[] = [
   { id: "tampered-audit", number: "06", title: "Rewrite the audit log", description: "After a legitimate run, one audit entry is edited directly in storage.", expect: "Expect TAMPER DETECTED" },
 ];
 
+// Not listed as an attack: the legitimate end-to-end run used by the guided demo.
+export const HAPPY_PATH = "happy-path";
+
 const ANALYST: Principal = { subject: "analyst@lab", roles: ["analyst"] };
 const REVIEWER: Principal = { subject: "reviewer@lab", roles: ["reviewer"] };
 const OWNER_A: Principal = { subject: "owner-a@lab", roles: ["action-owner"] };
@@ -55,11 +58,25 @@ function legitimate(store: DefenseStore, runId: string, steps: LabStep[]) {
 }
 
 export function runLab(id: string): LabResult | null {
-  if (!LAB_SCENARIOS.some((scenario) => scenario.id === id)) return null;
+  if (id !== HAPPY_PATH && !LAB_SCENARIOS.some((scenario) => scenario.id === id)) return null;
   const { db, store, run } = sandbox();
   const steps: LabStep[] = [];
   try {
     switch (id) {
+      case HAPPY_PATH: {
+        const brief = legitimate(store, run.runId, steps);
+        store.assign(brief.id, REVIEWER, OWNER_A.subject, DUE);
+        steps.push({ label: "Reviewer assigns owner-a", outcome: "allowed", detail: "Accepted" });
+        store.advanceAction(brief.id, OWNER_A);
+        steps.push({ label: "Owner acknowledges", outcome: "allowed", detail: "Accepted" });
+        store.advanceAction(brief.id, OWNER_A, "Inventory and alternates checked against the modeled path.");
+        steps.push({ label: "Owner records the observed outcome", outcome: "allowed", detail: "Accepted" });
+        store.reassess(brief.id, REVIEWER, "accepted", "Finding accepted.");
+        steps.push({ label: "Reviewer accepts the finding", outcome: "allowed", detail: "Accepted" });
+        const audit = store.verifyAudit(brief.id);
+        steps.push({ label: "Verify the audit chain", outcome: audit.ok ? "verified" : "tamper-detected", detail: `${audit.verified} of ${audit.events} entries chained` });
+        return { id, steps, verdict: "Four roles, six recorded decisions, one chain that still verifies. Nothing here proves a real-world effect." };
+      }
       case "self-approval": {
         const brief = store.draft(run.runId, ANALYST);
         steps.push({ label: "Analyst drafts a cited brief", outcome: "allowed", detail: "Accepted" });

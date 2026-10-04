@@ -30,6 +30,7 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
       <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>{session.authenticated ? "Your team workspace" : "Explore the sample workspace"}</p>
       <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-tight tracking-tight" style={{ color: "var(--text-strong)" }}>{session.authenticated ? focus.title : "What could be exposed, and who will check?"}</h2>
       <p className="mt-4 max-w-2xl text-base leading-relaxed">{session.authenticated ? focus.description : "If gallium supply is delayed, which modeled dependencies justify checking inventory, alternatives and timing? Follow one verification from analyst to reviewer to owner. Sample data is synthetic."}</p>
+      {!session.authenticated && <p className="mt-6"><a className="coarse-target inline-block rounded-lg border px-5 py-3 text-sm font-medium" style={accent} href="/defense/demo">Watch the two-minute demo →</a></p>}
       {session.authenticated ? <div className="mt-6 flex flex-wrap items-center gap-3">
         {paths.map((path) => <a key={path.n} className={`${btn} font-medium`} style={accent} href={path.href}>{path.title}</a>)}
         <a className="coarse-target px-3 py-3 text-sm underline" href="/api/auth/logout">Sign out</a>

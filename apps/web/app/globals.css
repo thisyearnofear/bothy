@@ -692,3 +692,16 @@ button:not(:disabled):hover {
 
 .scatter-letter { display: inline-block; transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 700ms ease-out, filter 700ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .scatter-letter { transition: none; transform: none !important; opacity: 1 !important; filter: none !important; } }
+
+/* ---- Guided demo ---- */
+.demo-track { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 768px) { .demo-track { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; } }
+.demo-track button { display: block; text-align: left; font-size: 0.85rem; padding: 0 0 0.6rem; color: var(--text-faint); }
+.demo-track .mono { color: var(--cursor); margin-right: 0.35rem; font-size: 0.7rem; letter-spacing: 0.14em; }
+.demo-track li[data-state="active"] button { color: var(--text-strong); }
+.demo-bar { display: block; height: 2px; background: var(--rule); overflow: hidden; }
+.demo-bar i { display: block; height: 100%; width: 0; background: var(--cursor); }
+.demo-track li[data-state="done"] .demo-bar i { width: 100%; }
+.demo-track li[data-state="active"] .demo-bar i { animation: demo-fill linear forwards; }
+@keyframes demo-fill { to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .demo-track li[data-state="active"] .demo-bar i { animation: none; width: 100%; } }
