@@ -26,6 +26,7 @@ export default function Landing() {
             <Link href="/defense?mode=onboarding" className="coarse-target rounded-lg border-2 px-6 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>
               Try a guided investigation
             </Link>
+            <Link href="/defense/stories" className="text-sm underline underline-offset-4">See it on real events</Link>
             <Link href="/pilot" className="text-sm underline underline-offset-4">Scope a two-week pilot</Link>
             <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>Scroll to descend ↓</span>
           </div>

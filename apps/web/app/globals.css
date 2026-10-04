@@ -705,3 +705,24 @@ button:not(:disabled):hover {
 .demo-track li[data-state="active"] .demo-bar i { animation: demo-fill linear forwards; }
 @keyframes demo-fill { to { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .demo-track li[data-state="active"] .demo-bar i { animation: none; width: 100%; } }
+
+/* ---- Stories ---- */
+.story-clock { display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem 1.5rem; border: 1px solid var(--cursor); border-radius: 0.5rem; background: color-mix(in oklch, var(--cursor) 8%, var(--page)); min-height: 5rem; font-size: 0.9rem; }
+.story-days { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 600; letter-spacing: -0.05em; line-height: 1; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.story-clock b { color: var(--text-strong); font-weight: 600; }
+.story-timeline { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); display: grid; gap: 1.5rem; }
+.story-timeline li { display: grid; gap: 0.35rem; padding-left: 1.5rem; position: relative; }
+.story-timeline li::before { content: ""; position: absolute; left: -4px; top: 0.45rem; width: 7px; height: 7px; border-radius: 50%; background: var(--cursor); }
+.story-date { font-size: 0.75rem; letter-spacing: 0.14em; color: var(--cursor); }
+.story-timeline p { margin: 0; max-width: 42rem; font-size: 0.95rem; line-height: 1.6; }
+.story-question { margin: 0; max-width: 46rem; font-size: clamp(1.4rem, 3vw, 2.1rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; color: var(--text-strong); border-left: 2px solid var(--cursor); padding-left: 1.25rem; }
+.story-counts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2rem; }
+.story-counts li { display: grid; gap: 0.25rem; }
+.story-qa { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 0.5rem; overflow: hidden; margin: 0; }
+@media (min-width: 768px) { .story-qa { grid-template-columns: repeat(2, 1fr); } }
+.story-qa > div { background: var(--page); padding: 1.25rem; }
+.story-qa dt { font-weight: 600; color: var(--text-strong); margin-bottom: 0.4rem; }
+.story-qa dd { margin: 0; font-size: 0.875rem; line-height: 1.55; }
+.story-caveat { border-top: 1px solid var(--rule); padding-top: 1rem; font-size: 0.8rem; line-height: 1.6; color: var(--text-faint); max-width: 46rem; }
+.story-caveat strong { color: var(--text-strong); }
+@media (min-width: 768px) { .story-hub { grid-template-columns: repeat(2, 1fr) !important; } }
