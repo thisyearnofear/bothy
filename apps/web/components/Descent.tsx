@@ -68,7 +68,7 @@ export default function Descent() {
 
         {LAYERS.map((l, i) => (
           <div key={l.key} data-cap className="descent-cap">
-            <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>
+            <p className="eyebrow">
               {String(i + 1).padStart(2, "0")} · {l.key}
             </p>
             <h2 className="mt-4 text-[clamp(2.25rem,7vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>

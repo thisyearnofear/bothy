@@ -26,7 +26,7 @@ export default function LaneMap({ state, counts }: { state: State; counts?: { la
   const suezDash = state === "open" ? undefined : state === "avoiding" ? "7 6" : "3 7";
   const capeActive = state === "diverted";
   const [bx, by] = pt(43.3, 12.6);
-  return <figure className="lane-map" aria-label={`Shipping lanes between Asia and Europe. ${COPY[state]}.`}>
+  return <figure className="lane-map frame" aria-label={`Shipping lanes between Asia and Europe. ${COPY[state]}.`}>
     <svg viewBox={`0 0 ${W} ${H}`} role="img">
       <title>{COPY[state]}</title>
       {[-20, 0, 20, 40, 60, 80, 100, 120].map((lon) => <line key={lon} x1={pt(lon, 0)[0]} x2={pt(lon, 0)[0]} y1="0" y2={H} className="lane-grid" />)}
@@ -39,11 +39,14 @@ export default function LaneMap({ state, counts }: { state: State; counts?: { la
       </g>}
       {(state === "open" || state === "avoiding") && [0, 1, 2].map((i) => <circle key={`s${i}`} r="4" fill="var(--text-strong)" className="lane-dot"><animateMotion dur="9s" begin={`${i * 3}s`} repeatCount="indefinite" path={path(SUEZ)} /></circle>)}
       {capeActive && [0, 1, 2, 3].map((i) => <circle key={`c${i}`} r="4" fill="var(--cursor)" className="lane-dot"><animateMotion dur="14s" begin={`${i * 3.5}s`} repeatCount="indefinite" path={path(CAPE)} /></circle>)}
+      {[0, 40, 80, 120].map((lon) => <text key={`lo${lon}`} x={pt(lon, 0)[0] + 4} y={H - 6} className="lane-coord">{lon}°E</text>)}
+      {[-30, 0, 30].map((lat) => <text key={`la${lat}`} x={4} y={pt(0, lat)[1] - 4} className="lane-coord">{Math.abs(lat)}°{lat < 0 ? "S" : lat > 0 ? "N" : ""}</text>)}
       {PORTS.map(([name, lon, lat, side]) => { const [x, y] = pt(lon, lat); return <g key={name}>
         <circle cx={x} cy={y} r="4.5" fill="var(--page)" stroke="var(--text-faint)" strokeWidth="1.5" />
         <text x={side === "r" ? x + 10 : x - 10} y={y + 4} textAnchor={side === "r" ? "start" : "end"} className="lane-label">{name}</text>
       </g>; })}
     </svg>
+    <p className="lane-head"><span>Area: Asia – Europe lanes</span><span>Corridor: {state === "diverted" ? "Cape of Good Hope" : "Suez / Red Sea"}</span></p>
     <figcaption>
       <span className="pill" data-state={state === "open" ? "allowed" : state === "avoiding" ? "tamper-detected" : state === "paused" ? "blocked" : "verified"}>{COPY[state]}</span>
       {counts && counts.length > 0 && <ul className="lane-counts" aria-label="Modeled shipments by status">{counts.map((c) => <li key={c.label}><b>{c.value}</b> <span className="mono">{c.label}</span></li>)}</ul>}

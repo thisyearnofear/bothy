@@ -15,7 +15,7 @@ export default function PilotPage() {
       />
       <div className="enter mx-auto max-w-5xl px-5 py-12 sm:px-10 sm:py-16">
         <section aria-label="Pilot onboarding">
-          <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>From sample to scoped pilot</p>
+          <p className="eyebrow">From sample to scoped pilot</p>
           <ol className="route mt-8">
             {[
               ["Agree the decision", "One analyst, one reviewer, one recurring exposure question. Agree what an approval authorizes."],

@@ -25,7 +25,7 @@ export default function DefenseOnboarding() {
   return (
     <div className="space-y-12">
       <section aria-label="Guided team exercise">
-        <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>Synthetic exercise</p>
+        <p className="eyebrow">Synthetic exercise</p>
         <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-tight tracking-tight" style={{ color: "var(--text-strong)" }}>
           A gallium delay is reported. What should your team verify?
         </h2>

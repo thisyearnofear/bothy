@@ -850,3 +850,9 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 .desk, .desk-attacks, .desk-log { border-radius: 2px; }
 .desk { position: relative; }
 .desk::before { content: "REVIEWER CONSOLE"; position: absolute; top: -0.6rem; left: 0.75rem; padding: 0 0.5rem; background: var(--page); font: 0.75rem var(--mono); letter-spacing: 0.2em; color: var(--cursor); }
+
+.hero h1, .page-hero h1 { text-transform: uppercase; font-weight: 700 !important; letter-spacing: -0.025em !important; line-height: 1 !important; }
+.hero h1 { font-size: clamp(2.25rem, 6.5vw, 5.75rem) !important; max-width: 16ch; }
+.lane-head { display: flex; justify-content: space-between; gap: 1rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--rule); font: 0.75rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); }
+.lane-coord { font: 0.75rem ui-monospace, monospace; fill: var(--text-faint); }
+.lane-map.frame { background: color-mix(in oklch, var(--page) 70%, var(--panel)); }
