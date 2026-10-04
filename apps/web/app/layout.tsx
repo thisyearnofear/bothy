@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { site } from "../lib/site";
+import MarkingBar from "../components/MarkingBar";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -64,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
       </head>
       <body>
+        <MarkingBar />
         {children}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       </body>

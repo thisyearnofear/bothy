@@ -323,3 +323,10 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 - Text floor: 12px (0.75rem). Nothing smaller.
 - Story scrubber: date label on the thumb, Play/Pause on every story, arrow keys, one polite status line ("Step n of N"); the beat card is not a live region.
 - Print: the story page ends with a case file (beats, question, caveat); `Print` hides the scrubber and chrome.
+
+## Identity layer: documents and consoles
+
+- Every page carries a marking bar: "Demonstration · public data · not approved analysis" plus UTC time. It never claims a real classification.
+- Stories and the landing speak as briefing documents: serif body, file references (`BTH-…`), a BLUF block, numbered paragraphs, ruled tables (`.rule-table`), "Limitations" instead of caveats.
+- The desk and readouts speak as consoles: mono uppercase labels, corner-bracket `.frame`, `.readout` numerals, "Reviewer console" title.
+- Corners are 2px everywhere; buttons and pills are uppercase mono.

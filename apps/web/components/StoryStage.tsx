@@ -69,7 +69,7 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
 
     <div key={index} className="beat enter">
       <div>
-        <p className="mono story-date">{beat.label}{beat.act ? " · your desk" : ""}</p>
+        <p className="docref">File BTH-{story.slug.toUpperCase().slice(0, 8)}-{String(index + 1).padStart(2, "0")} · {beat.label}{beat.act ? " · tasking" : ""}</p>
         <p className="beat-narration">{beat.narration}</p>
         {beat.event && <p className="beat-event">{beat.event.text} <a className="underline underline-offset-4" href={beat.event.source.url} rel="noreferrer noopener" target="_blank">{beat.event.source.name}</a></p>}
       </div>
@@ -83,23 +83,23 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
 
     {beat.act && <div className="space-y-12">
       <section className="space-y-4" aria-label="The question">
-        <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>The question on your desk</p>
+        <p className="eyebrow">Tasking</p>
         <blockquote className="story-question">{story.question}</blockquote>
       </section>
       <section className="space-y-4" aria-label="What the record shows">
-        <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>What Bothy puts in front of you</p>
+        <p className="eyebrow">Evidence on file</p>
         <p className="max-w-2xl text-sm">{story.recordNote} A live query against the demo graph.</p>
         {run ? <RunTrace run={run} busy={false} /> : runError
           ? <div role="alert" className="text-sm"><p>The analysis service is not reachable right now.</p><button className="mt-2 underline" onClick={() => setRetry((value) => value + 1)}>Retry</button></div>
           : <p role="status" className="text-sm">Querying the graph…</p>}
       </section>
       {run && <section className="space-y-4" aria-label="Your desk">
-        <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>You are the reviewer</p>
+        <p className="eyebrow">Reviewer console</p>
         <p className="max-w-2xl text-sm">Each click runs the real approval, ownership and audit rules in a private sandbox that holds only this session.</p>
         <ReviewerDesk runId={run.runId} auto={autoplay && playing} />
       </section>}
       <section className="space-y-4" aria-label="After-action questions">
-        <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>The questions an after-action review asks</p>
+        <p className="eyebrow">After-action review: four questions</p>
         <dl className="story-qa">{AFTER_ACTION.map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}</dl>
       </section>
     </div>}
@@ -107,7 +107,7 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
     {!beat.act && <p className="text-sm" style={{ color: "var(--text-faint)" }}>Drag the date to {story.beats[last].label.toLowerCase() === "today" ? "today" : story.beats[last].label} to open your desk.</p>}
 
     <aside className="story-caveat" aria-label="What this does not show">
-      <p><strong>What this does not show.</strong> Bothy did not exist during these events. This is the record it would produce, not evidence it would have changed an outcome. {story.caveat}</p>
+      <p><strong>Limitations.</strong> Bothy did not exist during these events. This is the record it would produce, not evidence it would have changed an outcome. {story.caveat}</p>
     </aside>
   </div>;
 }
