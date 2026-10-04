@@ -48,6 +48,26 @@ The road/cinema specification below remains useful for the earlier demo only.
 
 ### Public site visual system (October 2026)
 
+The guided deadline demo uses a compact briefing header and one dominant
+instrument per public date: a licensing notice, an interrupted export route,
+a bounded suspension window, then a staged brief handoff with capture inspection. These are labelled
+schematics, not reproductions of official documents or operational evidence.
+The guided beats use short reading copy; full story pages retain the longer
+narrative. The eight-second playback ring is distinct from the policy-day clock. Pause
+retains the remaining beat time; source/capture inspection pauses playback.
+Reduced motion disables autoplay-on-load and entrance animation, but explicit
+Play still works.
+
+At the final date the guided sandbox advances through one readable handoff at a
+time, at a five-second reading cadence gated by actual API responses. Pause
+stops scheduled reviewer **and owner** actions. The latest receipt comes from
+the disposable store, not an invented timeline. The walkthrough checks the
+audit after acceptance and stops; tampering attempts require entering challenge
+mode. Full console access remains available without resetting the session.
+Sandbox claim cards are derived from the actual claim text, retain the full
+fields in an inspector, and disclose possible fixture fallback. Test due dates
+are not public policy deadlines.
+
 Landing, `/defense`, the guided exercise, `/pilot`, `/case/[id]` and `/digest`
 share one language. The working surfaces stay calm; the spectacle lives in
 the heroes.
@@ -333,8 +353,8 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 - **Stress-test lab** (`/defense/lab`, `apps/agent/src/lab.ts`): six scripted attempts to skip, fake or rewrite a decision. Each runs the real `DefenseStore` against a throwaway in-memory database, so outcomes are the production rules' own and touch no saved case. The lab routes are the only defence routes the web proxy forwards without a session.
 - **Audit chain**: each `defense_audit` row stores `prev_hash` and `hash` (SHA-256 over the previous hash and the entry). `GET /api/defense/briefs/:id/audit/verify` recomputes it and names the first broken entry. Rows written before chaining are reported as unchained, not failed. It detects edits to stored rows; it is not an authenticated signature.
 - **Stories** (`/defense/stories/:slug`, `lib/stories.ts`, `StoryStage`): a date scrubber drives the page. Each story is a list of dated beats from public reporting (with source links), ending in an "act" beat that opens the working desk. Gallium ends on today's live countdown to the 27 Nov 2026 suspension end; Red Sea adds a schematic lane map (`LaneMap`) that bends from the Suez route to the Cape. Re-check dates and sources before editing a story.
-- **Reviewer desk** (`ReviewerDesk`, `apps/agent/src/labSession.ts`): the viewer is the reviewer. Each click calls a stateful sandbox session (in-memory, 30 min TTL, max 100) that runs the real `DefenseStore` on a copy of the live graph capture the story just showed. Owner steps run on their own; four attack buttons and an audit-chain check follow. The routes are the only defence routes the web proxy forwards without a session, and they forward only `runId`.
-- **Guided demo** (`/defense/demo`): the gallium story in autoplay (8 s per beat), then the desk plays its own plan (approve, assign, accept, two attacks, verify, rewrite, verify). Pause hands the controls to the viewer.
+- **Reviewer desk** (`ReviewerDesk`, `apps/agent/src/labSession.ts`): the viewer is the reviewer. Each click calls a stateful sandbox session (in-memory, 30 min TTL, max 100) that runs the real `DefenseStore` on a copy of the graph capture, with disclosed fixture fallback. Owner steps run on their own in the normal console; the guided desk pauses those steps with playback. Attack buttons and an audit-chain check remain available for explicit investigation. These sandbox routes do not require sign-in; creation forwards only `runId`.
+- **Guided demo** (`/defense/demo`): the gallium story in autoplay (8 s per dated beat), then a five-second, state-driven handoff (approve, assign, acknowledge, complete, accept, verify). It stops after verification or rejection. Full-console inspection retains the same session; challenges are separate and never run automatically.
 - **Landing hero clock** (`HeroClock`): the live day count to the same date, linking to the gallium story.
 - Every story states that Bothy did not exist during the events and that the page shows the record it would produce, not a changed outcome.
 
