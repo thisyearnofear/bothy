@@ -40,12 +40,10 @@ export default function DigestPage() {
     <div className="enter mx-auto max-w-3xl px-5 py-10 sm:px-10">
       <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Bothy loop · digest wall</p>
       <h1 className="mt-2 text-3xl font-semibold" style={{ color: "var(--text-strong)" }}>
-        Pinged only on real decisions.
+        Notification outbox
       </h1>
-      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-        One email per lane. No Postgres, no SMTP — the queue is the product. When a blast run lands,
-        every watcher on that lane gets a digest with a forwardable case link. {subs} watcher(s) so far.
-      </p>
+      <div className="record-status mt-4"><span>Queued records ≠ delivery confirmation</span><span>{subs} lane subscriptions</span></div>
+      <details className="disclosure mt-4"><summary>How the loop works</summary><p>Watch a lane. A scenario notification queues a digest with its case link for each watcher. Delivery depends on the configured sender; this wall alone does not confirm it.</p></details>
 
       <section className="mt-4 rounded-lg border p-3" style={card} aria-label="Subscribe">
         <div className="flex flex-wrap gap-2">
@@ -67,7 +65,7 @@ export default function DigestPage() {
           <div key={d.id} className="rounded-lg border p-3" style={card}>
             <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>{d.at} · to {d.to}</p>
             <p className="mt-1 text-sm font-medium" style={{ color: "var(--text-strong)" }}>{d.subject}</p>
-            <p className="mono mt-1 whitespace-pre-wrap text-xs" style={{ color: "var(--text-body)" }}>{d.body}</p>
+            <details className="disclosure mt-3"><summary>Message body</summary><p className="mono whitespace-pre-wrap">{d.body}</p></details>
             <Link href={d.caseHref} className="mono mt-2 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>Open case →</Link>
           </div>
         ))}

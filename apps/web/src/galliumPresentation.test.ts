@@ -20,7 +20,8 @@ test("presentation leads with captured overview and an explicit optional hierarc
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /id="chain-presentation" hidden=""/);
   assert.match(html, /connectors are not direct edges/);
-  assert.match(html, /not a real weapon-system/);
+  assert.match(html, /Not a real BOM/);
+  assert.match(html, /Not confirmed production loss/);
   assert.match(html, /Query limit: 10 paths/);
 });
 

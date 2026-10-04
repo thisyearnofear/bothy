@@ -1,31 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../lib/api";
 
 export function PilotInterestForm({ compact }: { compact?: boolean }) {
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
   const [email, setEmail] = useState("");
-  const [count, setCount] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let off = false;
-    api.pilotCount().then((c) => { if (!off) setCount(c.count); }).catch(() => { /* count optional */ });
-    return () => { off = true; };
-  }, []);
 
   const submit = async () => {
     setBusy(true); setNote(null);
     try {
       const r = await api.pilotInterest({ name, org, email });
-      setCount(r.count);
       setNote(r.degraded
         ? "Demo request counted, but contact details were not retained while the database was offline. Please retry when connected."
-        : "Registered — pilot scope will be reviewed.");
+        : "Enquiry recorded. Scope and terms are not yet agreed.");
       if (r.degraded) return;
       setName(""); setOrg(""); setEmail("");
     } catch (e) {
@@ -36,19 +28,17 @@ export function PilotInterestForm({ compact }: { compact?: boolean }) {
   const input = "min-w-0 flex-1 basis-40 rounded-lg border px-3 py-2.5 text-sm";
   const style = { borderColor: "var(--rule)", background: "var(--page)", color: "var(--text-strong)" } as const;
   return (
-    <div className={compact ? "" : "mt-2"}>
+    <form className={compact ? "" : "mt-4"} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <div className="flex flex-wrap gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" className={input} style={style} />
-        <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Organisation" aria-label="Organisation" className={input} style={style} />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="work email" aria-label="Email" type="email" className={input} style={style} />
-        <button onClick={() => void submit()} disabled={busy || !email || !name} className="coarse-target rounded-lg border-2 px-5 py-2.5 text-sm font-medium disabled:opacity-50" style={{ borderColor: "var(--text-strong)", color: "var(--text-body)" }}>
-          {busy ? "sending…" : "Request pilot"}
+        <label className="pilot-field">Name<input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" className={input} style={style} /></label>
+        <label className="pilot-field">Organisation<input value={org} onChange={(e) => setOrg(e.target.value)} autoComplete="organization" className={input} style={style} /></label>
+        <label className="pilot-field">Work email<input value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" type="email" className={input} style={style} /></label>
+        <button type="submit" disabled={busy || !email || !name} className="btn btn-primary self-end">
+          {busy ? "Sending…" : "Discuss a pilot"}
         </button>
       </div>
-      <p className="mono mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
-        {note ?? (count != null ? `${count} recorded requests · not validated traction` : "Two-week pilot · one dataset · one impact question")}
-      </p>
-    </div>
+      {note && <p role="status" className="hint mt-2">{note}</p>}
+    </form>
   );
 }
 

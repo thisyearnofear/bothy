@@ -326,7 +326,16 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 
 ## Identity layer: documents and consoles
 
-- Every page carries a marking bar: "Demonstration · public data · not approved analysis" plus UTC time. It never claims a real classification.
+- Every page carries a compact marking: "Demo · public / synthetic data" and "Unapproved analysis". Both remain visible on mobile. It never claims a real classification; decorative UTC time is removed.
 - Stories and the landing speak as briefing documents: serif body, file references (`BTH-…`), a BLUF block, numbered paragraphs, ruled tables (`.rule-table`), "Limitations" instead of caveats.
 - The desk and readouts speak as consoles: mono uppercase labels, corner-bracket `.frame`, `.readout` numerals, "Reviewer console" title.
 - Corners are 2px everywhere; buttons and pills are uppercase mono.
+
+## Relationships before prose
+
+- `BriefSpecimen` shows the deliverable as a disruption → dependency → programme chain, followed by evidence, gap, decision and task. It is explicitly an illustrative synthetic layout, never a captured case.
+- `WorkflowStrip` names the five handoffs and their outputs. Landing and workspace share it rather than repeating paragraphs and tables.
+- The pilot mission sheet leads with duration, dataset, question and indicative fee. Four gates disclose detailed requirements. A local/optional-cloud boundary and measures-to-agree replace deployment and acceptance essays.
+- Exercise steps show task, output and limit. Stories retain source links and historical facts in native disclosures. Actual captured evidence, known gaps, action restrictions and demo limitations remain inspectable; essential safety notices stay visible.
+- Contact forms keep persistent labels and native email validation. No request counter or traction claim. Never submit sensitive data here.
+- Assessment pages use labelled readouts. Notification messages and secondary road-entry controls disclose on demand. No captured claims or user-recorded findings are shortened.

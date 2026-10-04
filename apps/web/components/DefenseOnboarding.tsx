@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 const steps = [
-  { role: "Analyst", title: "Explain the dependency", task: "Open the sample, run the analysis, and reveal one captured chain from platform to material.", check: "Name the platform, component and material from a stored row, and say why this is synthetic evidence, not a real BOM." },
-  { role: "Reviewer", title: "Authorize a verification", task: "Inspect a citation, then approve or reject with a rationale. If approved, pick an owner and a due time.", check: "Approval authorizes the check only. Evidence version, reviewer, owner and deadline stay inspectable." },
-  { role: "Owner", title: "Return a finding", task: "Sign in as the assigned owner, acknowledge the task, and record a clearly synthetic finding.", check: "Only the right owner can act. Record what is still unknown, not a real stock result." },
-  { role: "Reviewer", title: "Decide what happens next", task: "Accept the finding, or require more verification as a linked, pending revision.", check: "The original finding never changes. Acceptance is not operational closure." },
+  { role: "Analyst", title: "Trace the chain", task: "Run the sample. Find one platform → component → material chain.", output: "One cited dependency", boundary: "Synthetic chain, not a real BOM", check: "Name each link from a stored row and explain what the sample cannot establish." },
+  { role: "Reviewer", title: "Authorize the check", task: "Inspect a citation. Approve or reject with a rationale.", output: "Decision → owner → deadline", boundary: "Approval is for verification only", check: "If approved, assign an owner and due time. Keep the evidence version and reviewer inspectable." },
+  { role: "Owner", title: "Return a finding", task: "Sign in as the assigned owner. Acknowledge and report.", output: "Finding + remaining unknowns", boundary: "Invented finding, not a stock result", check: "Only the assigned owner can act. Record a clearly synthetic finding and what remains unknown." },
+  { role: "Reviewer", title: "Accept or revise", task: "Accept the finding, or request a linked pending revision.", output: "Accepted finding / new pending brief", boundary: "Acceptance ≠ operational closure", check: "Confirm that the original finding is unchanged and that a revision needs its own approval." },
 ] as const;
 
 const checks = [
@@ -29,7 +29,7 @@ export default function DefenseOnboarding() {
         <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-tight tracking-tight" style={{ color: "var(--text-strong)" }}>
           A gallium delay is reported. What should your team verify?
         </h2>
-        <p className="mt-3 text-sm" style={{ color: "var(--text-faint)" }}>An exercise hypothesis, not a live alert. Invented platforms and parts; no company BOM needed.</p>
+        <div className="record-status mt-4"><span>Synthetic hypothesis · not a live alert</span><span>No real programme data or files</span><span>Guide only · not a completion tracker</span></div>
 
         <ol className="ob-track mt-10" aria-label="Exercise steps">
           {steps.map((item, index) => (
@@ -42,7 +42,8 @@ export default function DefenseOnboarding() {
           ))}
         </ol>
 
-        <div key={step} role="status" className="ob-stage mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-16">
+        <p className="sr-only" role="status">Step {step + 1}: {current.role}, {current.title}</p>
+        <div key={step} className="ob-stage mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-16">
           <div>
             <p className="ob-num mono" aria-hidden>{String(step + 1).padStart(2, "0")}</p>
             <h3 className="mt-2 text-[clamp(1.75rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.04em]" style={{ color: "var(--text-strong)" }}>{current.title}</h3>
@@ -50,10 +51,11 @@ export default function DefenseOnboarding() {
           </div>
           <div className="lg:pt-4">
             <p className="text-base leading-relaxed sm:text-lg" style={{ color: "var(--text-strong)" }}>{current.task}</p>
-            <p className="mt-5 border-l-2 pl-4 text-sm leading-relaxed" style={{ borderColor: "var(--cursor)" }}>
-              <span className="mono mr-2 text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Check</span>
-              {current.check}
-            </p>
+            <dl className="specimen-record mt-5">
+              <div><dt>Output</dt><dd>{current.output}</dd></div>
+              <div><dt>Limit</dt><dd>{current.boundary}</dd></div>
+            </dl>
+            <details className="disclosure mt-4"><summary>How to check this step</summary><p>{current.check}</p></details>
           </div>
         </div>
 

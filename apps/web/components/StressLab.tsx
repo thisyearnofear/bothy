@@ -38,9 +38,9 @@ export default function StressLab() {
 
   return <section aria-label="Stress-test lab" className="space-y-6">
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <p className="max-w-2xl text-sm leading-relaxed">Each button runs the real approval, ownership and audit rules against a throwaway database, then shows what they accepted and refused. Nothing here touches saved cases.</p>
-      <button className="coarse-target rounded-lg border px-4 py-3 text-sm font-medium disabled:opacity-50" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
-        disabled={Boolean(running) || !scenarios.length} onClick={() => void runAll()}>{running ? "Running…" : "Run all six"}</button>
+      <div className="record-status"><span>Real rules</span><span>Throwaway store</span><span>Saved cases untouched</span></div>
+      <button className="btn btn-primary"
+        disabled={Boolean(running) || !scenarios.length} onClick={() => void runAll()}>{running ? "Running…" : `Run all ${scenarios.length || "tests"}`}</button>
     </div>
     {error && <div role="alert" className="text-sm"><p>{error}</p><button className="mt-2 underline" onClick={() => setRetry((value) => value + 1)}>Retry</button></div>}
     <ul className="lab-grid" style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -49,7 +49,7 @@ export default function StressLab() {
         return <li key={scenario.id} className="lab-card">
           <span className="mono lab-num" aria-hidden>{scenario.number}</span>
           <h3>{scenario.title}</h3>
-          <p className="text-sm">{scenario.description}</p>
+          <details className="disclosure"><summary>Test setup</summary><p>{scenario.description}</p></details>
           <div className="flex flex-wrap items-center gap-3">
             <button className="coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50" style={{ borderColor: "var(--rule)" }}
               disabled={Boolean(running)} onClick={() => void run(scenario.id)}>{running === scenario.id ? "Running…" : result ? "Run again" : "Run"}</button>

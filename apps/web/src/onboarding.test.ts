@@ -6,9 +6,11 @@ import DefenseOnboarding from "../components/DefenseOnboarding";
 
 test("guided onboarding explains the synthetic hypothesis and starts with analyst evidence", () => {
   const html = renderToStaticMarkup(createElement(DefenseOnboarding));
-  assert.match(html, /exercise hypothesis, not a live alert/);
+  assert.match(html, /Synthetic hypothesis · not a live alert/);
   assert.match(html, /Step 1 of 4/);
-  assert.match(html, /Explain the dependency/);
+  assert.match(html, /Trace the chain/);
+  assert.match(html, /One cited dependency/);
+  assert.match(html, /Synthetic chain, not a real BOM/);
   assert.match(html, /mode=investigate&amp;scenario=gallium-chain/);
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
 });

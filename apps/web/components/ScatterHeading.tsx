@@ -18,7 +18,8 @@ export default function ScatterHeading({ text, className, style }: { text: strin
   const total = text.replace(/\s/g, "").length;
   let index = 0;
   return <h1 ref={ref} className={className} style={style} aria-label={text}>
-    {text.split(" ").map((word, w) => <span key={w} aria-hidden style={{ display: "inline-block", whiteSpace: "nowrap", marginRight: "0.28em" }}>
+    {text.split(" ").map((word, w) => <span key={w} aria-hidden>
+      <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
       {[...word].map((letter, l) => {
         const i = index++;
         const style: CSSProperties = visible
@@ -26,6 +27,7 @@ export default function ScatterHeading({ text, className, style }: { text: strin
           : { transform: `translate3d(${rand(i + 1) * 0.9}em, ${rand(i + 3) * 0.7}em, 0) rotate(${rand(i + 5) * 24}deg)`, opacity: 0, filter: "blur(6px)" };
         return <span key={l} className="scatter-letter" data-in={visible} style={style}>{letter}</span>;
       })}
+      </span>{w < text.split(" ").length - 1 ? " " : ""}
     </span>)}
   </h1>;
 }

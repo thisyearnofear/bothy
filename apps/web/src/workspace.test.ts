@@ -28,9 +28,10 @@ test("workspace, investigation and saved-case modes are explicit and old scenari
 
 test("sample workspace distinguishes immediate exploration from private onboarding", () => {
   const html = renderToStaticMarkup(createElement(DefenseWorkspace, { initialSession: session([], false) }));
-  assert.match(html, /Explore the gallium sample/);
-  assert.match(html, /Scope a private pilot/);
-  assert.match(html, /Sample data is synthetic/);
+  assert.match(html, /Investigate/);
+  assert.match(html, /mode=investigate&amp;scenario=gallium-chain/);
+  assert.match(html, /Scope a pilot/);
+  assert.match(html, /Synthetic evidence/);
   assert.match(html, /Team workflow/);
   assert.doesNotMatch(html, /Exposure question/);
 });

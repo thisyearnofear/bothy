@@ -135,9 +135,9 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
         )}
         {signInNotice && <p role="alert">{signInNotice}</p>}
       </div>
-      {!brief && !savedCase && <p className="mt-2 text-sm">{run ? "The analysis is ready. Draft a brief from the captured evidence for reviewer verification." : "Analyze exposure first to enable drafting."} Briefs are deterministic and make no production-loss prediction.</p>}
+      {!brief && !savedCase && <div className="record-status mt-3"><span>{run ? "Capture ready → draft for review" : "Analyze first → enable drafting"}</span><span>Deterministic brief · no production-loss prediction</span></div>}
       {brief?.status === "rejected" && <p className="mt-3 text-sm">This brief was rejected. Check the review note, then rerun the exposure question to prepare a new brief. The rejected record is retained.</p>}
-      {brief && !busy && <p className="mt-2 text-sm" role="status">Saved case. Bookmark this page or reopen it from your saved-case collection.</p>}
+      {brief && !busy && <p className="hint mt-2" role="status">Saved · bookmark or reopen from your cases.</p>}
       {error && <div className="mt-3 space-y-2 text-sm">
         <p role="alert">{error}</p>
         {authenticated && <button className={control} style={card} disabled={busy} onClick={() => setReopen((value) => value + 1)}>Reload saved case</button>}
@@ -150,7 +150,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
           {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
-          {brief.action?.status === "completed" && <p className="text-sm">Owner finding recorded. A reviewer may accept this verification or require further work. Neither decision closes an operational incident or proves risk eliminated.</p>}
+          {brief.action?.status === "completed" && <div className="record-status"><span>Owner finding recorded</span><span>Reviewer: accept / further work</span><span>Not operational closure or eliminated risk</span></div>}
           <details><summary className="cursor-pointer text-sm">Evidence receipt and version</summary>
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>
             {brief.status.toUpperCase()} · {brief.resultCount} captured query rows · {brief.generator.version}<br />
@@ -220,7 +220,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
                 {owners.map((person) => <option key={person.subject} value={person.subject}>{person.subject}</option>)}
               </select>
             </label>
-            <p className="text-sm">These identifiers come from this deployment's verified role configuration, not an identity-provider directory.</p>
+            <details className="disclosure"><summary>Where owner identities come from</summary><p>This deployment&apos;s verified role configuration, not an identity-provider directory.</p></details>
             {ownerError && <p role="alert" className="text-sm">{ownerError}</p>}
             {reviewer && <button className={control} style={card} disabled={busy} onClick={() => setOwnerRetry((value) => value + 1)}>Refresh eligible owners</button>}
             <label className="block text-sm">Verification due

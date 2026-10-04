@@ -49,8 +49,8 @@ export default async function DefensePage({ searchParams }: { searchParams: Prom
     <main className="min-h-screen">
       <PageHero
         eyebrow="Defence supply-chain analysis"
-        title={mode === "workspace" ? "A supply disruption. A defensible next decision." : mode === "onboarding" ? "Try the workflow with your team." : mode === "case" ? "Evidence, decision, and responsibility in one case." : "Investigate a disruption. Prepare the next decision."}
-        lede={mode === "onboarding" ? "Four roles. One verification. Nothing real." : "What might be exposed, why we think so, and who checks it."}
+        title={mode === "workspace" ? "Operations workspace" : mode === "onboarding" ? "Rehearse the handoff." : mode === "case" ? "Case record" : "Trace the exposure."}
+        lede={mode === "onboarding" ? "Four steps. Three roles. Synthetic evidence." : undefined}
         image={mode === "workspace" ? "5-material" : mode === "onboarding" ? "3-assembly" : mode === "case" ? "4-component" : "2-system"}
       />
       <div className="enter mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">

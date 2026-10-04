@@ -2,6 +2,8 @@ import Link from "next/link";
 import Descent from "../components/Descent";
 import ProofCases from "../components/ProofCases";
 import HeroClock from "../components/HeroClock";
+import BriefSpecimen from "../components/BriefSpecimen";
+import WorkflowStrip from "../components/WorkflowStrip";
 
 const pad = "px-5 sm:px-10";
 
@@ -36,30 +38,14 @@ export default function Landing() {
       <Descent />
 
       <section className={`${pad} py-24`} aria-label="Briefing">
-        <p className="docref">Bottom line up front</p>
-        <div className="bluf mt-4">
-          <p className="bluf-tag">BLUF</p>
-          <p>A dependency is a reason to investigate, not a prediction of failure. Bothy keeps the claim, the evidence, the reviewer and the owner in one record that anyone can re-check later.</p>
-        </div>
-
-        <dl className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[["5", "stations a case passes through, from analyst to accepted finding"], ["4", "ways to cheat the desk, each refused and logged"], ["1", "hash-chained audit log that names the first altered entry"]].map(([n, label]) => <div key={label} className="frame p-5">
-            <dd className="readout">{n}</dd>
-            <dt className="readout-label mt-2">{label}</dt>
-          </div>)}
-        </dl>
-
-        <h2 className="docref mt-20">Chain of custody</h2>
-        <table className="rule-table mt-4 max-w-4xl">
-          <thead><tr><th scope="col">Stage</th><th scope="col">Who</th><th scope="col">What the record holds</th></tr></thead>
-          <tbody>
-            <tr><td>1 Draft</td><td>Analyst</td><td>A brief whose every claim cites a stored row. Gaps stay visible.</td></tr>
-            <tr><td>2 Approve</td><td>Reviewer</td><td>A named decision, a note and a timestamp. The analyst cannot approve their own brief.</td></tr>
-            <tr><td>3 Assign</td><td>Reviewer</td><td>One owner and a due date for the next check.</td></tr>
-            <tr><td>4 Report</td><td>Owner</td><td>The owner acknowledges and reports. No one else can.</td></tr>
-            <tr><td>5 Accept</td><td>Reviewer</td><td>The finding closes as a verification, not a proven operational effect.</td></tr>
-          </tbody>
-        </table>
+        <h2 className="eyebrow mb-6">From dependency to a named check</h2>
+        <BriefSpecimen />
+        <div className="mt-10"><WorkflowStrip /></div>
+        <details className="disclosure mt-6">
+          <summary>What keeps the decision accountable?</summary>
+          <p>A reviewer cannot approve their own analysis. The assigned owner reports against a due date. Decisions and findings stay in a hash-chained audit record.</p>
+          <p>The chain detects edits to entries, not an attacker rewriting the whole chain. Hash linkage is not an authenticated signature.</p>
+        </details>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/defense/demo" className="btn btn-primary">Watch the gallium case play out</Link>
           <Link href="/pilot" className="btn">Scope a two-week pilot</Link>

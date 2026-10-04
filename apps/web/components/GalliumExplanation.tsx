@@ -17,7 +17,7 @@ export default function GalliumExplanation({ run }: { run: GraphRun }) {
       <span className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: "var(--rule)" }}>Synthetic model · captured evidence</span>
     </div>
     <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">A small material. A long dependency.</h2>
-    <p className="mt-3 max-w-3xl text-sm leading-relaxed">Follow one modeled path from a platform to primary gallium. This explains a relationship in the starter graph, not a real weapon-system bill of materials or confirmed production loss.</p>
+    <div className="record-status mt-3"><span>Modeled relationship</span><span>Not a real BOM</span><span>Not confirmed production loss</span></div>
     {row ? <>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
         <label className="min-w-0 max-w-full text-sm">Captured sample
@@ -48,8 +48,8 @@ export default function GalliumExplanation({ run }: { run: GraphRun }) {
       </div>
       <p role="status" className="mt-4 text-sm">Showing captured path {sample + 1} of {run.rows.length}. {expanded ? "Full returned hierarchy revealed." : "Overview groups the captured hierarchy; connectors are not direct edges."} Query limit: 10 paths; this is not total exposure.</p>
       <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--rule)" }}>
-        <h3 className="text-base font-semibold">The next decision belongs to a person.</h3>
-        <p className="mt-2 text-sm leading-relaxed">Prepare the cited brief below. Ask an authorized owner to confirm real programme mapping, inventory, qualified alternatives, and delivery timing.</p>
+        <h3 className="eyebrow">Next: cited brief → authorized owner</h3>
+        <ul className="measure-list mt-3">{["Programme mapping", "Inventory", "Qualified alternatives", "Delivery timing"].map((check) => <li key={check}>{check}</li>)}</ul>
       </div>
       <details className="mt-4 text-sm"><summary className="cursor-pointer">Capture receipt and source boundary</summary>
         <p className="mt-3 break-all">Row {sample + 1} · revision {run.graphCommit ?? "not pinned"} · captured {new Date(run.capturedAt).toLocaleString()}.</p>

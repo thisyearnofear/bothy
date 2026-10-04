@@ -624,11 +624,9 @@ export default function Watch() {
               </span>
             )}
           </div>
-          {scenario?.id === "flood" && <p className="mt-2 text-sm">Replay/training only. Seeded illustrative signals, not current gauge readings or validated flood prevention.</p>}
+          {scenario?.id === "flood" && <div className="record-status mt-2"><span>Seeded training signals</span><span>Not live gauges</span><span>Not validated prevention</span></div>}
           {!compact && scenario?.subtitle && (
-            <p className="mt-0.5 text-sm" style={{ color: "var(--text-faint)" }}>
-              {scenario.subtitle}
-            </p>
+            <details className="disclosure mt-2"><summary>Scenario context</summary><p>{scenario.subtitle}</p></details>
           )}
         </div>
 
@@ -786,7 +784,7 @@ export default function Watch() {
             />
           )}
           {scenario?.id === "live" && !compact && (
-            <RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} />
+            <details className="disclosure mb-4"><summary>Add road evidence</summary><RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} /></details>
           )}
           {selected && !compact && (
             <WatchMyRoad routeId={selected.id} routeName={selected.name} scenario={scenario?.id ?? "live"} />

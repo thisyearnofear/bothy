@@ -132,7 +132,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
             {busy ? "Working…" : "Analyze exposure"}
           </button>
         </div>
-        {active && <p className="mt-3 max-w-3xl text-sm leading-relaxed">{active.stakes}</p>}
+        {active && <details className="disclosure mt-3"><summary>Why this question?</summary><p>{active.stakes}</p></details>}
         {(catalogue === "unavailable" || catalogue === "empty" || health === false) && (
           <div role="status" className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
             <p className="text-sm">{catalogue === "unavailable"
@@ -156,7 +156,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
       {rows?.scenarioId !== "gallium-chain" && <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
-        <p className="mt-3 text-sm leading-relaxed">{summary?.explanation ?? "Analyze an exposure question to prepare a cited verification brief."}</p>
+        {summary && <details className="disclosure mt-3"><summary>How to read this result</summary><p>{summary.explanation}</p></details>}
         {rows && <p className="mt-3 text-sm">Captured {new Date(rows.capturedAt).toLocaleString()}. {busy && "Showing the previous capture while the operation completes."}</p>}
         {summary && <>
           {summary.names.length > 0 && <div className="mt-4">
@@ -166,7 +166,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
           </div>}
           <h3 className="mt-4 text-sm font-semibold">What still needs verification</h3>
           <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
-          <p className="mt-3 text-sm"><strong>Next step:</strong> Draft a cited brief, then ask the supply-chain owner to verify inventory, substitutes, and timing.</p>
+          <p className="hint mt-3">Next: cited brief → owner checks inventory, substitutes and timing.</p>
         </>}
       </section>}
 
@@ -205,10 +205,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         <aside className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Evidence snapshot</p>
           <h2 className="mt-2 text-lg font-semibold" style={{ color: "var(--text-strong)" }}>Unapproved analysis</h2>
-          <p className="mt-2 text-sm leading-relaxed">
-            This records a server-captured graph result, not an authorized intervention.
-            Confirm inventory, substitutes, timing, and missing dependencies before making a programme decision.
-          </p>
+          <div className="record-status mt-3"><span>Graph capture</span><span>Not an intervention approval</span></div>
+          <details className="disclosure mt-3"><summary>Checks before a programme decision</summary><p>Confirm inventory, substitutes, timing and missing dependencies.</p></details>
           {rows && <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
             {rows.graphCommit ? `Pinned graph commit: ${rows.graphCommit}` : "Graph HEAD captured without a pinned commit. This is not yet a reproducible versioned decision record."}
           </p>}

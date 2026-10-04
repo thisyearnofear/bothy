@@ -37,12 +37,11 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
     </nav>
     <DefenseBriefPanel key={id} run={null} session={session} savedCase />
     <details className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-      <summary className="cursor-pointer text-sm font-semibold">Retained exposure context and new revision</summary>
-      <p className="text-sm font-semibold">Saved case · retained evidence</p>
-      <p className="mt-2 text-sm">This case uses its stored capture. Starting a separate analysis does not replace an approved decision's evidence.</p>
+      <summary className="cursor-pointer text-sm font-semibold">Stored evidence &amp; linked revision</summary>
+      <div className="record-status mt-3"><span>Stored capture</span><span>Prior decision unchanged</span><span>New revision needs new approval</span></div>
       {summary && <><h2 className="mt-3 text-xl font-semibold">{summary.heading}</h2><p className="mt-2 text-sm">{summary.explanation}</p><p className="mt-2 text-sm">Captured {new Date(run!.capturedAt).toLocaleString()}.</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul></>}
       {session.authenticated && session.roles.some((role) => role === "analyst" || role === "reviewer") && <div className="mt-4 space-y-2 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
-        <p className="text-sm">A linked revision captures this same exposure question again and creates a separate pending brief. It does not inherit approval or alter the prior action.</p>
+        <p className="hint">Recapture → separate pending brief. No inherited approval; prior action unchanged.</p>
         <button className="coarse-target rounded border px-3 py-2 text-sm" disabled={!run || revising || Boolean(revision)} onClick={async () => {
           if (!run) return;
           setRevising(true); setError("");

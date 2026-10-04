@@ -107,32 +107,22 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <p className="eyebrow">
         Bothy case · {c.scenario} · {c.routeId}
       </p>
-      <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-        <span className="font-semibold" style={{ color: riskColor(c.label as RiskLabel) }}>
-          {c.label}
-        </span>{" "}
-        · {c.routeName}
-      </p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-        {c.routeName} is {c.label}
+        {c.routeName}
       </h1>
-      <p className="mono mt-3 text-sm" style={{ color: "var(--text-body)" }}>
-        score <span className="tnum">{Number(c.score).toFixed(2)}</span> · confidence <span className="tnum">{Number(c.confidence).toFixed(2)}</span> · {c.priority} · engine {c.engine} · status {c.status}
-      </p>
+      <dl className="mission-metrics mt-5" aria-label="Assessment">
+        <div><dt className="readout-label">Risk</dt><dd className="text-lg font-semibold" style={{ color: riskColor(c.label as RiskLabel) }}>{c.label}</dd></div>
+        <div><dt className="readout-label">Score</dt><dd className="readout">{Number(c.score).toFixed(2)}</dd></div>
+        <div><dt className="readout-label">Confidence</dt><dd className="readout">{Number(c.confidence).toFixed(2)}</dd></div>
+        <div><dt className="readout-label">Status</dt><dd>{c.status}</dd></div>
+      </dl>
+      <details className="disclosure mt-4"><summary>Assessment context</summary><p>Priority: {c.priority} · engine: {c.engine} · assessed: {c.at}</p></details>
       {c.leadText && (
         <p className="mono card mt-4 px-3 py-2 text-sm" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}>
           modeled lead time <span className="font-semibold tnum">{c.leadText}</span> · illustrative replay, not predictive validation
         </p>
       )}
-      {c.awake ? (
-        <p className="mono mt-4 text-xs uppercase tracking-wider" style={{ color: "oklch(80% 0.06 25)" }}>
-          needs a hand — a real decision is on the desk
-        </p>
-      ) : (
-        <p className="mono resting mt-4 text-xs uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
-          resting — not a decision yet · the agent is watching
-        </p>
-      )}
+      <p className="hint mt-4">{c.awake ? "Review requested" : "Below the decision threshold"} · a named duty officer decides.</p>
       <section className="card mt-6 p-5">
         <h2 className="eyebrow">
           Draft for duty officer — {c.responsibleActor}
@@ -151,9 +141,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           ))}
         </ol>
       </section>
-      <p className="mono mt-8 text-xs uppercase tracking-widest" style={{ color: "var(--text-body)" }}>
-        Bothy drafts — a named duty officer approves. Nothing publishes alone.
-      </p>
+      <p className="hint mt-8">Draft only. Nothing publishes without approval.</p>
       <a
         href={c.awake ? "/watch?case=live" : "/watch?case=backtest"}
         className={`btn mt-4 ${c.awake ? "btn-primary" : ""}`}
