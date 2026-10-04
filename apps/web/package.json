@@ -2,7 +2,9 @@
   "name": "@bothy/web",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -11,8 +13,8 @@
   "dependencies": {
     "gsap": "^3.15.0",
     "jose": "^6.2.12",
-    "maplibre-gl": "^5.1.0",
-    "next": "^16.3.1",
+    "maplibre-gl": "6.4.1",
+    "next": "16.3.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "0.180.0"

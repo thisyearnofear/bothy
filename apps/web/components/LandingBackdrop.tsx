@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { loadMapLibre } from "../lib/maplibre";
 import { ambientMapStyle } from "./MapView";
 
 type CamKey = {
@@ -125,7 +126,7 @@ export default function LandingBackdrop() {
     };
 
     (async () => {
-      const ml = await import("maplibre-gl");
+      const ml = await loadMapLibre();
       if (!alive || !container.current) return;
       map = new ml.Map({
         container: container.current,

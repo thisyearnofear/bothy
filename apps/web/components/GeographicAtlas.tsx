@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Beat } from "../lib/stories";
+import { loadMapLibre } from "../lib/maplibre";
 import {
   GALLIUM_CONTEXT,
   RED_SEA_CAPE,
@@ -96,7 +97,7 @@ export default function GeographicAtlas({ scenarioId, beat, selectedContext, onS
     };
     (async () => {
       try {
-        const ml = await import("maplibre-gl");
+        const ml = await loadMapLibre();
         if (!alive || my !== generation.current || !container.current) return;
         const colors = {
           cursor: token("--cursor", "#9ac4cb"),

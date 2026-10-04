@@ -6,6 +6,7 @@ import type { RouteInfo } from "../../../packages/shared/src/types";
 import { pointAt } from "../lib/derive";
 import { resolveMapLibreColor } from "../lib/mapColor";
 import { OSM_STYLE } from "../lib/mapStyle";
+import { loadMapLibre } from "../lib/maplibre";
 
 export type RouteOnMap = {
   route: RouteInfo;
@@ -89,7 +90,7 @@ export default function MapView({
     let alive = true;
     let map: any;
     (async () => {
-      const ml = await import("maplibre-gl");
+      const ml = await loadMapLibre();
       if (!alive || !container.current) return;
       map = new ml.Map({
         container: container.current,

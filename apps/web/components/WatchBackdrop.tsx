@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { loadMapLibre } from "../lib/maplibre";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { ambientMapStyle } from "./MapView";
 
@@ -73,7 +74,7 @@ export default function WatchBackdrop({ caseId }: { caseId: ScenarioId | null })
     const build = () => {
       if (!alive) return;
       (async () => {
-        const ml = await import("maplibre-gl");
+        const ml = await loadMapLibre();
         if (!alive || !container.current) return;
         const here = PLACES[placeRef.current];
         map = new ml.Map({
