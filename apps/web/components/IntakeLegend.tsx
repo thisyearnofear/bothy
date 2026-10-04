@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 
-/** Quiet intake contract, one line by default — the fine print discloses on demand. */
+/** The score and source clocks remain visible, not hidden behind a toggle. */
 export default function IntakeLegend({
   caseId,
   compact,
@@ -11,7 +10,6 @@ export default function IntakeLegend({
   caseId: ScenarioId | null;
   compact?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const clock =
     caseId === "backtest"
       ? "Beyond the hatch: ITV News — sourced outcome, not in the score"
@@ -36,19 +34,7 @@ export default function IntakeLegend({
           {" — "}
           warning · forecast · road · incident · traffic
         </p>
-        {!compact && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="mono text-xs underline"
-            style={{ color: "var(--cursor)" }}
-            aria-expanded={open}
-          >
-            {open ? "less" : "the clocks"}
-          </button>
-        )}
       </div>
-      {(open || compact) && (
         <>
           {clock && (
             <p className={`mono mt-1 leading-snug ${compact ? "text-xs" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
@@ -61,7 +47,6 @@ export default function IntakeLegend({
               : "Not ingested — audio · radio · social"}
           </p>
         </>
-      )}
     </section>
   );
 }

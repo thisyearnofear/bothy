@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
 import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
-import DefenseCases from "./DefenseCases";
 import GalliumExplanation from "./GalliumExplanation";
 import RunTrace from "./RunTrace";
 import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
 import { card, control } from "../lib/ui";
+import Inspector from "./Inspector";
 
 const ANONYMOUS: DefenseSession = { configured: false, authenticated: false, roles: [] };
 
@@ -113,7 +113,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
 
   return (
     <section className="space-y-5" aria-label="Defence exposure workspace">
-      {session.authenticated && <details className="rounded-lg border p-3" style={card}><summary className="cursor-pointer text-sm">Return to saved cases and verification work</summary><div className="mt-3"><DefenseCases session={session} /></div></details>}
+      {session.authenticated && <a className="inspect-trigger" href="/defense">Saved cases &amp; verification work →</a>}
       <ol className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Investigation steps" style={{ color: "var(--text-faint)" }}>
         <li style={{ color: "var(--cursor)" }}>01 / Ask one question</li><li>02 / Follow the dependency</li><li>03 / Own the verification</li>
       </ol>
@@ -132,7 +132,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
             {busy ? "Working…" : "Analyze exposure"}
           </button>
         </div>
-        {active && <details className="disclosure mt-3"><summary>Why this question?</summary><p>{active.stakes}</p></details>}
+        {active && <p className="context-note mt-3">{active.stakes}</p>}
         {(catalogue === "unavailable" || catalogue === "empty" || health === false) && (
           <div role="status" className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
             <p className="text-sm">{catalogue === "unavailable"
@@ -141,13 +141,13 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
               : "The analysis service is unavailable. Reconnect before running another analysis."}
               {rows && " Your previously captured evidence remains available below."}</p>
             <button className={control} style={card} disabled={busy || catalogue === "loading"} onClick={() => setRetry((value) => value + 1)}>Retry connection</button>
-            {catalogueError && <details className="text-xs"><summary className="cursor-pointer">Connection diagnostics</summary><p className="mt-2 break-all">{catalogueError}</p></details>}
+            {catalogueError && <Inspector label="Inspect connection diagnostics" title="Connection diagnostics"><p className="break-all">{catalogueError}</p></Inspector>}
           </div>
         )}
         {catalogue === "loading" && <p role="status" className="mt-3 text-sm">Connecting to the analysis service…</p>}
         {error && <div role="alert" className="mt-3 text-sm" style={{ color: "oklch(80% 0.06 25)" }}>
           <p>The operation could not be completed. Captured evidence has not been replaced. Retry the operation when the service is available.</p>
-          <details className="mt-2 text-xs"><summary className="cursor-pointer">Operation diagnostics</summary><p className="mt-2 break-all">{error}</p></details>
+          <Inspector label="Inspect operation diagnostics" title="Operation diagnostics"><p className="break-all">{error}</p></Inspector>
         </div>}
       </div>
 
@@ -156,7 +156,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
       {rows?.scenarioId !== "gallium-chain" && <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
-        {summary && <details className="disclosure mt-3"><summary>How to read this result</summary><p>{summary.explanation}</p></details>}
+        {summary && <p className="context-note mt-3">{summary.explanation}</p>}
         {rows && <p className="mt-3 text-sm">Captured {new Date(rows.capturedAt).toLocaleString()}. {busy && "Showing the previous capture while the operation completes."}</p>}
         {summary && <>
           {summary.names.length > 0 && <div className="mt-4">
@@ -174,8 +174,9 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
       <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
-        <details className="min-w-0 rounded-lg border p-4 sm:p-5" style={card}>
-          <summary className="cursor-pointer text-sm font-semibold" style={{ color: "var(--text-strong)" }}>Inspect captured evidence{rows ? ` (${rows.rows.length} rows)` : ""}</summary>
+        <section className="min-w-0 card p-4 sm:p-5" aria-label="Captured evidence">
+          <div className="receipt-strip"><div><p className="eyebrow">Captured evidence</p><p className="readout mt-3">{rows ? rows.rows.length : "—"} <span className="readout-label">rows</span></p></div>
+          <Inspector label="Inspect captured rows" title="Captured query evidence" disabled={!rows}>
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Exposure, not confirmed stoppage</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
             {rows ? `${rows.count} query result${rows.count === 1 ? "" : "s"}` : "Start with one dependency question."}
@@ -192,21 +193,24 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
                 Query limits may truncate results. Row count is not the total number of affected programmes.
               </p>
               <div className="mt-4 max-h-80 overflow-auto sm:max-h-[480px]" tabIndex={0} role="region" aria-label="Captured query rows">
-                <table className="w-full border-collapse text-left text-sm">
+                <table className="captured-table w-full border-collapse text-left text-sm">
                   <thead><tr>{rows.columns.map((column) => <th key={column} className="border-b px-2 py-2 font-medium" style={{ borderColor: "var(--rule)", color: "var(--text-strong)" }}>{column}</th>)}</tr></thead>
                   <tbody>{rows.rows.slice(0, 50).map((row, index) => <tr key={index}>{rows.columns.map((column) => <td key={column} className="border-b px-2 py-2 align-top" style={{ borderColor: "var(--rule)" }}>{String(row[column] ?? "—")}</td>)}</tr>)}</tbody>
                 </table>
               </div>
+              <p className="hint mt-2">Scroll the table to inspect additional columns.</p>
               {rows.count > 50 && <p className="mt-2 text-xs">Showing 50 rows; the export retains the captured query result.</p>}
             </>
           )}
-        </details>
+          </Inspector></div>
+          <p className="hint mt-4">Stored rows, not a fresh query. A bounded capture is not total programme exposure.</p>
+        </section>
 
         <aside className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Evidence snapshot</p>
           <h2 className="mt-2 text-lg font-semibold" style={{ color: "var(--text-strong)" }}>Unapproved analysis</h2>
           <div className="record-status mt-3"><span>Graph capture</span><span>Not an intervention approval</span></div>
-          <details className="disclosure mt-3"><summary>Checks before a programme decision</summary><p>Confirm inventory, substitutes, timing and missing dependencies.</p></details>
+          <ul className="measure-list mt-3">{["Inventory", "Substitutes", "Timing", "Missing dependencies"].map((check) => <li key={check}>{check}</li>)}</ul>
           {rows && <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
             {rows.graphCommit ? `Pinned graph commit: ${rows.graphCommit}` : "Graph HEAD captured without a pinned commit. This is not yet a reproducible versioned decision record."}
           </p>}
@@ -235,8 +239,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         </aside>
       </div>
 
-      <details className="rounded-lg border p-4 sm:p-5" style={card}>
-        <summary className="cursor-pointer text-sm font-medium" style={{ color: "var(--text-strong)" }}>Advanced: query, replay, and simulation</summary>
+      <div className="receipt-strip"><p className="hint">Stay with the captured evidence, or inspect its mechanics.</p><Inspector label="Open query & version workbench" title="Query, replay and simulation">
         {active && <pre className="mono mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>{active.cypher}</pre>}
         <div className="mt-4 flex flex-wrap gap-2">
           <button className={control} style={card} disabled={busy || !active || health !== true} onClick={history}>Load graph versions</button>
@@ -260,7 +263,7 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         {simNote && <p className="mt-3 text-sm">{simNote}</p>}
         {diff && <div className="mt-3 text-sm"><p>{diff.beforeCount} → {diff.afterCount} query rows</p><pre className="mono mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ added: diff.addedSample, removed: diff.removedSample }, null, 2)}</pre></div>}
         <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Catalogue-only, pinned reads use isolated graph clients. Simulation requires SSO and cannot submit changes. Daemon-side abandoned-change reclamation and independent operational validation remain outstanding.</p>
-      </details>
+      </Inspector></div>
     </section>
   );
 }

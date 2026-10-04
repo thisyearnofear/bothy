@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Assessment, AuditEntry, EvidenceCitation, RiskSnapshot, RouteInfo, ToolCall } from "../../../packages/shared/src/types";
 import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/lib";
 import { pipelineLines } from "../lib/derive";
 import { copyText, formatCaseRecord, printCaseRecord, readOfficerName, writeOfficerName } from "../lib/caseRecord";
 import AgentBeat from "./AgentBeat";
 import CitationRows from "./CitationRows";
+import Inspector from "./Inspector";
 
 const t = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
 
@@ -49,10 +50,7 @@ export default function Detail({
   onApprove: (officer: string) => void;
   onReject: (officer: string) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
-  const [showAllAudit, setShowAllAudit] = useState(false);
-  const [showTrace, setShowTrace] = useState(false);
-  const [showDraft, setShowDraft] = useState(false);
+  const caseId = useId();
   const [showCase, setShowCase] = useState(false);
   const [officer, setOfficer] = useState("");
   const [copied, setCopied] = useState(false);
@@ -88,7 +86,6 @@ export default function Detail({
     );
   }
   const expanded = !compact || showCase;
-  const cap = showAll ? undefined : 3;
   const hidden = Math.max(0, cursorCitations.length - 3);
   const lensOffHorizon = cursorTime !== horizonTime;
   const loadBearing = horizon.citations.reduce<null | (typeof horizon.citations)[number]>(
@@ -119,7 +116,7 @@ export default function Detail({
     : "";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" id={caseId}>
       <div>
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
           Decision case
@@ -170,12 +167,10 @@ export default function Detail({
             No reports on this corridor yet.
           </p>
         ) : (
-          <CitationRows citations={cursorCitations} cap={cap} compact={compact} showMix />
+          <CitationRows citations={cursorCitations} cap={3} compact={compact} showMix />
         )}
         {hidden > 0 && (
-          <button onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs underline" style={{ color: "var(--cursor)" }}>
-            {showAll ? "collapse" : `+${hidden} more reports`}
-          </button>
+          <Inspector label={`Inspect all ${cursorCitations.length} reports`} title={`Reports known at ${cursorTime}`}><CitationRows citations={cursorCitations} showMix /></Inspector>
         )}
         {lensOffHorizon && (
           <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
@@ -183,18 +178,15 @@ export default function Detail({
           </p>
         )}
         {expanded && loadBearing && withoutScore != null && withoutLabel !== horizon.label && (
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs" style={{ color: "var(--text-faint)" }}>
-              Why this number holds
-            </summary>
-            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
+          <aside className="context-note mt-2" aria-label="Why this number holds">
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
               Without the <span className="mono">{t(loadBearing.at)}</span> signal, risk would be{" "}
               <span className="font-semibold" style={{ color: "var(--text-body)" }}>
                 {withoutLabel}
               </span>{" "}
               (<span className="mono tnum">{withoutScore.toFixed(2)}</span>).
             </p>
-          </details>
+          </aside>
         )}
       </div>
 
@@ -224,13 +216,9 @@ export default function Detail({
       {!running && assessment?.draft && (
         <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
           <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--text-body)" }}>
-            {expanded || showDraft || !draftClipped ? assessment.draft : draftPreview}
+            {expanded || !draftClipped ? assessment.draft : draftPreview}
           </p>
-          {!expanded && !showDraft && draftClipped && (
-            <button onClick={() => setShowDraft(true)} className="mt-2 text-xs underline" style={{ color: "var(--cursor)" }}>
-              full draft
-            </button>
-          )}
+          {!expanded && draftClipped && <Inspector label="Read full draft" title="Unapproved duty-officer draft"><p className="whitespace-pre-wrap">{assessment.draft}</p></Inspector>}
         </div>
       )}
 
@@ -358,9 +346,9 @@ export default function Detail({
         )}
       </div>
 
-      {compact && !showCase && (
-        <button onClick={() => setShowCase(true)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
-          full case · trace
+      {compact && (
+        <button type="button" onClick={() => setShowCase((value) => !value)} aria-expanded={expanded} aria-controls={caseId} className="inspect-trigger">
+          {expanded ? "Return to summary view" : "Full case view →"}
         </button>
       )}
 
@@ -370,30 +358,21 @@ export default function Detail({
             Audit
           </p>
           <ul className="mt-1 space-y-1">
-            {(expanded && showAllAudit ? audit.slice().reverse() : audit.slice(-2).reverse()).map((a) => (
+            {audit.slice(-2).reverse().map((a) => (
               <li key={a.id} className="mono text-xs" style={{ color: "var(--text-faint)" }}>
                 {fmtDateTime(a.at)} · {a.actor} · {a.action} · {a.detail}
               </li>
             ))}
           </ul>
           {expanded && audit.length > 2 && (
-            <button
-              onClick={() => setShowAllAudit((v) => !v)}
-              className="mt-1 text-xs underline"
-              style={{ color: "var(--cursor)" }}
-            >
-              {showAllAudit ? "collapse" : `+${audit.length - 2} earlier entries`}
-            </button>
+            <Inspector label={`Inspect ${audit.length} audit entries`} title="Case audit / newest first"><ol className="reference-list">{audit.slice().reverse().map((entry) => <li key={entry.id}><p className="docref">{fmtDateTime(entry.at)} · {entry.actor}</p><p>{entry.action} · {entry.detail}</p></li>)}</ol></Inspector>
           )}
         </div>
       )}
 
       {expanded && assessment && assessment.toolTrace != null && (
         <div>
-          <button onClick={() => setShowTrace((v) => !v)} className="text-xs underline" style={{ color: "var(--cursor)" }}>
-            {showTrace ? "hide" : "show"} agent trace
-          </button>
-          {showTrace && (
+          <Inspector label="Inspect agent trace" title="Agent tool trace">
             <div
               className="mt-2 rounded border p-2"
               style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 60%, transparent)" }}
@@ -409,7 +388,7 @@ export default function Detail({
                 ))}
               </ul>
             </div>
-          )}
+          </Inspector>
         </div>
       )}
     </div>

@@ -2,24 +2,22 @@
 
 import { useEffect, useState } from "react";
 import type { PipelineLine } from "../lib/derive";
+import Inspector from "./Inspector";
 
 /** detect → retrieve → reason → draft. Plays once per case, then settles to a strip. */
 export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLine[] }) {
   const [shown, setShown] = useState(0);
   const [settled, setSettled] = useState(false);
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
       setShown(lines.length);
       setSettled(true);
-      setOpen(true);
       return;
     }
     setShown(0);
     setSettled(false);
-    setOpen(false);
     const timers: ReturnType<typeof setTimeout>[] = [];
     lines.forEach((_, i) => {
       timers.push(setTimeout(() => setShown(i + 1), 240 * (i + 1)));
@@ -27,7 +25,6 @@ export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLi
     timers.push(
       setTimeout(() => {
         setSettled(true);
-        setOpen(false);
       }, 240 * (lines.length + 2))
     );
     return () => timers.forEach(clearTimeout);
@@ -36,22 +33,12 @@ export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLi
   if (!lines.length) return null;
   const retrieve = lines.find((l) => l.phase === "retrieve");
 
-  if (settled && !open) {
+  if (settled) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mono w-full rounded-lg border px-3 py-2 text-left text-xs"
-        style={{ borderColor: "var(--rule)", color: "var(--text-body)", background: "var(--panel)" }}
-        aria-expanded={false}
-      >
-        {lines.map((l) => l.phase).join(" → ")}
-        {retrieve && (
-          <span className="mt-1 block" style={{ color: "var(--text-faint)" }}>
-            {retrieve.text}
-          </span>
-        )}
-      </button>
+      <div className="card p-3"><p className="docref">{lines.map((l) => l.phase).join(" → ")}</p>
+        {retrieve && <p className="hint mt-2">{retrieve.text}</p>}
+        <Inspector label="Inspect agent loop" title="Agent loop"><ol className="reference-list">{lines.map((line) => <li key={line.phase}><span className="eyebrow">{line.phase}</span><p>{line.text}</p></li>)}</ol></Inspector>
+      </div>
     );
   }
 
@@ -70,11 +57,6 @@ export default function AgentBeat({ id, lines }: { id: string; lines: PipelineLi
           </li>
         ))}
       </ol>
-      {settled && (
-        <button type="button" onClick={() => setOpen(false)} className="mt-2 text-xs underline" style={{ color: "var(--cursor)" }}>
-          collapse
-        </button>
-      )}
     </div>
   );
 }

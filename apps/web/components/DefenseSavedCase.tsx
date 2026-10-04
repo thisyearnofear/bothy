@@ -36,8 +36,8 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
       <a href="#saved-cases" className="underline">Saved cases and work</a>
     </nav>
     <DefenseBriefPanel key={id} run={null} session={session} savedCase />
-    <details className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-      <summary className="cursor-pointer text-sm font-semibold">Stored evidence &amp; linked revision</summary>
+    <section className="card p-4 sm:p-5" aria-label="Stored evidence and linked revision">
+      <h2 className="eyebrow">Stored evidence → new revision</h2>
       <div className="record-status mt-3"><span>Stored capture</span><span>Prior decision unchanged</span><span>New revision needs new approval</span></div>
       {summary && <><h2 className="mt-3 text-xl font-semibold">{summary.heading}</h2><p className="mt-2 text-sm">{summary.explanation}</p><p className="mt-2 text-sm">Captured {new Date(run!.capturedAt).toLocaleString()}.</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul></>}
       {session.authenticated && session.roles.some((role) => role === "analyst" || role === "reviewer") && <div className="mt-4 space-y-2 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
@@ -56,7 +56,7 @@ export default function DefenseSavedCase({ id, initialSession }: { id: string; i
       </div>}
       {error && <p role="alert" className="mt-3 text-sm">{error}</p>}
       <button className="coarse-target mt-3 rounded border px-3 py-2 text-sm" onClick={() => setRetry((value) => value + 1)}>Refresh saved evidence and session</button>
-    </details>
+    </section>
     {run?.scenarioId === "gallium-chain" && <GalliumExplanation key={run.runId} run={run} />}
     <div id="saved-cases"><DefenseCases session={session} /></div>
   </div>;

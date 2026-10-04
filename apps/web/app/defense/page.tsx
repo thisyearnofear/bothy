@@ -5,6 +5,7 @@ import GraphPanel from "../../components/GraphPanel";
 import DefenseSavedCase from "../../components/DefenseSavedCase";
 import DefenseWorkspace from "../../components/DefenseWorkspace";
 import DefenseOnboarding from "../../components/DefenseOnboarding";
+import Inspector from "../../components/Inspector";
 import { defenseMode } from "../../lib/workspace";
 import { SESSION_COOKIE, openSession } from "@/lib/session";
 import type { DefenseSession } from "../../lib/api";
@@ -57,10 +58,9 @@ export default async function DefensePage({ searchParams }: { searchParams: Prom
       {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : mode === "onboarding" ? <DefenseOnboarding /> : mode === "investigation" ? <><p className="mb-4 text-sm"><Link href="/defense" className="underline">Back to workspace</Link> · New investigation · public/synthetic evidence</p><GraphPanel initialSession={session} /></> : <DefenseWorkspace initialSession={session} />}
       <footer className="mt-12 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
         <p>Prototype · synthetic/public evidence · not live intelligence.</p>
-        <details className="mt-2">
-          <summary className="cursor-pointer underline underline-offset-4">Prototype boundary</summary>
+        <div className="mt-2"><Inspector label="Inspect prototype boundary" title="Prototype boundary">
           <p className="mt-2 max-w-3xl">Briefs are deterministic. Review and owned-action APIs fail closed unless OIDC and the SSO session bridge are configured. Outcomes are owner-recorded, not proven operational impact. No cloud inference runs on this page.</p>
-        </details>
+        </Inspector></div>
       </footer>
       </div>
     </main>

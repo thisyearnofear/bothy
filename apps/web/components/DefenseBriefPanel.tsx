@@ -6,6 +6,7 @@ import { briefStage } from "../lib/briefStage";
 import { validateCitation } from "../lib/citation";
 import AuditBadge from "./AuditBadge";
 import { card, control } from "../lib/ui";
+import Inspector from "./Inspector";
 
 
 const SIGN_IN_ERRORS: Record<string, string> = {
@@ -151,14 +152,14 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
           </dl>
           {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
           {brief.action?.status === "completed" && <div className="record-status"><span>Owner finding recorded</span><span>Reviewer: accept / further work</span><span>Not operational closure or eliminated risk</span></div>}
-          <details><summary className="cursor-pointer text-sm">Evidence receipt and version</summary>
+          <Inspector label="Inspect evidence receipt" title="Evidence receipt and version">
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>
             {brief.status.toUpperCase()} · {brief.resultCount} captured query rows · {brief.generator.version}<br />
             graph {brief.graphCommit} · query {brief.queryHash}<br />
             evidence {brief.evidenceHash}
-          </p></details>
+          </p></Inspector>
           {brief.parentBriefId && <p className="text-sm">Linked revision of <a className="underline" href={`/defense?brief=${encodeURIComponent(brief.parentBriefId)}`}>the prior case</a>. Access to that case is checked separately. This revision requires its own review.</p>}
-          <details><summary className="cursor-pointer text-sm font-medium">Inspect {brief.claims.length} cited findings</summary>
+          <section aria-label="Cited findings"><h3 className="eyebrow">{brief.claims.length} cited findings / select a row to inspect</h3>
           <ol className="mt-4 space-y-3">
             {brief.claims.map((claim, index) => <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
               <p className="break-words text-sm">{claim.text}</p>
@@ -180,7 +181,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
                   }}>Inspect row {citation.row + 1}, {citation.column}</button>)}
               </div>
             </li>)}
-          </ol></details>
+          </ol></section>
           {!brief.claims.length && <p className="text-sm">No claims are recorded in this brief. Inspect its retained evidence; an empty claim list does not establish no exposure.</p>}
           <div>
             <h3 className="text-sm font-semibold">Known gaps</h3>
@@ -196,7 +197,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
             </div>)}</dl>
             <p className="mt-3 text-sm">This is the stored capture, not a new graph query.</p>
           </div>}
-          {evidence && <details className="text-sm"><summary className="cursor-pointer">Full captured evidence and provenance</summary><pre className="mono mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs" tabIndex={0} aria-label="Full brief evidence">{JSON.stringify(evidence, null, 2)}</pre></details>}
+          {evidence && <Inspector label="Inspect full evidence JSON" title="Full captured evidence and provenance"><pre className="mono max-h-[65vh] overflow-auto whitespace-pre-wrap break-words text-xs" tabIndex={0} aria-label="Full brief evidence">{JSON.stringify(evidence, null, 2)}</pre></Inspector>}
           {brief.status === "pending" && (
             <div className="space-y-3">
               <label className="block text-sm">Review note
@@ -220,7 +221,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
                 {owners.map((person) => <option key={person.subject} value={person.subject}>{person.subject}</option>)}
               </select>
             </label>
-            <details className="disclosure"><summary>Where owner identities come from</summary><p>This deployment&apos;s verified role configuration, not an identity-provider directory.</p></details>
+            <p className="hint">Eligible owners come from verified deployment roles, not an identity-provider directory.</p>
             {ownerError && <p role="alert" className="text-sm">{ownerError}</p>}
             {reviewer && <button className={control} style={card} disabled={busy} onClick={() => setOwnerRetry((value) => value + 1)}>Refresh eligible owners</button>}
             <label className="block text-sm">Verification due

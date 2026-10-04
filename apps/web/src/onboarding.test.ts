@@ -13,6 +13,9 @@ test("guided onboarding explains the synthetic hypothesis and starts with analys
   assert.match(html, /Synthetic chain, not a real BOM/);
   assert.match(html, /mode=investigate&amp;scenario=gallium-chain/);
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, /aria-label="Dependency inspection practice"/);
+  assert.match(html, /This diagram is guidance, not captured evidence/);
+  assert.doesNotMatch(html, /data-state="done"/);
 });
 
 test("onboarding provides stress checks without certifying completion or collecting sensitive data", () => {
@@ -22,4 +25,7 @@ test("onboarding provides stress checks without certifying completion or collect
   assert.match(html, /does not track case state or certify completion/);
   assert.match(html, /Do not enter real programme details/);
   assert.doesNotMatch(html, /<input|<textarea|<form/);
+  assert.doesNotMatch(html, /<details/);
+  assert.match(html, /Open the field guide/);
+  assert.match(html, /Can you break the handoff/);
 });

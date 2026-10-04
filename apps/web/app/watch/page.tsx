@@ -10,6 +10,7 @@ import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
 import NextDoors from "../../components/NextDoors";
 import RoadIngest from "../../components/RoadIngest";
+import Inspector from "../../components/Inspector";
 import ReliabilityPanel, { type ChainHealth } from "../../components/ReliabilityPanel";
 import WatchMyRoad from "../../components/WatchMyRoad";
 import WatchBackdrop from "../../components/WatchBackdrop";
@@ -626,7 +627,7 @@ export default function Watch() {
           </div>
           {scenario?.id === "flood" && <div className="record-status mt-2"><span>Seeded training signals</span><span>Not live gauges</span><span>Not validated prevention</span></div>}
           {!compact && scenario?.subtitle && (
-            <details className="disclosure mt-2"><summary>Scenario context</summary><p>{scenario.subtitle}</p></details>
+            <p className="context-note mt-2">{scenario.subtitle}</p>
           )}
         </div>
 
@@ -784,7 +785,7 @@ export default function Watch() {
             />
           )}
           {scenario?.id === "live" && !compact && (
-            <details className="disclosure mb-4"><summary>Add road evidence</summary><RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} /></details>
+            <div className="mb-4"><Inspector label="Add road evidence" title="Operator road report"><RoadIngest routes={routes} selectedId={selectedId} busy={ingesting} onSubmit={landRoad} /></Inspector></div>
           )}
           {selected && !compact && (
             <WatchMyRoad routeId={selected.id} routeName={selected.name} scenario={scenario?.id ?? "live"} />

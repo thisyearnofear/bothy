@@ -116,7 +116,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <div><dt className="readout-label">Confidence</dt><dd className="readout">{Number(c.confidence).toFixed(2)}</dd></div>
         <div><dt className="readout-label">Status</dt><dd>{c.status}</dd></div>
       </dl>
-      <details className="disclosure mt-4"><summary>Assessment context</summary><p>Priority: {c.priority} · engine: {c.engine} · assessed: {c.at}</p></details>
+      <dl className="record-status mt-4" aria-label="Assessment context"><div><dt>Priority</dt><dd>{c.priority}</dd></div><div><dt>Engine</dt><dd>{c.engine}</dd></div><div><dt>Assessed</dt><dd>{c.at}</dd></div></dl>
       {c.leadText && (
         <p className="mono card mt-4 px-3 py-2 text-sm" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}>
           modeled lead time <span className="font-semibold tnum">{c.leadText}</span> · illustrative replay, not predictive validation

@@ -16,6 +16,8 @@ export default function DigestPage() {
   const [email, setEmail] = useState("");
   const [lane, setLane] = useState("gallium-exposure");
   const [note, setNote] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = digests.find((digest) => digest.id === selectedId) ?? digests[0];
 
   const refresh = () => {
     api.loopDigest().then((d) => { setDigests(d.digests); setSubs(d.subs); }).catch(() => {});
@@ -43,7 +45,8 @@ export default function DigestPage() {
         Notification outbox
       </h1>
       <div className="record-status mt-4"><span>Queued records ≠ delivery confirmation</span><span>{subs} lane subscriptions</span></div>
-      <details className="disclosure mt-4"><summary>How the loop works</summary><p>Watch a lane. A scenario notification queues a digest with its case link for each watcher. Delivery depends on the configured sender; this wall alone does not confirm it.</p></details>
+      <ol className="outbox-flow mt-4" aria-label="Notification loop"><li>Watch a lane</li><li>Scenario queues a case link</li><li>Configured sender handles delivery</li></ol>
+      <p className="hint">This wall shows queued records only. It does not confirm delivery.</p>
 
       <section className="mt-4 rounded-lg border p-3" style={card} aria-label="Subscribe">
         <div className="flex flex-wrap gap-2">
@@ -57,18 +60,22 @@ export default function DigestPage() {
         {note && <p className="mono mt-1 text-xs" style={{ color: "var(--cursor)" }}>{note}</p>}
       </section>
 
-      <section className="mt-4 grid gap-2" aria-label="Digests">
+      <section className="outbox-reader mt-6" aria-label="Digests">
         {digests.length === 0 && (
           <p className="mono text-sm" style={{ color: "var(--text-faint)" }}>No digests yet — run a scenario in the watch room, then fan a notify to its lane.</p>
         )}
-        {digests.map((d) => (
-          <div key={d.id} className="rounded-lg border p-3" style={card}>
-            <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>{d.at} · to {d.to}</p>
-            <p className="mt-1 text-sm font-medium" style={{ color: "var(--text-strong)" }}>{d.subject}</p>
-            <details className="disclosure mt-3"><summary>Message body</summary><p className="mono whitespace-pre-wrap">{d.body}</p></details>
-            <Link href={d.caseHref} className="mono mt-2 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>Open case →</Link>
-          </div>
-        ))}
+        {digests.length > 0 && <ul className="outbox-index" aria-label="Queued messages">{digests.map((d) => <li key={d.id}>
+          <button type="button" aria-pressed={selected?.id === d.id} onClick={() => setSelectedId(d.id)}>
+            <span className="docref">{d.at}</span><strong>{d.subject}</strong><span>To {d.to}</span>
+          </button>
+        </li>)}</ul>}
+        {selected && <article className="outbox-message" aria-label="Selected message">
+          <p className="sr-only" role="status">Reading queued message: {selected.subject}</p>
+          <p className="eyebrow">Queued / not delivery-confirmed</p><h2>{selected.subject}</h2>
+          <dl className="record-status"><div><dt>To</dt><dd>{selected.to}</dd></div><div><dt>Recorded</dt><dd>{selected.at}</dd></div></dl>
+          <p className="mono whitespace-pre-wrap break-words">{selected.body}</p>
+          <Link href={selected.caseHref} className="btn mt-5">Open case →</Link>
+        </article>}
       </section>
 
       <Link href="/watch" className="mono mt-4 inline-block text-xs underline" style={{ color: "var(--cursor)" }}>← back to watch room</Link>

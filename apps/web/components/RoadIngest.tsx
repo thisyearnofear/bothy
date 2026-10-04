@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RouteInfo } from "../../../packages/shared/src/types";
 import { readOfficerName } from "../lib/caseRecord";
 
@@ -29,12 +29,13 @@ export default function RoadIngest({
     actor: string;
   }) => Promise<void>;
 }) {
-  const [open, setOpen] = useState(false);
   const [routeId, setRouteId] = useState(selectedId ?? routes[0]?.id ?? "");
   const [roadKind, setRoadKind] = useState<(typeof KINDS)[number]["id"]>("disruption");
   const [headline, setHeadline] = useState("");
   const [source, setSource] = useState("Duty officer report");
   const [error, setError] = useState<string | null>(null);
+  const [recorded, setRecorded] = useState(false);
+  useEffect(() => { if (selectedId) setRouteId(selectedId); }, [selectedId]);
 
   if (!routes.length) return null;
 
@@ -53,25 +54,15 @@ export default function RoadIngest({
             Land a patrol or feed update on a corridor. It moves risk. Open-Meteo does not.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setOpen((v) => !v);
-            if (selectedId) setRouteId(selectedId);
-          }}
-          className="rounded-lg border px-3 py-1.5 text-sm transition-transform active:scale-[0.96]"
-          style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
-        >
-          {open ? "Close" : "Report a road"}
-        </button>
       </div>
 
-      {open && (
+      {recorded && <p role="status" className="context-note mt-3">Report recorded. Close this sheet to inspect the updated corridor.</p>}
         <form
           className="mt-3 grid gap-2 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);
+            setRecorded(false);
             if (!headline.trim() || !routeId) {
               setError("Corridor and headline are required.");
               return;
@@ -85,7 +76,7 @@ export default function RoadIngest({
             })
               .then(() => {
                 setHeadline("");
-                setOpen(false);
+                setRecorded(true);
               })
               .catch((err) => setError(err instanceof Error ? err.message : String(err)));
           }}
@@ -156,7 +147,6 @@ export default function RoadIngest({
             </button>
           </div>
         </form>
-      )}
     </section>
   );
 }

@@ -49,7 +49,7 @@ export default function StressLab() {
         return <li key={scenario.id} className="lab-card">
           <span className="mono lab-num" aria-hidden>{scenario.number}</span>
           <h3>{scenario.title}</h3>
-          <details className="disclosure"><summary>Test setup</summary><p>{scenario.description}</p></details>
+          <p className="lab-intent"><span className="docref">Attempt</span>{scenario.description}</p>
           <div className="flex flex-wrap items-center gap-3">
             <button className="coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50" style={{ borderColor: "var(--rule)" }}
               disabled={Boolean(running)} onClick={() => void run(scenario.id)}>{running === scenario.id ? "Running…" : result ? "Run again" : "Run"}</button>

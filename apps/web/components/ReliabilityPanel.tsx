@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Inspector from "./Inspector";
 
 export interface ProviderHealth {
   id: string;
@@ -41,7 +41,6 @@ export default function ReliabilityPanel({
   onProbe: () => void;
   onRehearse: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   if (!health) return null;
   const ok = health.firstOkIndex != null;
   const okProvider = ok ? health.providers[health.firstOkIndex as number] : null;
@@ -85,18 +84,10 @@ export default function ReliabilityPanel({
           >
             {rehearsing ? "Rehearsing…" : "Rehearse fallback"}
           </button>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="mono text-xs underline"
-            style={{ color: "var(--cursor)" }}
-          >
-            {open ? "hide" : "detail"}
-          </button>
         </div>
       </div>
 
-      {open && (
+      <Inspector label="Inspect provider chain" title="Provider reliability">
         <ul className="mt-3 space-y-1.5">
           {health.providers.map((p) => {
             const tone = OUTCOME_TONE[p.outcome] ?? OUTCOME_TONE["network-error"];
@@ -126,7 +117,7 @@ export default function ReliabilityPanel({
             scripted brain: {health.scriptedAvailable ? "always available (no key)" : "unavailable"} · fallback {health.fallbackEngaged ? "engaged" : "idle"}
           </li>
         </ul>
-      )}
+      </Inspector>
     </section>
   );
 }

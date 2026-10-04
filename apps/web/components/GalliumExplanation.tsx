@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import type { GraphRun } from "../lib/api";
+import Inspector from "./Inspector";
 
 const stages = [["Platform", "p.name"], ["System", "s.name"], ["Subsystem", "ss.name"], ["Assembly", "a.name"], ["Subassembly", "sa.name"], ["Component", "c.name"], ["Material", "m.name"], ["Primary material", "g.name"]] as const;
 const value = (row: Record<string, unknown>, key: string) => typeof row[key] === "string" && row[key] ? String(row[key]) : "Not recorded";
@@ -51,15 +52,15 @@ export default function GalliumExplanation({ run }: { run: GraphRun }) {
         <h3 className="eyebrow">Next: cited brief → authorized owner</h3>
         <ul className="measure-list mt-3">{["Programme mapping", "Inventory", "Qualified alternatives", "Delivery timing"].map((check) => <li key={check}>{check}</li>)}</ul>
       </div>
-      <details className="mt-4 text-sm"><summary className="cursor-pointer">Capture receipt and source boundary</summary>
+      <div className="receipt-strip mt-4"><span className="docref">Row {sample + 1} · {run.graphCommit ? `revision ${run.graphCommit.slice(0, 8)}` : "revision not pinned"}</span><Inspector label="Inspect capture receipt" title="Capture receipt and source boundary">
         <p className="mt-3 break-all">Row {sample + 1} · revision {run.graphCommit ?? "not pinned"} · captured {new Date(run.capturedAt).toLocaleString()}.</p>
         <p className="mt-2">{run.sourceBoundary}</p>
-      </details>
+      </Inspector></div>
     </> : <p className="mt-4 text-sm">No chain rows captured. This does not establish no exposure.</p>}
-    <details className="mt-4 text-sm"><summary className="cursor-pointer font-medium">Why gallium matters: official context</summary>
-      <p className="mt-3">USGS 2026 reports China accounted for 99% of worldwide primary low-purity gallium production. This is not an EU-import or platform-specific share. <a className="underline" href="https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-gallium.pdf">USGS source</a>.</p>
-      <p className="mt-3">Gallium appears on the European Commission's 2023 critical raw materials list. <a className="underline" href="https://single-market-economy.ec.europa.eu/sectors/raw-materials/areas-specific-interest/critical-raw-materials_en">Commission source</a>.</p>
-      <p className="mt-3">Neither source validates this synthetic platform's BOM.</p>
-    </details>
+    <aside className="material-context mt-6" aria-label="Official material context">
+      <div><span className="readout">99%</span><p>of worldwide primary low-purity gallium production attributed to China, USGS 2026.</p><a href="https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-gallium.pdf">USGS source ↗</a></div>
+      <div><span className="eyebrow">EU / critical raw material</span><p>Gallium is on the Commission&apos;s 2023 list.</p><a href="https://single-market-economy.ec.europa.eu/sectors/raw-materials/areas-specific-interest/critical-raw-materials_en">Commission source ↗</a></div>
+      <p className="hint">Not an EU-import or platform-specific share. Neither source validates this synthetic platform&apos;s BOM.</p>
+    </aside>
   </section>;
 }

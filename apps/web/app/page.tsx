@@ -41,11 +41,10 @@ export default function Landing() {
         <h2 className="eyebrow mb-6">From dependency to a named check</h2>
         <BriefSpecimen />
         <div className="mt-10"><WorkflowStrip /></div>
-        <details className="disclosure mt-6">
-          <summary>What keeps the decision accountable?</summary>
-          <p>A reviewer cannot approve their own analysis. The assigned owner reports against a due date. Decisions and findings stay in a hash-chained audit record.</p>
-          <p>The chain detects edits to entries, not an attacker rewriting the whole chain. Hash linkage is not an authenticated signature.</p>
-        </details>
+        <aside className="accountability-note mt-6" aria-label="What keeps the decision accountable?">
+          <ul><li><span className="docref">Separation</span><strong>No self-approval</strong></li><li><span className="docref">Responsibility</span><strong>Named owner + due date</strong></li><li><span className="docref">Record</span><strong>Hash-chained decisions &amp; findings</strong></li></ul>
+          <p className="hint">The chain detects edits to entries, not an attacker rewriting the whole chain. Hash linkage is not an authenticated signature.</p>
+        </aside>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/defense/demo" className="btn btn-primary">Watch the gallium case play out</Link>
           <Link href="/pilot" className="btn">Scope a two-week pilot</Link>

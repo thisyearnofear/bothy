@@ -4,13 +4,8 @@ import Link from "next/link";
 import PageHero from "../../components/PageHero";
 import { PilotInterestForm } from "../../components/EyPilotBand";
 import BriefSpecimen from "../../components/BriefSpecimen";
-
-const GATES = [
-  ["Scope", "One question. One analyst. One reviewer.", "Agree the recurring exposure question and what an approval authorizes."],
-  ["Boundary", "Approved fields, access and egress.", "Agree BOM and dependency fields, source versions, reference evidence, hosting, identity, retention, export controls and any model egress before transfer. Private access and customer tenancy need separate approval."],
-  ["Rehearsal", "Checked dependencies and coverage gaps.", "Validate roles and case access. Compare dependencies, interpretation errors and time to a review-ready brief against today's process."],
-  ["Acceptance", "Review the results. Proceed or stop.", "Agree targets first. Review accuracy issues, handoff completion and remaining security gaps before deciding on operational use."],
-] as const;
+import PilotGates from "../../components/PilotGates";
+import LensTabs from "../../components/LensTabs";
 
 export default function PilotPage() {
   return (
@@ -34,13 +29,7 @@ export default function PilotPage() {
 
         <section className="mt-14" aria-labelledby="pilot-gates">
           <h2 id="pilot-gates" className="eyebrow">Four gates. No automatic deployment.</h2>
-          <ol className="mission-gates mt-5">
-            {GATES.map(([title, output, detail], index) => <li key={title}>
-              <span className="docref">{String(index + 1).padStart(2, "0")}</span>
-              <h3>{title}</h3><p>{output}</p>
-              <details className="disclosure"><summary>Requirements</summary><p>{detail}</p></details>
-            </li>)}
-          </ol>
+          <div className="mt-5"><PilotGates /></div>
         </section>
 
         <section className="mt-14" aria-labelledby="pilot-boundary">
@@ -54,12 +43,10 @@ export default function PilotPage() {
           <ul className="measure-list mt-3">
             {["Dependency accuracy", "Coverage gaps", "Time to review-ready brief", "Handoff completion"].map((measure) => <li key={measure}>{measure}</li>)}
           </ul>
-          <details className="disclosure mt-6">
-            <summary>Example questions &amp; commercial details</summary>
-            <ul><li>Gallium: which programmes have a material dependency worth checking?</li><li>Taiwan Strait: which assembly plants depend on shipments through the lane?</li></ul>
-            <p>Demo evidence is public/synthetic. Exposure is not confirmed stoppage.</p>
-            <p>Indicative: pilot €15k / two weeks; Cell €60k / year. Scope depends on lanes and BOM size.</p>
-          </details>
+          <div className="mt-8"><LensTabs label="Pilot reference" items={[
+            { id: "questions", label: "Questions", content: <div className="question-pair"><Link href="/defense?mode=investigate&scenario=gallium-chain"><span className="docref">Material</span><strong>Gallium → which programmes?</strong></Link><Link href="/defense?mode=investigate&scenario=taiwan-strait"><span className="docref">Transit</span><strong>Taiwan Strait → which plants?</strong></Link><p className="hint">Demo evidence is public/synthetic. Exposure is not confirmed stoppage.</p></div> },
+            { id: "terms", label: "Commercial terms", content: <dl className="specimen-record"><div><dt>Pilot</dt><dd>€15k / two weeks</dd></div><div><dt>Cell</dt><dd>€60k / year</dd></div><div><dt>Basis</dt><dd>Indicative. Scope depends on lanes and BOM size.</dd></div></dl> },
+          ]} /></div>
         </section>
 
         <section id="contact" className="mt-14 border-t pt-8" style={{ borderColor: "var(--rule)" }} aria-label="Contact">

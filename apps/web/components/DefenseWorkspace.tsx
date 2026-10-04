@@ -50,6 +50,6 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
       <h3 className="eyebrow mb-5">One case. Named handoffs.</h3>
       <WorkflowStrip />
     </section>}
-    <details className="disclosure"><summary>Demo boundary</summary><p>Public/synthetic evidence and demo authorization only. No live disruption monitoring, customer tenancy or independently verified operational effect.</p></details>
+    <p className="context-note">Public/synthetic evidence and demo authorization only. No live disruption monitoring, customer tenancy or independently verified operational effect.</p>
   </div>;
 }

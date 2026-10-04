@@ -6,6 +6,8 @@ import { clockDays, type Story } from "../lib/stories";
 import LaneMap from "./LaneMap";
 import ReviewerDesk from "./ReviewerDesk";
 import RunTrace from "./RunTrace";
+import Inspector from "./Inspector";
+import LensTabs from "./LensTabs";
 
 const BEAT_MS = 8000;
 
@@ -74,7 +76,7 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
       <div>
         <p className="docref">File BTH-{story.slug.toUpperCase().slice(0, 8)}-{String(index + 1).padStart(2, "0")} · {beat.label}{beat.act ? " · tasking" : ""}</p>
         <p className="beat-narration">{beat.narration}</p>
-        {beat.event && <details className="disclosure mt-4"><summary>Source · {beat.event.source.name}</summary><p>{beat.event.text} <a className="underline underline-offset-4" href={beat.event.source.url} rel="noreferrer noopener" target="_blank">Read the source ↗</a></p></details>}
+        {beat.event && <div className="source-note mt-4"><span className="docref">Public source</span><a href={beat.event.source.url} rel="noreferrer noopener" target="_blank">{beat.event.source.name} ↗</a><Inspector label="Inspect source note" title={`${beat.label} / source note`} onOpen={() => setPlaying(false)}><p>{beat.event.text}</p><a className="btn mt-4" href={beat.event.source.url} rel="noreferrer noopener" target="_blank">Read the source ↗</a></Inspector></div>}
       </div>
       {beat.clock && days !== null && <div className="story-clock" role="status">
         <span className="story-days">{Math.abs(days)}</span>
@@ -101,17 +103,20 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
         <div className="record-status"><span>Session sandbox</span><span>Real decision rules</span><span>No saved cases changed</span></div>
         <ReviewerDesk runId={run.runId} auto={autoplay && playing} />
       </section>}
-      <details className="disclosure" aria-label="After-action questions">
-        <summary>Inspect the record: decision / evidence / owner / integrity</summary>
-        <dl className="story-qa">{AFTER_ACTION.map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}</dl>
-      </details>
+      <section aria-label="After-action questions">
+        <p className="eyebrow mb-4">Four ways to read the record</p>
+        <LensTabs label="After-action lenses" items={AFTER_ACTION.map(([q, a], index) => ({
+          id: String(index), label: ["Decision", "Evidence", "Owner", "Integrity"][index],
+          content: <div className="review-lens"><h3>{q}</h3><p>{a}</p><span className="hint">A guide to inspection, not independent validation of an outcome.</span></div>,
+        }))} />
+      </section>
     </div>}
 
     {!beat.act && <p className="text-sm" style={{ color: "var(--text-faint)" }}>Drag the date to {story.beats[last].label.toLowerCase() === "today" ? "today" : story.beats[last].label} to open your desk.</p>}
 
     <aside className="story-caveat" aria-label="What this does not show">
       <p><strong>Historical replay. Synthetic exposure.</strong> Bothy did not exist during these events; no changed outcome is claimed.</p>
-      <details className="disclosure mt-3"><summary>Data &amp; interpretation limits</summary><p>{story.caveat}</p></details>
+      <p className="hint mt-3">{story.caveat}</p>
     </aside>
   </div>;
 }

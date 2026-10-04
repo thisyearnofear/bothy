@@ -13,8 +13,32 @@ commit IDs, and simulation controls only when requested. Do not interleave pilot
 marketing with an operational approval gate.
 
 The implemented order is scenario/service state, exposure summary, brief/current
-stage and next action, collapsed captured evidence/export, then advanced controls.
-Citation inspection focuses the exact stored row and keeps provenance expandable.
+stage and next action, captured-evidence receipt/export, then advanced controls.
+Citation inspection focuses the exact stored row; full provenance opens in an inspector.
+
+### Progressive disclosure by purpose
+
+- **Evidence and mechanics** use the native modal `Inspector`: a side sheet on
+  desktop, a full-width sheet on mobile. Escape closes it, focus returns to the
+  trigger, and background scroll is locked. No role or transition rules change.
+- **Reference and commercial choices** use `LensTabs`. Arrow keys, Home and End
+  switch lenses. Inactive panels remain mounted, but hidden from focus and assistive
+  technology, so switching does not discard form state.
+- **Onboarding** keeps the role handoff, expected output and limit visible. A small,
+  selectable illustrative chain teaches evidence inspection. Role navigation is
+  not a completion state. The field guide and lab are separate doors.
+- **Pilot gates** show all four destinations and one agreed-output panel, not four
+  expanding requirements lists. Selection means orientation, not acceptance.
+- **Stories** directly link the named source, offer a source-note inspector, and
+  present after-action questions as four reading lenses. Replay caveats stay visible.
+- **Outbox** uses a message index and reader. Queued records remain explicitly
+  distinct from delivery confirmation.
+- **Brief findings, action safeguards, lab attempts, source clocks and short
+  interpretation notes** remain visible. Do not hide critical boundaries for a
+  tidier layout.
+- **Semantic zoom** remains appropriate for the gallium hierarchy and compact
+  watch-room case, with named controls and current expanded state. It is not a
+  replacement pattern for ordinary paragraphs.
 
 Mobile places the brief before exports and diagnostic/supporting content. Important small
 text must meet 4.5:1 contrast; the faint token is raised to 60% lightness.
@@ -39,8 +63,8 @@ the heroes.
 - **Imagery**: `apps/web/public/descent/*.jpg`, generated, abstract, labelled
   illustrative. Per `edth-dependency-visual-spec.md`: no military photography,
   no partner logos, no glowing networks.
-- **Copy rule**: one idea per beat. Long boundary statements live in
-  disclosures or a single footer line, but phrases covered by tests
+- **Copy rule**: one idea per beat. Deep reference lives in an inspector;
+  essential boundaries stay inline or in a single footer line. Phrases covered by tests
   (`onboarding.test.ts`, `workspace.test.ts`) must remain in the DOM.
 - **Next.js gotchas**: rewrites are fixed at build time (pass `AGENT_URL` as a
   build arg); unlayered CSS beats Tailwind utilities, so avoid setting
