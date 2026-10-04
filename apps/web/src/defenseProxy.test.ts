@@ -198,3 +198,20 @@ describe("proxyDefense", () => {
     assert.equal(agent.calls.length, 0);
   });
 });
+describe("lab routes", () => {
+  const sid = "123e4567-e89b-12d3-a456-426614174000";
+  it("forwards the sandbox without a session and only passes runId", async () => {
+    const up = upstream(201, { sid });
+    const result = await proxyDefense(post("/lab/sandbox", { runId: "r1", subject: "x", roles: ["reviewer"] }), "/lab/sandbox", SECRET, up.impl);
+    assert.equal(result.status, 201);
+    assert.equal(up.calls[0].url, "http://agent.test/api/defense/lab/sandbox");
+    assert.deepEqual(JSON.parse(String(up.calls[0].init.body)), { runId: "r1" });
+    assert.equal((up.calls[0].init.headers as Record<string, string> | undefined)?.authorization, undefined);
+  });
+  it("accepts sandbox actions and refuses malformed session ids and cross-origin posts", async () => {
+    assert.equal(allowPath("POST", `/lab/sandbox/${sid}/approve`).ok, true);
+    assert.equal(allowPath("POST", "/lab/sandbox/not-a-uuid/approve").ok, false);
+    const cross = await proxyDefense(post("/lab/sandbox", {}, { origin: "https://evil.example" }), "/lab/sandbox", SECRET, upstream(201, {}).impl);
+    assert.equal(cross.status, 403);
+  });
+});

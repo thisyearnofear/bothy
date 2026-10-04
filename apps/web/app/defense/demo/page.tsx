@@ -1,20 +1,20 @@
 import PageHero from "../../../components/PageHero";
-import DemoPlayer from "../../../components/DemoPlayer";
+import StoryStage from "../../../components/StoryStage";
+import { storyBySlug } from "../../../lib/stories";
 
 export const metadata = {
   title: "Two-minute demo",
-  description: "A guided run: one question, four roles, an attempt to cheat, and proof nothing was rewritten.",
+  description: "The gallium story playing itself: three public events, today's deadline, then a real reviewer desk.",
 };
 
 export default function DemoPage() {
+  const story = storyBySlug("gallium");
+  if (!story) return null;
   return (
     <main className="min-h-screen">
-      <PageHero eyebrow="Guided demo · about two minutes" title="See it work, then see it refuse." lede="Real rules, synthetic data. Pause or step through at any time." image="2-system" />
-      <div className="enter mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <DemoPlayer />
-        <footer className="mt-12 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
-          <p>Synthetic and public evidence only. The graph query is live; the four-role walkthrough and attacks run the real approval, ownership and audit rules against a throwaway database. No operational effect is claimed.</p>
-        </footer>
+      <PageHero eyebrow="Guided demo · about two minutes" title="Watch a deadline become a verified case." lede="It plays itself. Pause to take the controls." image="2-system" />
+      <div className="enter mx-auto max-w-5xl px-4 pb-14 sm:px-6">
+        <StoryStage story={story} autoplay />
       </div>
     </main>
   );

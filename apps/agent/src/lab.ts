@@ -21,15 +21,15 @@ export const LAB_SCENARIOS: LabScenario[] = [
 // Not listed as an attack: the legitimate end-to-end run used by the guided demo.
 export const HAPPY_PATH = "happy-path";
 
-const ANALYST: Principal = { subject: "analyst@lab", roles: ["analyst"] };
-const REVIEWER: Principal = { subject: "reviewer@lab", roles: ["reviewer"] };
-const OWNER_A: Principal = { subject: "owner-a@lab", roles: ["action-owner"] };
+export const ANALYST: Principal = { subject: "analyst@lab", roles: ["analyst"] };
+export const REVIEWER: Principal = { subject: "reviewer@lab", roles: ["reviewer"] };
+export const OWNER_A: Principal = { subject: "owner-a@lab", roles: ["action-owner"] };
 const OWNER_B: Principal = { subject: "owner-b@lab", roles: ["action-owner"] };
-const DUE = "2030-01-01T00:00:00.000Z";
+export const DUE = "2030-01-01T00:00:00.000Z";
 
 // Every scenario runs the real DefenseStore against a throwaway in-memory
 // database, so the outcomes are the production rules' own, with no shared state.
-function sandbox() {
+export function sandbox() {
   const db = new DatabaseSync(":memory:");
   const store = new DefenseStore(db);
   const def = getScenarioDef("gallium-chain");
@@ -42,7 +42,7 @@ function sandbox() {
   return { db, store, run };
 }
 
-const refusal = (e: unknown) => e instanceof AccessError ? `${e.status} ${e.message}` : "refused";
+export const refusal = (e: unknown) => e instanceof AccessError ? `${e.status} ${e.message}` : "refused";
 
 function attempt(steps: LabStep[], label: string, operation: () => unknown, onBlock: LabOutcome = "blocked") {
   try { operation(); steps.push({ label, outcome: "allowed", detail: "Accepted" }); return true; }

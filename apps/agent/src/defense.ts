@@ -7,6 +7,7 @@ import { AccessError, type Principal, type createAuth } from "./auth";
 import { getScenarioDef } from "./graph/scenarios";
 import { witnessRunId } from "./graph/witness";
 import { LAB_SCENARIOS, runLab } from "./lab";
+import { actSandbox, createSandbox, type SandboxAction } from "./labSession";
 
 export const evidenceHash = (run: GraphRun) => createHash("sha256").update(JSON.stringify(run)).digest("hex");
 
@@ -239,6 +240,19 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     const result = runLab(req.params.id);
     if (!result) return res.status(404).json({ error: "unknown lab scenario" });
     res.setHeader("Cache-Control", "no-store");
+    res.json(result);
+  });
+  const sandboxActions = new Set<SandboxAction>(["approve", "reject", "assign", "acknowledge", "complete", "accept", "verify", "attack-self-approve", "attack-replay", "attack-edit-evidence", "attack-rewrite-audit"]);
+  router.post("/lab/sandbox", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const runId = typeof req.body?.runId === "string" && /^[\w-]{1,80}$/.test(req.body.runId) ? req.body.runId : undefined;
+    try { res.status(201).json(createSandbox(db, runId)); } catch { res.status(503).json({ error: "sandbox unavailable" }); }
+  });
+  router.post("/lab/sandbox/:sid/:action", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (!sandboxActions.has(req.params.action as SandboxAction)) return res.status(404).json({ error: "unknown sandbox action" });
+    const result = actSandbox(req.params.sid, req.params.action as SandboxAction);
+    if (!result) return res.status(404).json({ error: "sandbox expired; start again" });
     res.json(result);
   });
   // Public/synthetic demo drafts only. Private customer evidence is a later gate.

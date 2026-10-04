@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Descent from "../components/Descent";
 import ProofCases from "../components/ProofCases";
+import HeroClock from "../components/HeroClock";
 
 const pad = "px-5 sm:px-10";
 
@@ -22,6 +23,7 @@ export default function Landing() {
           <h1 className="mt-5 max-w-5xl text-[clamp(2.75rem,9vw,8rem)] font-semibold leading-[0.92] tracking-[-0.06em]" style={{ color: "var(--text-strong)" }}>
             Which programmes break when gallium does?
           </h1>
+          <HeroClock />
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
             <Link href="/defense?mode=onboarding" className="coarse-target rounded-lg border-2 px-6 py-3 text-sm font-medium" style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}>
               Try a guided investigation

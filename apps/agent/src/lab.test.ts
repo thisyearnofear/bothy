@@ -28,3 +28,35 @@ test("the guided happy path completes and its audit chain verifies", () => {
   assert.equal(result.steps.at(-1)?.outcome, "verified");
   assert.ok(!LAB_SCENARIOS.some((scenario) => scenario.id === "happy-path"));
 });
+
+import { DatabaseSync } from "node:sqlite";
+import { actSandbox, createSandbox } from "./labSession";
+
+test("a sandbox session enforces the real rules step by step", () => {
+  const source = new DatabaseSync(":memory:");
+  source.exec("CREATE TABLE graph_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL)");
+  const created = createSandbox(source);
+  assert.equal(created.briefStatus, "pending");
+  assert.ok(created.available.includes("approve") && !created.available.includes("assign"));
+  assert.equal(actSandbox(created.sid, "assign")!.steps.at(-1)?.outcome, "blocked");
+  assert.equal(actSandbox(created.sid, "attack-self-approve")!.steps.at(-1)?.outcome, "blocked");
+  assert.equal(actSandbox(created.sid, "approve")!.briefStatus, "approved");
+  assert.equal(actSandbox(created.sid, "attack-replay")!.steps.at(-1)?.outcome, "duplicate");
+  for (const action of ["assign", "acknowledge", "complete", "accept"] as const) actSandbox(created.sid, action);
+  const verified = actSandbox(created.sid, "verify")!;
+  assert.equal(verified.steps.at(-1)?.outcome, "verified");
+  assert.equal(verified.reassessed, true);
+  actSandbox(created.sid, "attack-rewrite-audit");
+  assert.equal(actSandbox(created.sid, "verify")!.steps.at(-1)?.outcome, "tamper-detected");
+  assert.equal(actSandbox("missing", "verify"), null);
+});
+
+test("editing evidence in a sandbox blocks later decisions", () => {
+  const source = new DatabaseSync(":memory:");
+  source.exec("CREATE TABLE graph_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL)");
+  const created = createSandbox(source);
+  actSandbox(created.sid, "attack-edit-evidence");
+  const after = actSandbox(created.sid, "approve")!;
+  assert.equal(after.briefStatus, "pending");
+  assert.equal(after.steps.at(-1)?.outcome, "blocked");
+});

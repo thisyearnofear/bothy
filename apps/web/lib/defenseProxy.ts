@@ -23,6 +23,8 @@ const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
   { method: "GET", pattern: /^\/briefs\/[^/]+\/audit\/verify$/, key: "GET /briefs/:id/audit/verify" },
   { method: "GET", pattern: /^\/lab$/, key: "GET /lab" },
   { method: "POST", pattern: /^\/lab\/[a-z-]+\/run$/, key: "POST /lab/:id/run" },
+  { method: "POST", pattern: /^\/lab\/sandbox$/, key: "POST /lab/sandbox" },
+  { method: "POST", pattern: /^\/lab\/sandbox\/[0-9a-f-]{36}\/[a-z-]+$/, key: "POST /lab/sandbox/:sid/:action" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/reassessment$/, key: "POST /briefs/:id/reassessment" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/review$/, key: "POST /briefs/:id/review" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/action$/, key: "POST /briefs/:id/action" },
@@ -37,6 +39,8 @@ const BODY_FIELDS: Record<string, readonly string[]> = {
   "POST /briefs": ["runId"],
   "POST /briefs/:id/revisions": ["runId"],
   "POST /lab/:id/run": [],
+  "POST /lab/sandbox": ["runId"],
+  "POST /lab/sandbox/:sid/:action": [],
   "POST /briefs/:id/review": ["decision", "note"],
   "POST /briefs/:id/reassessment": ["decision", "note"],
   "POST /briefs/:id/action": ["owner", "dueAt"],
@@ -111,12 +115,12 @@ export async function proxyDefense(
 
   // The lab runs against a throwaway database and carries no credential, so it
   // is forwarded even without a session. Nothing else on this list is.
-  if (route.key === "GET /lab" || route.key === "POST /lab/:id/run") {
+  if (route.key.includes("/lab")) {
     try {
       const response = await fetchImpl(`${env.AGENT_URL ?? "http://localhost:8787"}/api/defense${rawPath}`, {
         method,
         cache: "no-store",
-        ...(method === "POST" ? { headers: { "content-type": "application/json" }, body: "{}" } : {}),
+        ...(method === "POST" ? { headers: { "content-type": "application/json" }, body: JSON.stringify(filterBody(route.key, await request.json().catch(() => null))) } : {}),
       });
       return { status: response.status, body: await response.text(), headers: { "content-type": "application/json", "cache-control": "no-store" } };
     } catch {

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import PageHero from "../../../../components/PageHero";
-import StoryView from "../../../../components/StoryView";
+import StoryStage from "../../../../components/StoryStage";
 import { STORIES, storyBySlug } from "../../../../lib/stories";
 
 export function generateStaticParams() { return STORIES.map((story) => ({ slug: story.slug })); }
@@ -16,8 +16,8 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
   return (
     <main className="min-h-screen">
       <PageHero eyebrow={story.kicker} title={story.title} lede={story.lede} image={story.image} />
-      <div className="enter mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <StoryView story={story} />
+      <div className="enter mx-auto max-w-5xl px-4 pb-14 sm:px-6">
+        <StoryStage story={story} />
       </div>
     </main>
   );

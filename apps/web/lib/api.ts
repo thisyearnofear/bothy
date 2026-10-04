@@ -29,6 +29,19 @@ export interface DefenseSession {
 export type LabOutcome = "allowed" | "blocked" | "duplicate" | "tamper-detected" | "verified";
 export interface LabScenario { id: string; number: string; title: string; description: string; expect: string }
 export interface LabResult { id: string; steps: { label: string; outcome: LabOutcome; detail: string }[]; verdict: string }
+export type SandboxAction =
+  | "approve" | "reject" | "assign" | "acknowledge" | "complete" | "accept" | "verify"
+  | "attack-self-approve" | "attack-replay" | "attack-edit-evidence" | "attack-rewrite-audit";
+export interface SandboxState {
+  sid: string;
+  briefStatus: string;
+  actionStatus: string;
+  reassessed: boolean;
+  evidenceEdited: boolean;
+  claims: string[];
+  steps: { label: string; outcome: LabOutcome; detail: string }[];
+  available: SandboxAction[];
+}
 export interface AuditVerification { ok: boolean; events: number; verified: number; unchained: number; brokenAt: number | null }
 
 export interface GraphBenchRow {
@@ -219,6 +232,8 @@ export const api = {
     get<GraphWitness & { links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
   labScenarios: (signal?: AbortSignal) => get<{ scenarios: LabScenario[] }>("/api/defense/lab", signal),
   runLab: (id: string, signal?: AbortSignal) => post<LabResult>(`/api/defense/lab/${encodeURIComponent(id)}/run`, {}, signal),
+  createSandbox: (runId?: string, signal?: AbortSignal) => post<SandboxState>("/api/defense/lab/sandbox", runId ? { runId } : {}, signal),
+  sandboxAct: (sid: string, action: SandboxAction, signal?: AbortSignal) => post<SandboxState>(`/api/defense/lab/sandbox/${encodeURIComponent(sid)}/${action}`, {}, signal),
   verifyAudit: (id: string, signal?: AbortSignal) => get<AuditVerification>(`/api/defense/briefs/${encodeURIComponent(id)}/audit/verify`, signal),
   defenseSession: (signal?: AbortSignal) => get<DefenseSession>("/api/defense/session", signal),
   defenseCases: (offset = 0, signal?: AbortSignal, filter: DefenseCaseFilter = "all") => get<DefenseCasePage>(`/api/defense/briefs/page/${filter}/${offset}`, signal),
