@@ -1,18 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api, isAbortError, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { api, isAbortError, type DefenseBrief, type GraphDiff, type GraphRun, type GraphScenario, type GraphWitness } from "../lib/api";
 import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
-import GalliumExplanation from "./GalliumExplanation";
-import RunTrace from "./RunTrace";
-import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
+import InvestigationAtlas from "./InvestigationAtlas";
+import { diffSummary } from "../lib/atlas";
+import { createOperationGuard } from "../lib/operations";
+import { catalogueLabel, type CatalogueState } from "../lib/exposureSummary";
 import { card, control } from "../lib/ui";
 import Inspector from "./Inspector";
 
 const ANONYMOUS: DefenseSession = { configured: false, authenticated: false, roles: [] };
 
-export default function GraphPanel({ initialSession }: { initialSession?: DefenseSession }) {
+export interface InvestigationPresentation {
+  run: GraphRun | null;
+  busy: boolean;
+  error: string | null;
+  scenario: GraphScenario | undefined;
+  catalogue: CatalogueState;
+  health: boolean | null;
+  session: DefenseSession;
+  brief: DefenseBrief | null;
+  analyze: () => void;
+  retry: () => void;
+  onBriefChange: (brief: DefenseBrief | null) => void;
+}
+
+export default function GraphPanel({ initialSession, initialScenarioId, presentation }: {
+  initialSession?: DefenseSession;
+  initialScenarioId?: string;
+  presentation?: (state: InvestigationPresentation) => ReactNode;
+}) {
   const [scenarios, setScenarios] = useState<GraphScenario[]>([]);
   const [activeId, setActiveId] = useState("");
   const [rows, setRows] = useState<GraphRun | null>(null);
@@ -20,6 +39,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
   const [catalogue, setCatalogue] = useState<CatalogueState>("loading");
   const [catalogueError, setCatalogueError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const guard = useRef(createOperationGuard()).current;
   const [error, setError] = useState<string | null>(null);
   const [commits, setCommits] = useState<string[]>([]);
   const [beforeCommit, setBeforeCommit] = useState("");
@@ -32,8 +53,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
   // Seeded from the server so the first paint already reflects the session
   // rather than flashing a signed-out state before hydration resolves.
   const [session, setSession] = useState<DefenseSession>(initialSession ?? ANONYMOUS);
+  const [brief, setBrief] = useState<DefenseBrief | null>(null);
   const active = scenarios.find((scenario) => scenario.id === activeId);
-  const summary = rows ? exposureSummary(rows) : null;
 
   useEffect(() => {
     const ctl = new AbortController();
@@ -53,7 +74,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
       setCatalogue(list.length ? "ready" : "empty");
       const requested = new URLSearchParams(window.location.search).get("scenario");
       setActiveId((previous) => list.some((item) => item.id === previous) ? previous
-        : list.find((item) => item.id === requested)?.id
+        : list.find((item) => item.id === initialScenarioId)?.id
+        ?? list.find((item) => item.id === requested)?.id
         ?? list.find((item) => item.id === "gallium-exposure")?.id
         ?? list[0]?.id ?? "");
     }).catch((e) => {
@@ -65,30 +87,45 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
     return () => ctl.abort();
   }, [retry]);
 
-  const execute = useCallback(async (operation: () => Promise<void>) => {
+  useEffect(() => {
+    guard.mount();
+    return () => guard.unmount();
+  }, [guard]);
+
+  const execute = useCallback(async (work: (generation: number) => Promise<void>, generation?: number) => {
+    const my = generation ?? guard.begin();
+    if (!guard.isCurrent(my)) return;
     setBusy(true);
     setError(null);
-    try { await operation(); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    finally { setBusy(false); }
-  }, []);
+    try { await work(my); }
+    catch (e) { if (guard.isCurrent(my)) setError(e instanceof Error ? e.message : String(e)); }
+    finally { if (guard.isCurrent(my)) setBusy(false); }
+  }, [guard]);
 
   const run = (commit?: string) => {
     if (!active) return;
-    void execute(async () => {
-      const result = await api.runScenario(active.id, commit ? { commit } : {});
+    const scenarioId = active.id;
+    const my = guard.begin();
+    setCaptureBusy(true);
+    void execute(async (gen) => {
+      const result = await api.runScenario(scenarioId, commit ? { commit } : {});
+      if (!guard.isCurrent(gen)) return;
       setRows(result);
       setWitness(null);
       setCopyNote(null);
       setDiff(null);
       setSimNote(null);
-      window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(active.id)}`);
-    });
+      if (!presentation) window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(scenarioId)}`);
+    }, my).finally(() => { if (guard.isCurrent(my)) setCaptureBusy(false); });
   };
 
   const select = (id: string) => {
+    guard.invalidate();
+    setBusy(false);
+    setCaptureBusy(false);
     setActiveId(id);
     setRows(null);
+    setBrief(null);
     setWitness(null);
     setCopyNote(null);
     setCommits([]);
@@ -97,13 +134,23 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
     setDiff(null);
     setSimNote(null);
     setError(null);
-    window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(id)}`);
+    if (!presentation) window.history.replaceState(null, "", `/defense?scenario=${encodeURIComponent(id)}`);
   };
+
+  const onBriefChange = useCallback((next: DefenseBrief | null) => { setBrief(next); }, []);
+  const focusBrief = useCallback(() => {
+    const el = document.getElementById("investigation-brief");
+    el?.scrollIntoView({ behavior: "auto", block: "start" });
+    const target = el?.querySelector<HTMLElement>("button:not([disabled]), a[href], select:not([disabled]), input:not([disabled]), textarea:not([disabled])");
+    (target ?? el)?.focus({ preventScroll: true });
+  }, []);
 
   const history = () => {
     if (!active) return;
-    void execute(async () => {
-      const result = await api.graphHistory(active.graph);
+    const graph = active.graph;
+    void execute(async (gen) => {
+      const result = await api.graphHistory(graph);
+      if (!guard.isCurrent(gen)) return;
       const list = result.rows.map((row) => String(row.commit ?? "").replace(/\(HEAD\)$/, "")).filter(Boolean);
       setCommits(list);
       setBeforeCommit(list.at(-1) ?? "");
@@ -111,28 +158,41 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
     });
   };
 
+  if (presentation) {
+    return <>{presentation({
+      run: rows,
+      busy: captureBusy,
+      error,
+      scenario: active,
+      catalogue,
+      health,
+      session,
+      brief,
+      analyze: () => run(),
+      retry: () => setRetry((value) => value + 1),
+      onBriefChange,
+    })}</>;
+  }
+
   return (
     <section className="space-y-5" aria-label="Defence exposure workspace">
       {session.authenticated && <a className="inspect-trigger" href="/defense">Saved cases &amp; verification work →</a>}
-      <ol className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Investigation steps" style={{ color: "var(--text-faint)" }}>
-        <li style={{ color: "var(--cursor)" }}>01 / Ask one question</li><li>02 / Follow the dependency</li><li>03 / Own the verification</li>
-      </ol>
-      <div className="rounded-lg border p-4 sm:p-5" style={card}>
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <div id="investigation-question" tabIndex={-1} className="rounded-lg border p-3 sm:p-4" style={card}>
+        <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-0 flex-1 text-sm">
             Exposure question
             <select value={activeId} disabled={busy || catalogue !== "ready"} onChange={(e) => select(e.target.value)}
-              className="mt-2 block w-full rounded-lg border px-3 py-3 text-sm" style={{ ...card, color: "var(--text-strong)" }}>
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm" style={{ ...card, color: "var(--text-strong)" }}>
               {!scenarios.length && <option value="">{catalogueLabel(catalogue)}</option>}
               {scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}
             </select>
           </label>
           <button className={control} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
             disabled={busy || catalogue !== "ready" || !active || health !== true} onClick={() => run()}>
-            {busy ? "Working…" : "Analyze exposure"}
+            {captureBusy ? "Working…" : "Analyze exposure"}
           </button>
         </div>
-        {active && <p className="context-note mt-3">{active.stakes}</p>}
+        {active && <p className="context-note mt-2 text-xs">{active.stakes}</p>}
         {(catalogue === "unavailable" || catalogue === "empty" || health === false) && (
           <div role="status" className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
             <p className="text-sm">{catalogue === "unavailable"
@@ -151,27 +211,49 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
         </div>}
       </div>
 
-      <RunTrace key={rows?.runId ?? "none"} run={rows} busy={busy} />
+      <InvestigationAtlas
+        run={rows}
+        busy={captureBusy}
+        scenario={active}
+        session={session}
+        brief={brief}
+        onPrepareVerification={focusBrief}
+        onRequestChain={busy ? undefined : () => select("gallium-chain")}
+        versionsPanel={
+          <div>
+            <div className="flex flex-wrap gap-2">
+              <button className={control} style={card} disabled={busy || !active || health !== true} onClick={history}>Load graph versions</button>
+              {commits.map((commit) => <button key={commit} className={control} style={card} disabled={busy} onClick={() => run(commit)}>Replay {commit.slice(0, 8)}</button>)}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="Before commit" placeholder="Before commit" value={beforeCommit} onChange={(e) => setBeforeCommit(e.target.value)} />
+              <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="After commit" placeholder="After commit" value={afterCommit} onChange={(e) => setAfterCommit(e.target.value)} />
+              <button className={control} style={card} disabled={busy || !active || !beforeCommit || !afterCommit} onClick={() => {
+                if (!active) return;
+                const request = { graph: active.graph, cypher: active.cypher, beforeCommit, afterCommit };
+                void execute(async (gen) => {
+                  const result = await api.graphDiff(request);
+                  if (guard.isCurrent(gen)) setDiff(result);
+                });
+              }}>Compare versions</button>
+            </div>
+            {diff && (() => {
+              const summary = diffSummary(diff);
+              return <div className="mt-3 text-sm" role="status">
+                <p>{summary.counts}</p>
+                <p>{summary.added} · {summary.removed}</p>
+                <pre className="mono mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs" aria-label="Returned difference samples">{JSON.stringify({ added: diff.addedSample, removed: diff.removedSample }, null, 2)}</pre>
+                <p className="hint mt-2">{summary.note}</p>
+              </div>;
+            })()}
+            {!commits.length && <p className="hint mt-3">Load graph versions to replay the reviewed query against a pinned revision.</p>}
+          </div>
+        }
+      />
 
-      {rows?.scenarioId !== "gallium-chain" && <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
-        <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
-        {summary && <p className="context-note mt-3">{summary.explanation}</p>}
-        {rows && <p className="mt-3 text-sm">Captured {new Date(rows.capturedAt).toLocaleString()}. {busy && "Showing the previous capture while the operation completes."}</p>}
-        {summary && <>
-          {summary.names.length > 0 && <div className="mt-4">
-            <h3 className="text-sm font-semibold">Observed platform names</h3>
-            <ul className="mt-2 flex flex-wrap gap-2">{summary.names.slice(0, 10).map((name) => <li key={name} className="max-w-full break-words rounded border px-3 py-2 text-sm" style={{ borderColor: "var(--rule)" }}>{name}</li>)}</ul>
-            {summary.names.length > 10 && <p className="mt-2 text-sm">Showing 10 of {summary.names.length} observed names. Inspect the captured evidence below for the remaining names.</p>}
-          </div>}
-          <h3 className="mt-4 text-sm font-semibold">What still needs verification</h3>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
-          <p className="hint mt-3">Next: cited brief → owner checks inventory, substitutes and timing.</p>
-        </>}
-      </section>}
-
-      {rows?.scenarioId === "gallium-chain" && <GalliumExplanation key={rows.runId} run={rows} />}
-      <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} />
+      <div id="investigation-brief" tabIndex={-1}>
+        <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} onBriefChange={onBriefChange} />
+      </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
         <section className="min-w-0 card p-4 sm:p-5" aria-label="Captured evidence">
@@ -215,8 +297,10 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
             {rows.graphCommit ? `Pinned graph commit: ${rows.graphCommit}` : "Graph HEAD captured without a pinned commit. This is not yet a reproducible versioned decision record."}
           </p>}
           <button className={`${control} mt-4`} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}
-            disabled={busy || !rows} onClick={() => void execute(async () => {
-              if (rows) setWitness(await api.graphWitness({ runId: rows.runId }));
+            disabled={busy || !rows} onClick={() => void execute(async (gen) => {
+              if (!rows) return;
+              const result = await api.graphWitness({ runId: rows.runId });
+              if (guard.isCurrent(gen)) setWitness(result);
             })}>Export evidence snapshot</button>
           {witness && (
             <div className="mt-4 space-y-3 border-t pt-3" style={{ borderColor: "var(--rule)" }}>
@@ -224,12 +308,12 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
               <div className="flex flex-wrap gap-3 text-sm" style={{ color: "var(--cursor)" }}>
                 <a className="underline" href={`/witness/${witness.hash}`}>Open share link</a>
                 <a className="underline" href={`data:application/json,${encodeURIComponent(JSON.stringify(witness, null, 2))}`} download={`witness-${witness.pack.scenarioId}.json`}>Download JSON</a>
-                <button className="underline" onClick={() => void execute(async () => {
+                <button className="underline" onClick={() => void execute(async (gen) => {
                   const url = `${window.location.origin}/witness/${witness.hash}`;
                   if (navigator.clipboard) {
                     await navigator.clipboard.writeText(url);
-                    setCopyNote("Link copied");
-                  } else setCopyNote(url);
+                    if (guard.isCurrent(gen)) setCopyNote("Link copied");
+                  } else if (guard.isCurrent(gen)) setCopyNote(url);
                 })}>Copy link</button>
               </div>
               {copyNote && <p role="status" className="break-all text-xs">{copyNote}</p>}
@@ -242,26 +326,16 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
       <div className="receipt-strip"><p className="hint">Stay with the captured evidence, or inspect its mechanics.</p><Inspector label="Open query & version workbench" title="Query, replay and simulation">
         {active && <pre className="mono mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>{active.cypher}</pre>}
         <div className="mt-4 flex flex-wrap gap-2">
-          <button className={control} style={card} disabled={busy || !active || health !== true} onClick={history}>Load graph versions</button>
-          {commits.map((commit) => <button key={commit} className={control} style={card} disabled={busy} onClick={() => run(commit)}>Replay {commit.slice(0, 8)}</button>)}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="Before commit" placeholder="Before commit" value={beforeCommit} onChange={(e) => setBeforeCommit(e.target.value)} />
-          <input className="mono min-w-0 max-w-full rounded-lg border px-3 py-2 text-xs" style={card} aria-label="After commit" placeholder="After commit" value={afterCommit} onChange={(e) => setAfterCommit(e.target.value)} />
-          <button className={control} style={card} disabled={busy || !active || !beforeCommit || !afterCommit} onClick={() => void execute(async () => {
-            if (active) setDiff(await api.graphDiff({ graph: active.graph, cypher: active.cypher, beforeCommit, afterCommit }));
-          })}>Compare versions</button>
-          <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true || !session.authenticated || !session.roles.some((role) => role === "analyst" || role === "reviewer")} onClick={() => void execute(async () => {
+          <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true || !session.authenticated || !session.roles.some((role) => role === "analyst" || role === "reviewer")} onClick={() => void execute(async (gen) => {
             const result = await api.graphSimulate({
               graph: "supply_chain_deep",
               writes: ["MATCH (p:Platform {archetype:'Loitering munition'}) SET p.sim_closed = true"],
               readCypher: "MATCH (p:Platform {archetype:'Loitering munition'}) WHERE p.sim_closed = true RETURN p.name",
             });
-            setSimNote(`Temporary marker demonstration: ${result.beforeCount} → ${result.afterCount} rows. Change left unsubmitted; this does not model lost production.`);
+            if (guard.isCurrent(gen)) setSimNote(`Temporary marker demonstration: ${result.beforeCount} → ${result.afterCount} rows. Change left unsubmitted; this does not model lost production.`);
           })}>Demo temporary branch</button>
         </div>
         {simNote && <p className="mt-3 text-sm">{simNote}</p>}
-        {diff && <div className="mt-3 text-sm"><p>{diff.beforeCount} → {diff.afterCount} query rows</p><pre className="mono mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ added: diff.addedSample, removed: diff.removedSample }, null, 2)}</pre></div>}
         <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Catalogue-only, pinned reads use isolated graph clients. Simulation requires SSO and cannot submit changes. Daemon-side abandoned-change reclamation and independent operational validation remain outstanding.</p>
       </Inspector></div>
     </section>

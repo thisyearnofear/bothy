@@ -18,7 +18,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
   token_endpoint_unreachable: "The SSO token endpoint is unreachable.",
 };
 
-export default function DefenseBriefPanel({ run, session, savedCase = false }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean }) {
+export default function DefenseBriefPanel({ run, session, savedCase = false, onBriefChange }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean; onBriefChange?: (brief: DefenseBrief | null) => void }) {
   const [brief, setBrief] = useState<DefenseBrief | null>(null);
   const [evidence, setEvidence] = useState<GraphRun | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,6 +66,9 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
     alive.current = true;
     return () => { alive.current = false; };
   }, []);
+
+  useEffect(() => { onBriefChange?.(brief); }, [brief, onBriefChange]);
+  useEffect(() => () => onBriefChange?.(null), [onBriefChange]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("brief");

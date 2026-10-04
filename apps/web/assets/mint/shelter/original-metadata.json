@@ -1,0 +1,53 @@
+{
+  "path": "apps/web/assets/mint/shelter/original.glb",
+  "bytes": 4856260,
+  "sha256": "99d90729ff5521dcc6d4e0357ea40fb630fcae3f6233b7c28d1c97a7299349ac",
+  "gltfVersion": "2.0",
+  "generator": "glTF-Transform v4.3.0",
+  "extensionsUsed": [],
+  "extensionsRequired": [],
+  "meshCount": 1,
+  "primitiveCount": 1,
+  "triangles": 4338,
+  "nonTrianglesPrimitives": [],
+  "positionAccessorCounts": {
+    "1": 6974
+  },
+  "materialCount": 1,
+  "textureCount": 3,
+  "images": [
+    {
+      "name": "Color_48b49df2-bdf9-43a9-8abe-c98f1c55812f",
+      "mimeType": "image/jpeg",
+      "byteLength": 1127727,
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "name": "ORM_48b49df2-bdf9-43a9-8abe-c98f1c55812f",
+      "mimeType": "image/jpeg",
+      "byteLength": 945987,
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "name": "NormalGL_48b49df2-bdf9-43a9-8abe-c98f1c55812f",
+      "mimeType": "image/png",
+      "byteLength": 2531566,
+      "dimensions": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "nodeNames": [
+    "Amber Door Bothy"
+  ],
+  "sceneChildren": [
+    "Amber Door Bothy"
+  ]
+}

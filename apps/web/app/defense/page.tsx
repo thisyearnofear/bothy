@@ -1,11 +1,12 @@
 import Link from "next/link";
-import PageHero from "../../components/PageHero";
+import PageHero, { SiteHeader } from "../../components/PageHero";
 import { cookies } from "next/headers";
 import GraphPanel from "../../components/GraphPanel";
 import DefenseSavedCase from "../../components/DefenseSavedCase";
 import DefenseWorkspace from "../../components/DefenseWorkspace";
 import DefenseOnboarding from "../../components/DefenseOnboarding";
 import Inspector from "../../components/Inspector";
+import BothyContours from "../../components/BothyContours";
 import { defenseMode } from "../../lib/workspace";
 import { SESSION_COOKIE, openSession } from "@/lib/session";
 import type { DefenseSession } from "../../lib/api";
@@ -46,16 +47,34 @@ export default async function DefensePage({ searchParams }: { searchParams: Prom
   const { brief } = params;
   const mode = defenseMode(params);
   const savedId = typeof brief === "string" && brief ? brief : null;
+  const investigation = mode === "investigation" && !savedId;
   return (
     <main className="min-h-screen">
-      <PageHero
-        eyebrow="Defence supply-chain analysis"
-        title={mode === "workspace" ? "Operations workspace" : mode === "onboarding" ? "Rehearse the handoff." : mode === "case" ? "Case record" : "Trace the exposure."}
-        lede={mode === "onboarding" ? "Four steps. Three roles. Synthetic evidence." : undefined}
-        image={mode === "workspace" ? "5-material" : mode === "onboarding" ? "3-assembly" : mode === "case" ? "4-component" : "2-system"}
-      />
-      <div className="enter mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-      {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : mode === "onboarding" ? <DefenseOnboarding /> : mode === "investigation" ? <><p className="mb-4 text-sm"><Link href="/defense" className="underline">Back to workspace</Link> · New investigation · public/synthetic evidence</p><GraphPanel initialSession={session} /></> : <DefenseWorkspace initialSession={session} />}
+      {investigation ? (
+        <>
+          <SiteHeader />
+          <div className="field-head mx-auto w-full max-w-[1600px] px-4 sm:px-6">
+            <BothyContours label className="field-head-contours" />
+            <p className="eyebrow">Defence supply-chain analysis · synthetic/public evidence only</p>
+            <div className="field-head-row">
+              <h1 className="story-serif text-2xl sm:text-3xl" style={{ color: "var(--text-strong)" }}>Investigation workspace</h1>
+              <ol className="field-steps mono" aria-label="Investigation steps">
+                <li>01 / Ask one question</li><li>02 / Follow the dependency</li><li>03 / Own the verification</li>
+              </ol>
+            </div>
+            <p className="mt-1 max-w-2xl text-sm">Ask one reviewed question, follow the captured dependency, own the verification.</p>
+          </div>
+        </>
+      ) : (
+        <PageHero
+          eyebrow="Defence supply-chain analysis"
+          title={mode === "workspace" ? "Investigation workspace" : mode === "onboarding" ? "Rehearse the handoff." : mode === "case" ? "Case record" : "Trace the exposure."}
+          lede={mode === "onboarding" ? "Four steps. Three roles. Synthetic evidence." : undefined}
+          image={mode === "workspace" ? "5-material" : mode === "onboarding" ? "3-assembly" : mode === "case" ? "4-component" : "2-system"}
+        />
+      )}
+      <div className={`enter mx-auto px-4 py-8 sm:px-6 sm:py-10 ${investigation ? "w-full max-w-[1600px]" : "max-w-6xl"}`}>
+      {savedId ? <DefenseSavedCase id={savedId} initialSession={session} /> : mode === "onboarding" ? <DefenseOnboarding /> : investigation ? <><p className="mb-4 text-sm"><Link href="/defense" className="underline">Back to workspace</Link> · New investigation · public/synthetic evidence</p><GraphPanel initialSession={session} /></> : <DefenseWorkspace initialSession={session} />}
       <footer className="mt-12 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: "var(--rule)", color: "var(--text-faint)" }}>
         <p>Prototype · synthetic/public evidence · not live intelligence.</p>
         <div className="mt-2"><Inspector label="Inspect prototype boundary" title="Prototype boundary">

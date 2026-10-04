@@ -1,0 +1,233 @@
+.root {
+  position: relative;
+  min-height: calc(100dvh - 130px);
+  overflow-x: clip;
+}
+
+.canvasWrap {
+  position: absolute;
+  inset: 0;
+  min-height: 70vh;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.fallbackImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.canvasNote {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 3;
+  max-width: 22rem;
+  font-size: 0.8rem;
+  color: var(--text-body);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.overlay {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1.25rem;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+.panel {
+  align-self: start;
+  max-width: 34rem;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.panel h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(2.75rem, 5vw, 5rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  color: var(--text-strong);
+}
+
+.panel h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 2.4vw, 2.25rem);
+  line-height: 1.05;
+  color: var(--text-strong);
+}
+
+.lede {
+  font-size: 1.05rem;
+  color: var(--text-body);
+  margin: 0.75rem 0 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.btn {
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: var(--panel);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  composes: btn;
+  background: var(--moss);
+  border-color: var(--moss);
+  color: var(--page);
+  font-weight: 600;
+}
+
+.link {
+  font-size: 0.85rem;
+  color: var(--cursor);
+  text-decoration: underline;
+}
+
+.stageList {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stage {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.stage[aria-pressed="true"] {
+  border-color: var(--cursor);
+  background: color-mix(in srgb, var(--cursor) 14%, transparent);
+  color: var(--text-strong);
+}
+
+.stage:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stageKey {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.bound {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  border-top: 1px dashed var(--rule);
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+}
+
+.nav {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 9rem;
+}
+
+.nav button {
+  text-align: left;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.nav button[aria-current="step"] {
+  border-color: var(--shelter);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.nav button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.caption {
+  position: relative;
+  z-index: 2;
+  padding: 0.5rem 1.25rem 1rem;
+  max-width: 44rem;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.gaps {
+  font-size: 0.8rem;
+  color: var(--text-body);
+  border-left: 2px solid var(--shelter);
+  padding-left: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .overlay {
+    grid-template-columns: 1fr;
+  }
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .panel {
+    max-width: none;
+  }
+}

@@ -1,11 +1,17 @@
 import Link from "next/link";
 import ScatterHeading from "./ScatterHeading";
+import BothyMark from "./BothyMark";
 
 export function SiteHeader({ className = "" }: { className?: string }) {
   return (
     <header className={`flex items-center justify-between px-5 py-6 sm:px-10 ${className}`}>
-      <Link href="/" className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</Link>
+      <Link href="/" className="flex items-center gap-3" aria-label="Bothy — shelter for uncertain decisions">
+        <BothyMark />
+        <span className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</span>
+        <span className="mono hidden text-[11px] uppercase tracking-widest sm:inline" style={{ color: "var(--text-faint)" }}>Shelter for uncertain decisions.</span>
+      </Link>
       <nav className="flex gap-6 text-sm" aria-label="Main navigation">
+        <Link href="/experience/gallium" className="nav-link underline-offset-4 hover:underline">Explore Bothy</Link>
         <Link href="/defense" className="nav-link underline-offset-4 hover:underline">Workspace</Link>
         <Link href="/pilot" className="nav-link underline-offset-4 hover:underline">Pilot</Link>
       </nav>

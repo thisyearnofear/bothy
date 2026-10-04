@@ -27,7 +27,7 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
   ];
   return <div className="space-y-14">
     <section aria-label="Workspace next action">
-      <p className="docref">{session.authenticated ? "Operations workspace · your team" : "Operations workspace · sample data"}</p>
+      <p className="docref">{session.authenticated ? "Investigation workspace · your team" : "Investigation workspace · sample data"}</p>
       <h2 className="mt-3 max-w-3xl text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-tight tracking-tight" style={{ color: "var(--text-strong)" }}>{session.authenticated ? focus.title : "Choose your next move."}</h2>
       {session.authenticated ? <p className="mt-4 max-w-2xl text-base leading-relaxed">{focus.description}</p> : <div className="record-status mt-4"><span>Synthetic evidence</span><span>Exposure ≠ stoppage</span><a className="underline" href="/defense/demo">Watch the gallium demo →</a></div>}
       {session.authenticated ? <div className="mt-6 flex flex-wrap items-center gap-3">

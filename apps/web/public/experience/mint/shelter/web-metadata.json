@@ -1,0 +1,15 @@
+{
+  "path": "apps/web/public/experience/mint/shelter/web.glb",
+  "bytes": 1461836,
+  "sha256": "2d72d8623064780c73c62ae25226990e948eae9ea3570e71e70f439e7485dc89",
+  "gltfVersion": "2.0",
+  "generator": "Khronos glTF Blender I/O v4.5.51",
+  "extensionsUsed": [],
+  "extensionsRequired": [],
+  "meshCount": 1,
+  "triangles": 4338,
+  "materialCount": 2,
+  "textureCount": 6,
+  "derivedFrom": "apps/web/assets/mint/shelter/original.glb",
+  "derivedFromSha256": "99d90729ff5521dcc6d4e0357ea40fb630fcae3f6233b7c28d1c97a7299349ac"
+}

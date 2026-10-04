@@ -1,0 +1,49 @@
+{
+  "registryVersion": 1,
+  "mintProject": {
+    "projectId": "zd70am9cbh0dthrayrw9ybn0t18fmjqr",
+    "name": "Bothy Shelter Showcase"
+  },
+  "assetRoot": "apps/web/public/experience/mint",
+  "assets": {
+    "shelter": {
+      "source": {
+        "manifestVersion": 1,
+        "kind": "asset",
+        "assetType": "model",
+        "assetId": "ks755sq7fpa09rmdge3fjhprcs8fmqz6"
+      },
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "mode": "local_files",
+      "artifacts": {
+        "web_glb": {
+          "artifactId": "web_glb",
+          "role": "canonical_model",
+          "format": "glb",
+          "contentType": "model/gltf-binary",
+          "filename": "web.glb",
+          "localPath": "apps/web/public/experience/mint/shelter/web.glb",
+          "loaderHint": "gltf",
+          "byteSize": 1461836,
+          "extensionsUsed": [],
+          "extensionsRequired": [],
+          "usesDraco": false,
+          "requiresDraco": false
+        }
+      }
+    }
+  },
+  "manualImports": {
+    "shelter": {
+      "sourceFile": "apps/web/assets/mint/shelter/original.glb",
+      "originalSha256": "99d90729ff5521dcc6d4e0357ea40fb630fcae3f6233b7c28d1c97a7299349ac",
+      "source": "user_export",
+      "downloadsAllowedByMcp": false,
+      "chatUrl": "https://mint.gg/chat/ph76ne32ms40zar7gyjzt0rhd58fm9eb"
+    }
+  }
+}

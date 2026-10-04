@@ -1,0 +1,41 @@
+{
+  "sourceUrl": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/11/995/631.png",
+  "datasetUrl": "https://registry.opendata.aws/terrain-tiles/",
+  "attributionUrl": "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+  "attribution": "Mapzen Terrain Tiles. Produced using Copernicus data and information funded by the European Union \u2014 EU-DEM layers. SRTM and GMTED2010 data courtesy of the U.S. Geological Survey. ETOPO1: DOC/NOAA/NESDIS/NCEI.",
+  "sourceSha256": "616af9bd776b71da3a1d521073928af5ac5c418b432bd532fbb782e0b019aba5",
+  "imagerySources": "eudem/eudem_dem_5deg_n55w010.tif, eudem/eudem_dem_5deg_n55w005.tif, srtm/N56W006.tif, srtm/N56W005.tif, gmted/50N030W_20101117_gmted_mea075.tif, etopo1/ETOPO1_Bed_g.tif",
+  "boundsWgs84": {
+    "west": -5.09765625,
+    "east": -4.921875,
+    "north": 56.6562264935022,
+    "south": 56.55948248376224
+  },
+  "tile": {
+    "zoom": 11,
+    "x": 995,
+    "y": 631
+  },
+  "units": "1 scene unit = 1 kilometre; Y up; X east; Z south",
+  "verticalExaggeration": 2,
+  "processing": "Nearest-pixel samples on 65x65 and 33x33 grids; approximate local ground scale from Web Mercator at crop mid-latitude; no smoothing or terrain deformation",
+  "boundary": "Scottish elevation crop is brand atmosphere only, not supplier geography, route guidance or current conditions. Shelter is an illustrative brand symbol, not a mapped building.",
+  "sampledElevationRangeMetres": [
+    0.125,
+    1053.23046875
+  ],
+  "assets": {
+    "terrain": {
+      "vertices": 4225,
+      "triangles": 8192,
+      "bytes": 151412,
+      "sha256": "ab31f7e7acdbeed21f699e9f2b521652dff9b42dfd7f8adf6b4f843b5288a0a2"
+    },
+    "terrain-low": {
+      "vertices": 1089,
+      "triangles": 2048,
+      "bytes": 39284,
+      "sha256": "c2f8cf93cc47be6aa719f51aaed4d8215caee7145041b1557e42f4afec7a8c94"
+    }
+  }
+}

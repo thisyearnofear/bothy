@@ -1,4 +1,6 @@
 import Link from "next/link";
+import BothyMark from "../components/BothyMark";
+import BothyContours from "../components/BothyContours";
 import Descent from "../components/Descent";
 import ProofCases from "../components/ProofCases";
 import HeroClock from "../components/HeroClock";
@@ -12,19 +14,25 @@ export default function Landing() {
     <main>
       <section className="hero">
         <div className="hero-bg" aria-hidden />
+        <BothyContours label className="hero-contours" />
         <header className={`absolute inset-x-0 top-0 z-10 flex items-center justify-between py-6 ${pad}`}>
-          <Link href="/" className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</Link>
+          <Link href="/" className="flex items-center gap-3" aria-label="Bothy — shelter for uncertain decisions">
+            <BothyMark />
+            <span className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>Bothy</span>
+          </Link>
           <nav className="flex gap-6 text-sm" aria-label="Main navigation">
+            <Link href="/experience/gallium" className="underline-offset-4 hover:underline">Explore Bothy</Link>
             <Link href="/defense" className="underline-offset-4 hover:underline">Workspace</Link>
             <Link href="/pilot" className="underline-offset-4 hover:underline">Pilot</Link>
           </nav>
         </header>
 
-        <div className={`${pad} pb-16 sm:pb-24`}>
+        <div className={`${pad} pb-16 sm:pb-24 relative z-[2]`}>
           <p className="docref">BTH-SITREP · Defence supply-chain exposure · Open source</p>
-          <h1 className="mt-5 max-w-5xl text-[clamp(2.75rem,9vw,8rem)] font-semibold leading-[0.92] tracking-[-0.06em]" style={{ color: "var(--text-strong)" }}>
-            Which programmes break when gallium does?
+          <h1 className="story-serif mt-5 max-w-5xl text-[clamp(2.75rem,9vw,8rem)] font-semibold leading-[0.92] tracking-[-0.06em]" style={{ color: "var(--text-strong)" }}>
+            Find the exposure. Keep the evidence. Own the next step.
           </h1>
+          <p className="mt-3 max-w-xl text-sm sm:text-base">A field shelter for uncertain decisions.</p>
           <HeroClock />
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
             <Link href="/defense?mode=onboarding" className="btn btn-primary">Open a guided investigation</Link>
