@@ -18,7 +18,7 @@ const AFTER_ACTION = [
 
 export default function StoryStage({ story, autoplay = false }: { story: Story; autoplay?: boolean }) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(autoplay);
+  const [playing, setPlaying] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [run, setRun] = useState<GraphRun | null>(null);
   const [runError, setRunError] = useState(false);
@@ -27,7 +27,10 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
   const last = story.beats.length - 1;
   const days = now === null ? null : clockDays(beat, now);
 
-  useEffect(() => { setNow(Date.now()); }, []);
+  useEffect(() => {
+    setNow(Date.now());
+    if (autoplay && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) setPlaying(true);
+  }, [autoplay]);
 
   useEffect(() => {
     let alive = true;
@@ -38,13 +41,13 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
 
   useEffect(() => {
     if (!playing || index >= last) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = setTimeout(() => setIndex(index + 1), BEAT_MS);
     return () => clearTimeout(timer);
   }, [playing, index, last]);
 
   const go = (next: number) => { setIndex(Math.max(0, Math.min(last, next))); setPlaying(false); };
-  const play = () => { if (index >= last) setIndex(0); setPlaying(true); };
+  // Pressing Play is an explicit request, so it moves at once and works under reduced motion too.
+  const play = () => { setIndex(index >= last ? 0 : index + 1); setPlaying(true); };
   const counts = story.scenarioId === "red-sea-d01" && run
     ? run.rows.map((row) => ({ label: String(row["s.status"] ?? ""), value: String(row["count(s)"] ?? "") })) : undefined;
   const btn = "btn";
