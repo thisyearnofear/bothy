@@ -4,9 +4,10 @@
 [Execution roadmap](docs/roadmap.md) · [Deployment design](docs/deployment-design.md)
 
 **For a supply-chain analyst at a European defence prime:** investigate a
-material, supplier, or transit disruption, trace which platforms and programmes
-are exposed, and keep the evidence and the responsible person attached to the
-decision.
+material, supplier, or transit disruption, inspect the returned platform and
+dependency evidence — mapping it to specific programmes remains a verification
+task, not an answered question — and keep the evidence and the responsible
+person attached to the decision.
 
 > Turn a supply-chain disruption into a review-ready, auditable impact brief,
 > without losing the evidence or the owner of the next action.
@@ -26,7 +27,8 @@ exposes an allowlisted read path into an embedded, versioned graph.
 | Surface | Route | What you do there |
 |---|---|---|
 | Briefing landing | `/` | The disruption, the countdown to the export-control deadline, a specimen brief, the workflow, and proof cases. Entry point for someone who has never seen the tool. |
-| Defence workspace | `/defense` | The operational door. Four modes: default workspace (role-aware case list), `?mode=investigate` (graph run), `?mode=onboarding` (guided four-role exercise), `?brief=<id>` (a saved case). |
+| Defence workspace | `/defense` | The operational door. Four modes: default workspace (role-aware case list), `?mode=investigate` (graph run: captured dependency, coverage gaps, role-aware rail, public timeline and geographic context, cited brief and owner), `?mode=onboarding` (guided four-role exercise), `?brief=<id>` (a saved case). |
+| Gallium experience | `/experience/gallium` | A cinematic vertical slice of the same evidence discipline: illustrated Scottish terrain and an authored bothy miniature on arrival, then the real `gallium-chain` capture rendered as an ordered field-book folio of selectable stage leaves, exact HTML evidence inspection, and verification/handoff. Not a live AI feed and not supplier geography; handoff still requires a configured session. |
 | Guided story | `/defense/demo`, `/defense/stories`, `/defense/stories/[slug]` | Date-scrubbed narrated case files — gallium exposure and a Red Sea diversion — replayable and printable as a case file. |
 | Stress lab | `/defense/lab` | Six scripted attempts to break the approval and audit rules: self-approval, replay, rewriting an audit entry. Shows the refusals, not just the happy path. |
 | Pilot scope | `/pilot` | What a two-week pilot agrees up front: decision, evidence and access boundary, rehearsal, acceptance. Collects contact interest only. |
@@ -41,14 +43,29 @@ agent through an allowlisted method/path/body filter. The agent never sees a
 cookie, and there is no password system or token-paste UI. Everything else under
 `/api/*` is rewritten straight to the agent.
 
+Visual asset provenance: the `/experience/gallium` cinematic scene is lazily
+loaded Three.js + GSAP, entirely separate from the MapLibre maps elsewhere in
+the app, and optional — every phase has a complete static/semantic HTML
+fallback. The bothy shelter is a user-provided asset registered in
+`mint-assets.json`: the browser variant is
+`apps/web/public/experience/mint/shelter/web.glb`, derived offline from the
+source kept at `apps/web/assets/mint/shelter/original.glb` (inside the repo,
+outside Next's `public/` asset directory). The backdrop terrain is a separate
+locally built DEM mesh with 2× vertical exaggeration, source-attributed in
+`apps/web/public/experience/terrain/terrain-source.json`. None of it is
+supplier geography or measured operational data.
+
 ## Run the defence demo
 
 Prerequisites: Node **22.13+** (or current Node 24), npm, Python + the TuringDB
 SDK, and the graph pack described in [graphs/README.md](graphs/README.md) (about
 470 MB, not in Git).
 
+Use `npm ci --legacy-peer-deps`, as the Dockerfiles do; the existing
+Express 4 versus `@strands-agents/sdk` peer mismatch can block a plain install.
+
 ```bash
-npm install
+npm ci --legacy-peer-deps
 cp .env.example .env
 bash scripts/venue.sh        # TuringDB :6677 → sidecar :6777 → agent :8787 → web :3001
 bash scripts/venue.sh status # health of all four, colour-coded
@@ -65,7 +82,7 @@ and witness artifacts in `apps/agent/data/bothy-loop.db`.
    watch it resolve against the stored evidence row.
 3. With configured OIDC, a reviewer approves or requests further verification,
    assigns a configured owner, that owner acknowledges and records an outcome,
-   and the audit trail keeps all of it in one SQLite transaction.
+   and each state transition and its audit append commit atomically in SQLite.
 4. Advanced controls expose pinned replay and version comparison. The temporary
    branch simulation requires an analyst or reviewer and cannot submit changes.
 
@@ -135,7 +152,6 @@ Full detail: [docs/architecture.md](docs/architecture.md).
 ```text
 apps/web        Next.js · defence workspace, stories, lab, landing · session bridge · earlier road/flood demos
 apps/agent      Express · brief generation and case state · graph sidecar client · road agent · SQLite artifacts
-apps/demo-video HyperFrames composition for the demo recording
 packages/shared shared domain/API types
 bench/          measurement instruments (see docs/baseline-measurement.md)
 scripts/        venue startup · SSO rehearsal · refusal probe · witness QR · DB bootstrap · secret scan
@@ -178,10 +194,25 @@ path and body allowlist, CSRF origin checks, upstream status passthrough, and a
 full brief → review → assign → acknowledge → outcome journey driven through the
 real agent router. No external email or inference is required.
 
-Current measured counts on this worktree: **118 web + 32 agent TypeScript tests
-passing** (150 total), plus 6 Python sidecar boundary tests (mocked, not
-live-query proof). `9bf591a` recorded 103/32; these numbers were measured against
-uncommitted changes, so re-run on the final commit before quoting a total.
+Current measured counts on this worktree: **150 web + 32 agent TypeScript tests
+passing** (182 total), measured at `6deefe4`, plus 6 Python sidecar boundary
+tests (mocked, not live-query proof). `9bf591a` recorded 103/32.
+
+Security snapshot (4 October 2026): `npm audit --omit=dev` reports **0**
+production-dependency findings in this lock and in the deployed agent
+container. The full `npm audit` reports 7 remaining findings (2 moderate, 5
+high), all in dev-classified dependencies — with the caveat that the agent
+image installs dev dependencies and runs production via `tsx`, so do not read
+that as proof those packages are absent from the deployed filesystem, and this
+is not a runtime/OS/vulnerability certification. Current pinned versions:
+Next 16.3.6, Sharp 0.35.5, MapLibre 6.4.1, with root `overrides` pinning
+fast-uri 3.1.8, ip-address 10.7.2 and qs 6.16.0.
+
+Verified by focused desktop QA (same date): `/watch` and
+`/defense?mode=investigate` render the base OSM map under MapLibre 6 — worker
+and shared modules served 200, console clean. Graph-dependent corridor overlays
+and mobile 3D were not verified in that pass; production browser QA remains an
+operator task.
 
 The 6 sidecar tests pass when discovery runs directly
 (`cd apps/agent && python3 -m unittest discover -s src/graph -p 'test_*.py'`).

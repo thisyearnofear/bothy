@@ -464,7 +464,9 @@ It does not need Coolify/Traefik.
    curl https://bothy.trustfall.xyz/api/health
    ```
 
-3. Update: re-sync the repo, then re-run the `up -d --build` command.
+3. Update (fresh Git-checkout installs only): re-sync the repo, then re-run the
+   `up -d --build` command. The live `/opt/bothy` checkout-free mirror uses the
+   procedure in the subsection below instead.
 
 The stack includes a `graph` container (TuringDB daemon plus the loopback-only
 read bridge, republished on the private compose network by socat). It reads the
@@ -506,3 +508,59 @@ signing key persists in the `bothy-idp-data` volume.
 When syncing the repo to the server, quote exclusions so the shell does not
 expand them (`--exclude '.env*' --exclude invite.caddy --exclude .invite-passphrase`);
 an unquoted `.env*` once deleted the server's `.env.production`.
+
+### Current deployment: `/opt/bothy` mirror on `snapflip-vultr` (October 2026)
+
+The live `/opt/bothy` directory on `snapflip-vultr` is **not a Git checkout**
+(`git -C /opt/bothy status` is fatal). Updates are a checkout-free `tar` overlay
+from a committed local `HEAD`: it writes files only, never deletes, and never
+runs `git pull`. It must preserve the ignored live configuration
+(`deploy/.env.production`, `deploy/.env.sso`, `invite.caddy`,
+`.invite-passphrase`), the graph stores under `graphs/`, and the Docker volumes —
+never `rsync --delete`, never let an unquoted `.env*` expand.
+
+Before overlaying, take a versioned backup under `/root/bothy-art` of the
+web/agent source, root package files and the live ignored configuration —
+protect file permissions and never print or commit secret values.
+
+The archive scope is web/agent/shared plus the root package files only:
+deployment config, graph, IdP or proxy changes need a separate planned
+migration, and the local `HEAD` must be the tested commit (pushing to GitHub is
+independent of this source mirror).
+
+```bash
+set -o pipefail
+git archive --format=tar HEAD apps/web apps/agent packages/shared package.json package-lock.json .gitignore | ssh snapflip-vultr 'tar -x -C /opt/bothy'
+ssh snapflip-vultr 'cd /opt/bothy/deploy && docker compose -f docker-compose.demo.yml --env-file .env.production build agent web && docker compose -f docker-compose.demo.yml --env-file .env.production up -d --no-deps agent web'
+```
+
+Smoke afterwards:
+
+```bash
+curl -fsS https://bothy.trustfall.xyz/api/health
+curl -fSI https://bothy.trustfall.xyz/maplibre/maplibre-gl-worker.mjs
+curl -fSI https://bothy.trustfall.xyz/maplibre/maplibre-gl-shared.mjs
+curl -fsS -o /dev/null -w '%{http_code}\n' https://bothy.trustfall.xyz/experience/gallium
+ssh snapflip-vultr 'docker ps --filter name=bothy --format "{{.Names}} {{.Status}}"'
+```
+
+The agent should report `healthy`; the web container should be `Up` and return
+HTTP 200 on the checks above.
+
+MapLibre 6 detail: Turbopack cannot emit the worker's sibling module from
+`import.meta.url`, so `predev`/`prebuild`
+(`apps/web/scripts/copy-maplibre-worker.mjs`) copies **both**
+`maplibre-gl-worker.mjs` and `maplibre-gl-shared.mjs` from the installed package
+into `apps/web/public/maplibre/` — that directory is Git-ignored and generated
+inside the Docker build, served same-origin as static JS; nothing is copied into
+the repo by hand and no CDN is used for the worker modules — raster basemap
+tiles still require network access to `tile.openstreetmap.org`. The app calls
+`setWorkerUrl` before the first `Map` construction, requires WebGL2, and keeps
+the 2D/static fallback.
+
+Audit snapshot (4 October 2026): `npm audit --omit=dev` reports 0 findings in
+the repo lock and deployed agent container; the full audit shows 7 dev-classified
+findings, but the agent image installs dev dependencies and runs production via
+`tsx`, so do not treat the vulnerable versions as absent from the runtime. Do not
+resolve residuals with `npm audit fix --force` or by overriding security-policy
+controls.

@@ -12,9 +12,37 @@ next permitted action before retained exposure context. Reveal Cypher, benchmark
 commit IDs, and simulation controls only when requested. Do not interleave pilot
 marketing with an operational approval gate.
 
-The implemented order is scenario/service state, exposure summary, brief/current
-stage and next action, captured-evidence receipt/export, then advanced controls.
+The implemented order is graph question/service state, captured hierarchy,
+evidence boundary and summary, public timeline (distinct from graph versions),
+geographic public context (no supplier coordinates) and coverage gaps, then the
+cited deterministic brief, role-controlled review and owner handoff, with
+mechanics on demand. The exposure query returns names only; the chain query is a
+sampled `LIMIT 10` path capture whose final material shows bounded connectivity
+(`1–4 edges · intermediate materials not returned`), not a direct relationship.
 Citation inspection focuses the exact stored row; full provenance opens in an inspector.
+
+### Current mood: field shelter × survey atlas × architectural miniature (October 2026)
+
+The mood below (*a situation room at 02:00*) remains the earlier demo's palette.
+For the defence workspace and `/experience/gallium` the current visual register is
+a field shelter on a surveyed hill: `--page #161c18`, `--panel #202822`,
+`--text-strong #eee9dc`, `--cursor #9ac4cb`, `--shelter #dfad73`,
+`--moss #b5c99a`. Serif editorial display with monospace instrument labels; the
+mark is a roofline/open door and illustrated contours. **Amber is reserved for
+the shelter and the human next step** — never for evidence success or
+probability.
+
+`/experience/gallium` is a progressive-enhancement sequence —
+arrival → question → dependency → evidence → handoff — with Three.js + GSAP
+lazily loaded, render-on-demand (no idle loop), reduced-motion/skip paths, and a
+static + HTML fallback. The evidence folio orders its leaves by actual captured
+columns only — a field-book abstraction, not a physical BOM, and no fabricated
+edges; exact row/column/runId stay in HTML, and handoff requires a configured
+session. The terrain mesh is a local DEM with **2×** vertical exaggeration and
+the shelter is an authored miniature: atmosphere, not measured gallium supplier
+geography. Real geography appears as country/policy-level representative labels
+and schematic Red Sea corridors bounded by public sources. 3D work is
+desktop-first; no blanket mobile QA is claimed for it.
 
 ### Progressive disclosure by purpose
 
@@ -99,6 +127,10 @@ the *craft* layer: how Bothy should look, move, and prioritise a decision.
   — useful principles for micro-interactions, hierarchy, and optical alignment.
 
 ## Mood: a situation room at 02:00
+
+*Legacy: this mood and its token table describe the earlier road/flood watch-room
+demo. The current defence/experience register is the dated "field shelter ×
+survey atlas × architectural miniature" section above.*
 
 Cold, low-light, high contrast. Bothy is a shelter that is already watching the
 hill: the interface should feel spatial and alive, but never distract from the
@@ -237,12 +269,13 @@ Bothy has exactly two kinds of surface, and motion law differs between them:
 - **One direction of influence.** Scroll may move the camera; the camera never
   moves the page. No scroll-snap traps, no forced scrolling to reveal a door.
 
-**Runtime stance:** CSS + MapLibre + rAF + the View Transitions API remain the
-default and are sufficient for every pattern in this document. A choreography
-library (GSAP or similar) is permissible only for an isolated, non-critical
-presentation sequence that produces a concrete benefit CSS/MapLibre cannot,
-never captures scrolling, and has an equivalent reduced-motion state. Do not
-add one merely to decorate the product.
+**Runtime stance (legacy, earlier demo):** CSS + MapLibre + rAF + the View
+Transitions API remain the default and are sufficient for the earlier
+road/watch-room patterns in this document. A choreography library (GSAP or
+similar) is permissible only for an isolated, non-critical presentation
+sequence that produces a concrete benefit CSS/MapLibre cannot, never captures
+scrolling, and has an equivalent reduced-motion state. Do not add one merely
+to decorate the product.
 
 ### Atmospheric map backdrop
 
