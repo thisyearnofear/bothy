@@ -97,7 +97,7 @@ export default function Timeline({
           {tags.map((tag) => (
             <span
               key={tag.key}
-              className="mono pointer-events-none absolute max-w-[min(240px,70%)] truncate rounded border px-1.5 py-0.5 text-[11px] leading-tight"
+              className="mono pointer-events-none absolute max-w-[min(240px,70%)] truncate rounded border px-1.5 py-0.5 text-xs leading-tight"
               style={{
                 left: `clamp(8px, ${tag.pct}%, calc(100% - 8px))`,
                 top: tag.row * 24,

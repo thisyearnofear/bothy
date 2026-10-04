@@ -5,13 +5,13 @@ import { use, useEffect, useState } from "react";
 import { api } from "../../../lib/api";
 import { PilotInterestForm } from "../../../components/EyPilotBand";
 import type { GraphWitness } from "../../../../../packages/shared/src/types";
+import { card } from "../../../lib/ui";
 
 type Pack = Omit<GraphWitness, "pack"> & {
   pack: Partial<GraphWitness["pack"]> & { officer?: string | null };
   links?: { page: string; rerun: string };
 };
 
-const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 
 export default function WitnessInner({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = use(params);

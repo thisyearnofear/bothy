@@ -313,3 +313,13 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 - **Guided demo** (`/defense/demo`): the gallium story in autoplay (8 s per beat), then the desk plays its own plan (approve, assign, accept, two attacks, verify, rewrite, verify). Pause hands the controls to the viewer.
 - **Landing hero clock** (`HeroClock`): the live day count to the same date, linking to the gallium story.
 - Every story states that Bothy did not exist during the events and that the page shows the record it would produce, not a changed outcome.
+
+## System tokens and primitives
+
+- `--rule-strong` (oklch 52% grey): borders of interactive controls and inputs, at least 3:1 on page and panel. `--rule` stays for decorative hairlines.
+- `--focus-ring`, `--hit` (2.75rem touch target, applied under `pointer: coarse` and to scrubber ticks).
+- Classes: `.btn` (+ `-primary`, `-quiet`), `.card`, `.eyebrow`, `.hint`, `.nav-link`. Shared JS constants live in `apps/web/lib/ui.ts`.
+- State colour is derived by rule: each state has one hue (`--h` on `.pill`), text 82%, fill 24%, edge 52% lightness, plus a glyph so colour is never the only signal. `--st-*` are the same hues for SVG and tracks.
+- Text floor: 12px (0.75rem). Nothing smaller.
+- Story scrubber: date label on the thumb, Play/Pause on every story, arrow keys, one polite status line ("Step n of N"); the beat card is not a live region.
+- Print: the story page ends with a case file (beats, question, caveat); `Print` hides the scrubber and chrome.

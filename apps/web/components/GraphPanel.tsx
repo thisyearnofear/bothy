@@ -8,9 +8,8 @@ import DefenseCases from "./DefenseCases";
 import GalliumExplanation from "./GalliumExplanation";
 import RunTrace from "./RunTrace";
 import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
+import { card, control } from "../lib/ui";
 
-const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
-const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
 const ANONYMOUS: DefenseSession = { configured: false, authenticated: false, roles: [] };
 
 export default function GraphPanel({ initialSession }: { initialSession?: DefenseSession }) {

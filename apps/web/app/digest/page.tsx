@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { SiteHeader } from "../../components/PageHero";
+import { card } from "../../lib/ui";
 
-const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
 
 type Digest = { id: string; to: string; subject: string; body: string; caseHref: string; at: string };
 

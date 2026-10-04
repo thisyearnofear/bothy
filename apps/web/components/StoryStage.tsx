@@ -43,13 +43,15 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
     return () => clearTimeout(timer);
   }, [playing, index, last]);
 
-  const go = (next: number) => { setIndex(Math.max(0, Math.min(last, next))); if (autoplay) setPlaying(false); };
+  const go = (next: number) => { setIndex(Math.max(0, Math.min(last, next))); setPlaying(false); };
+  const play = () => { if (index >= last) setIndex(0); setPlaying(true); };
   const counts = story.scenarioId === "red-sea-d01" && run
     ? run.rows.map((row) => ({ label: String(row["s.status"] ?? ""), value: String(row["count(s)"] ?? "") })) : undefined;
-  const btn = "coarse-target rounded-lg border px-3 py-2 text-sm";
+  const btn = "btn";
 
   return <div className="space-y-12">
     <div className="scrub" role="group" aria-label="Story timeline">
+      <div className="scrub-thumbrow" aria-hidden="true"><span className="scrub-thumb" style={{ left: `calc(${(index / last) * 100}% + ${0.55 - (index / last) * 1.1}rem)`, transform: `translateX(-${(index / last) * 100}%)` }}>{beat.label}</span></div>
       <input type="range" min={0} max={last} step={1} value={index} onChange={(e) => go(Number(e.target.value))}
         aria-label="Date in the story" aria-valuetext={beat.label} style={{ "--p": `${(index / last) * 100}%` } as React.CSSProperties} />
       <ol className="scrub-ticks">
@@ -57,13 +59,15 @@ export default function StoryStage({ story, autoplay = false }: { story: Story; 
           <button onClick={() => go(i)} aria-current={i === index ? "step" : undefined}>{item.label}</button>
         </li>)}
       </ol>
-      {autoplay && <div className="scrub-controls">
-        <button className={btn} style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }} onClick={() => setPlaying((value) => !value)}>{playing ? "Pause" : "Play"}</button>
-        <button className={btn} style={{ borderColor: "var(--rule)" }} onClick={() => { setIndex(0); setPlaying(true); }}>Restart</button>
-      </div>}
+      <div className="scrub-controls">
+        <button className={`${btn} btn-primary`} onClick={() => (playing ? setPlaying(false) : play())}>{playing ? "Pause" : "Play story"}</button>
+        <button className={btn} disabled={index === 0} onClick={() => { setIndex(0); setPlaying(false); }}>Back to start</button>
+        <span className="hint" aria-hidden="true">Step {index + 1} of {story.beats.length} · drag the date or use ← → keys</span>
+      </div>
+      <p className="sr-only" role="status" aria-live="polite">{`Step ${index + 1} of ${story.beats.length}: ${beat.label}`}</p>
     </div>
 
-    <div key={index} className="beat enter" aria-live="polite">
+    <div key={index} className="beat enter">
       <div>
         <p className="mono story-date">{beat.label}{beat.act ? " · your desk" : ""}</p>
         <p className="beat-narration">{beat.narration}</p>

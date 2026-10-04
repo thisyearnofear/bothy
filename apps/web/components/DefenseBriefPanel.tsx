@@ -5,9 +5,8 @@ import { ApiError, ApiAuthError, api, isAbortError, recoveryMessage, type Defens
 import { briefStage } from "../lib/briefStage";
 import { validateCitation } from "../lib/citation";
 import AuditBadge from "./AuditBadge";
+import { card, control } from "../lib/ui";
 
-const card = { borderColor: "var(--rule)", background: "var(--panel)" };
-const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
 
 const SIGN_IN_ERRORS: Record<string, string> = {
   sso_not_configured: "SSO is not configured on this deployment, so sign-in is disabled.",

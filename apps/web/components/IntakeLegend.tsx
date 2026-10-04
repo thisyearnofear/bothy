@@ -28,7 +28,7 @@ export default function IntakeLegend({
       aria-label="Intake"
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <p className={`mono uppercase tracking-widest ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+        <p className={`mono uppercase tracking-widest ${compact ? "text-xs" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
           Intake
         </p>
         <p className={`leading-snug ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--text-body)" }}>
@@ -51,11 +51,11 @@ export default function IntakeLegend({
       {(open || compact) && (
         <>
           {clock && (
-            <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+            <p className={`mono mt-1 leading-snug ${compact ? "text-xs" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
               {clock}
             </p>
           )}
-          <p className={`mono mt-1 leading-snug ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
+          <p className={`mono mt-1 leading-snug ${compact ? "text-xs" : "text-xs"}`} style={{ color: "var(--text-faint)" }}>
             {caseId === "live"
               ? "Operator road reports land in the score · audio · radio · social are not ingested"
               : "Not ingested — audio · radio · social"}

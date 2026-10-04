@@ -78,11 +78,13 @@ export default function ReviewerDesk({ runId, auto }: { runId?: string; auto: bo
 
   const at = station(state);
   const can = (action: SandboxAction) => state.available.includes(action) && !busy;
-  const btn = "coarse-target rounded-lg border px-4 py-2 text-sm disabled:opacity-40";
-  const accent = { borderColor: "var(--cursor)", color: "var(--cursor)" } as const;
+  const btn = "btn";
   const ownerWorking = state.actionStatus === "assigned" || state.actionStatus === "acknowledged";
 
+  const why = (action: SandboxAction) => (can(action) ? undefined : busy ? "Working…" : "The rules do not allow this at the current step.");
+
   return <section className="desk" aria-label="Your desk">
+    <p className="hint">Step {Math.min(at, 5)} of 5 · left: the brief and your controls · right: what the system recorded, one line per attempt.</p>
     <ol className="desk-track" aria-label="Where the case is">
       {STATIONS.map(([role, what], index) => <li key={what} data-state={index + 1 < at ? "done" : index + 1 === at ? "active" : "todo"}>
         <span className="mono">{role}</span><span>{what}</span>
@@ -97,27 +99,28 @@ export default function ReviewerDesk({ runId, auto }: { runId?: string; auto: bo
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {state.available.includes("approve") && <>
-            <button className={btn} style={accent} disabled={!can("approve")} onClick={() => void act("approve")}>Approve verification</button>
-            <button className={btn} style={{ borderColor: "var(--rule)" }} disabled={!can("reject")} onClick={() => void act("reject")}>Reject</button>
+            <button className={`${btn} btn-primary`} title={why("approve")} disabled={!can("approve")} onClick={() => void act("approve")}>Approve verification</button>
+            <button className={btn} title={why("reject")} disabled={!can("reject")} onClick={() => void act("reject")}>Reject</button>
           </>}
-          {state.available.includes("assign") && <button className={btn} style={accent} disabled={!can("assign")} onClick={() => void act("assign")}>Assign to owner-a, due in 14 days</button>}
+          {state.available.includes("assign") && <button className={`${btn} btn-primary`} title={why("assign")} disabled={!can("assign")} onClick={() => void act("assign")}>Assign to owner-a, due in 14 days</button>}
           {ownerWorking && <p role="status" className="text-sm">Owner-a is working on it…</p>}
-          {state.available.includes("accept") && <button className={btn} style={accent} disabled={!can("accept")} onClick={() => void act("accept")}>Accept the finding</button>}
+          {state.available.includes("accept") && <button className={`${btn} btn-primary`} title={why("accept")} disabled={!can("accept")} onClick={() => void act("accept")}>Accept the finding</button>}
           {state.reassessed && <p role="status" className="text-sm">Case complete. It records a verification, not a proven operational effect.</p>}
           {state.briefStatus === "rejected" && <p role="status" className="text-sm">Rejected. The record is retained; a new brief needs its own review.</p>}
         </div>
         {auto && <p className="text-xs" style={{ color: "var(--text-faint)" }}>Auto-playing. Press Pause above to take the controls.</p>}
         <div className="desk-attacks">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Now try to cheat it</p>
+          <p className="hint">Each attempt should be refused and logged. Greyed buttons are not valid yet; hover for why.</p>
           <div className="flex flex-wrap gap-2">
-            {ATTACKS.map(([action, label]) => <button key={action} className={btn} style={{ borderColor: "var(--rule)" }} disabled={!can(action)} onClick={() => void act(action)}>{label}</button>)}
-            <button className={btn} style={{ borderColor: "var(--st-verified)", color: "var(--st-verified)" }} disabled={!can("verify")} onClick={() => void act("verify")}>Verify the audit chain</button>
+            {ATTACKS.map(([action, label]) => <button key={action} className={btn} title={why(action)} disabled={!can(action)} onClick={() => void act(action)}>{label}</button>)}
+            <button className={`${btn} btn-quiet`} title={why("verify")} disabled={!can("verify")} onClick={() => void act("verify")}>Verify the audit chain</button>
           </div>
         </div>
-        <button className="text-xs underline" onClick={() => setGeneration((value) => value + 1)}>Start the desk over</button>
+        <button className="btn btn-quiet" onClick={() => setGeneration((value) => value + 1)}>Start the desk over</button>
         {error && <p role="alert" className="text-sm">{error}</p>}
       </div>
-      <ol ref={log} className="lab-steps desk-log" aria-live="polite" aria-label="What the system recorded">
+      <ol ref={log} className="lab-steps desk-log" role="log" aria-label="What the system recorded">
         {state.steps.map((step, index) => <li key={index} style={{ animationDelay: "0ms" } as CSSProperties}>
           <span>{step.label}</span><StatePill state={step.outcome} /><small>{step.detail}</small>
         </li>)}

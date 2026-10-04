@@ -93,7 +93,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <p className="mono mt-4 text-sm uppercase tracking-widest" style={{ color: "var(--text-body)" }}>
           The link may be old — open the watch room for live cases.
         </p>
-        <a href="/watch?case=live" className="mt-8 inline-block rounded-lg border px-5 py-2.5 text-sm underline">
+        <a href="/watch?case=live" className="btn mt-8">
           Open the watch room
         </a>
       </div>
@@ -104,7 +104,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
     <main>
       <SiteHeader />
       <div className="enter mx-auto max-w-2xl px-6 py-10">
-      <p className="mono text-xs uppercase tracking-[0.22em]" style={{ color: "var(--cursor)" }}>
+      <p className="eyebrow">
         Bothy case · {c.scenario} · {c.routeId}
       </p>
       <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
@@ -120,7 +120,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         score <span className="tnum">{Number(c.score).toFixed(2)}</span> · confidence <span className="tnum">{Number(c.confidence).toFixed(2)}</span> · {c.priority} · engine {c.engine} · status {c.status}
       </p>
       {c.leadText && (
-        <p className="mono mt-4 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}>
+        <p className="mono card mt-4 px-3 py-2 text-sm" style={{ borderColor: "var(--cursor)", color: "var(--cursor)" }}>
           modeled lead time <span className="font-semibold tnum">{c.leadText}</span> · illustrative replay, not predictive validation
         </p>
       )}
@@ -133,19 +133,19 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           resting — not a decision yet · the agent is watching
         </p>
       )}
-      <section className="mt-6 rounded-lg border p-5" style={{ borderColor: "var(--rule)" }}>
-        <h2 className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>
+      <section className="card mt-6 p-5">
+        <h2 className="eyebrow">
           Draft for duty officer — {c.responsibleActor}
         </h2>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{c.draft}</p>
       </section>
       <section className="mt-6">
-        <h2 className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>
+        <h2 className="eyebrow">
           Evidence ({c.causalChain.length})
         </h2>
         <ol className="mt-3 space-y-2 text-sm leading-relaxed">
           {c.causalChain.map((line, i) => (
-            <li key={i} className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--rule)" }}>
+            <li key={i} className="card px-3 py-2">
               {line}
             </li>
           ))}
@@ -156,8 +156,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </p>
       <a
         href={c.awake ? "/watch?case=live" : "/watch?case=backtest"}
-        className="mt-4 inline-block rounded-lg border px-5 py-2.5 text-sm underline"
-        style={{ borderColor: c.awake ? "var(--text-strong)" : "var(--rule)", color: c.awake ? "var(--text-strong)" : "var(--text-body)" }}
+        className={`btn mt-4 ${c.awake ? "btn-primary" : ""}`}
       >
         {c.awake ? "Open the desk and sign" : "Open the watch room"}
       </a>
