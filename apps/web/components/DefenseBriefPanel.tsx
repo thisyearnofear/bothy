@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, ApiAuthError, api, isAbortError, recoveryMessage, type DefenseBrief, type DefenseSession, type GraphRun } from "../lib/api";
 import { briefStage } from "../lib/briefStage";
 import { validateCitation } from "../lib/citation";
+import AuditBadge from "./AuditBadge";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" };
 const control = "coarse-target rounded-lg border px-3 py-2 text-sm disabled:opacity-50";
@@ -149,6 +150,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false }: {
             <div><dt className="text-xs uppercase tracking-wide">Verification owner</dt><dd className="mt-2 break-words text-sm">{brief.action?.owner ?? "Not assigned yet"}</dd></div>
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
+          {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
           {brief.action?.status === "completed" && <p className="text-sm">Owner finding recorded. A reviewer may accept this verification or require further work. Neither decision closes an operational incident or proves risk eliminated.</p>}
           <details><summary className="cursor-pointer text-sm">Evidence receipt and version</summary>
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>

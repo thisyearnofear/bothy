@@ -6,8 +6,13 @@ import type { DefenseBrief, DefenseCasePage, DefenseCaseFilter, GraphRun } from 
 import { AccessError, type Principal, type createAuth } from "./auth";
 import { getScenarioDef } from "./graph/scenarios";
 import { witnessRunId } from "./graph/witness";
+import { LAB_SCENARIOS, runLab } from "./lab";
 
 export const evidenceHash = (run: GraphRun) => createHash("sha256").update(JSON.stringify(run)).digest("hex");
+
+export interface AuditVerification { ok: boolean; events: number; verified: number; unchained: number; brokenAt: number | null }
+const auditHash = (prev: string, briefId: string, subject: string, action: string, at: string) =>
+  createHash("sha256").update([prev, briefId, subject, action, at].join("\n")).digest("hex");
 
 export class DefenseStore {
   constructor(private db: DatabaseSync) {
@@ -17,6 +22,38 @@ export class DefenseStore {
       CREATE INDEX IF NOT EXISTS defense_creator ON defense_briefs(json_extract(brief, '$.createdBySubject'));
       CREATE INDEX IF NOT EXISTS defense_owner ON defense_briefs(json_extract(brief, '$.action.owner'));
       CREATE INDEX IF NOT EXISTS defense_created ON defense_briefs(json_extract(brief, '$.createdAt'), id);`);
+    const columns = (db.prepare("PRAGMA table_info(defense_audit)").all() as { name: string }[]).map((c) => c.name);
+    if (!columns.includes("hash")) db.exec("ALTER TABLE defense_audit ADD COLUMN prev_hash TEXT; ALTER TABLE defense_audit ADD COLUMN hash TEXT;");
+  }
+  // Each entry commits to its predecessor within the same brief, so editing,
+  // deleting or reordering any stored row breaks verification from that point.
+  private appendAudit(briefId: string, subject: string, action: string) {
+    const last = this.db.prepare("SELECT hash FROM defense_audit WHERE brief_id = ? ORDER BY id DESC LIMIT 1").get(briefId) as { hash: string | null } | undefined;
+    const prev = last?.hash ?? "";
+    const at = new Date().toISOString();
+    this.db.prepare("INSERT INTO defense_audit (brief_id, subject, action, at, prev_hash, hash) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(briefId, subject, action, at, prev, auditHash(prev, briefId, subject, action, at));
+  }
+  verifyAudit(id: string): AuditVerification {
+    this.get(id);
+    const rows = this.db.prepare("SELECT id, subject, action, at, prev_hash, hash FROM defense_audit WHERE brief_id = ? ORDER BY id").all(id) as
+      { id: number; subject: string; action: string; at: string; prev_hash: string | null; hash: string | null }[];
+    let prev = "";
+    let verified = 0;
+    let unchained = 0;
+    for (const [index, row] of rows.entries()) {
+      if (!row.hash) {
+        if (verified) return { ok: false, events: rows.length, verified, unchained, brokenAt: index + 1 };
+        unchained += 1;
+        continue;
+      }
+      if (row.prev_hash !== prev || row.hash !== auditHash(prev, id, row.subject, row.action, row.at)) {
+        return { ok: false, events: rows.length, verified, unchained, brokenAt: index + 1 };
+      }
+      prev = row.hash;
+      verified += 1;
+    }
+    return { ok: true, events: rows.length, verified, unchained, brokenAt: null };
   }
   private run(id: string): GraphRun {
     const row = this.db.prepare("SELECT run FROM graph_runs WHERE id = ?").get(id) as { run: string } | undefined;
@@ -84,7 +121,7 @@ export class DefenseStore {
       const child = this.draft(runId, principal);
       child.parentBriefId = parent.id;
       this.db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify(child), child.id);
-      this.db.prepare("INSERT INTO defense_audit (brief_id, subject, action, at) VALUES (?, ?, ?, ?)").run(child.id, principal.subject, "revision_created", new Date().toISOString());
+      this.appendAudit(child.id, principal.subject, "revision_created");
       this.db.exec("COMMIT");
       return child;
     } catch (e) { this.db.exec("ROLLBACK"); throw e; }
@@ -121,7 +158,7 @@ export class DefenseStore {
       const brief = this.authorizeRead(id, principal);
       change(brief);
       this.db.prepare("UPDATE defense_briefs SET status = ?, brief = ? WHERE id = ?").run(brief.status, JSON.stringify(brief), id);
-      this.db.prepare("INSERT INTO defense_audit (brief_id, subject, action, at) VALUES (?, ?, ?, ?)").run(id, principal.subject, action, new Date().toISOString());
+      this.appendAudit(id, principal.subject, action);
       this.db.exec("COMMIT");
       return brief;
     } catch (e) {
@@ -196,6 +233,14 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     try { res.json({ configured: auth.configured, authenticated: true, ...(await auth.authenticate(req.headers.authorization)) }); }
     catch (e) { const error = e as AccessError; res.status(error.status).json({ error: error.message }); }
   });
+  // Stress-test lab: public, runs the real store rules against a throwaway database.
+  router.get("/lab", (_req, res) => res.json({ scenarios: LAB_SCENARIOS }));
+  router.post("/lab/:id/run", (req, res) => {
+    const result = runLab(req.params.id);
+    if (!result) return res.status(404).json({ error: "unknown lab scenario" });
+    res.setHeader("Cache-Control", "no-store");
+    res.json(result);
+  });
   // Public/synthetic demo drafts only. Private customer evidence is a later gate.
   router.post("/briefs", async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
@@ -230,6 +275,7 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
   router.get("/briefs/:id", (req, res) => handle(() => store.authorizeRead(req.params.id, res.locals.principal), res));
   router.get("/briefs/:id/evidence", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.evidence(req.params.id); }, res));
   router.get("/briefs/:id/audit", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return { entries: store.audit(req.params.id) }; }, res));
+  router.get("/briefs/:id/audit/verify", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.verifyAudit(req.params.id); }, res));
   router.post("/briefs/:id/review", (req, res) => {
     const parsed = reviewBody.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "decision and optional note required; identity/evidence fields are forbidden" });

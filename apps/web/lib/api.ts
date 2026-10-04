@@ -26,6 +26,11 @@ export interface DefenseSession {
   error?: string;
 }
 
+export type LabOutcome = "allowed" | "blocked" | "duplicate" | "tamper-detected" | "verified";
+export interface LabScenario { id: string; number: string; title: string; description: string; expect: string }
+export interface LabResult { id: string; steps: { label: string; outcome: LabOutcome; detail: string }[]; verdict: string }
+export interface AuditVerification { ok: boolean; events: number; verified: number; unchained: number; brokenAt: number | null }
+
 export interface GraphBenchRow {
   id: string;
   ms: number;
@@ -212,6 +217,9 @@ export const api = {
     post<GraphWitness>(`/api/graph/witness`, body, signal),
   witness: (hash: string, signal?: AbortSignal) =>
     get<GraphWitness & { links?: { page: string; rerun: string } }>(`/api/graph/witness/${encodeURIComponent(hash)}`, signal),
+  labScenarios: (signal?: AbortSignal) => get<{ scenarios: LabScenario[] }>("/api/defense/lab", signal),
+  runLab: (id: string, signal?: AbortSignal) => post<LabResult>(`/api/defense/lab/${encodeURIComponent(id)}/run`, {}, signal),
+  verifyAudit: (id: string, signal?: AbortSignal) => get<AuditVerification>(`/api/defense/briefs/${encodeURIComponent(id)}/audit/verify`, signal),
   defenseSession: (signal?: AbortSignal) => get<DefenseSession>("/api/defense/session", signal),
   defenseCases: (offset = 0, signal?: AbortSignal, filter: DefenseCaseFilter = "all") => get<DefenseCasePage>(`/api/defense/briefs/page/${filter}/${offset}`, signal),
   reviseDefenseBrief: (id: string, runId: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/revisions`, { runId }),

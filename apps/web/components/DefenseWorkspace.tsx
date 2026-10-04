@@ -22,7 +22,8 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
     ...((!session.authenticated || session.roles.some((role) => role === "analyst" || role === "reviewer"))
       ? [{ n: "02", title: session.authenticated ? "Start a separate investigation" : "Explore the gallium sample", text: "Trace one captured chain.", href: "/defense?mode=investigate&scenario=gallium-chain" }]
       : []),
-    { n: "03", title: "Scope a private pilot", text: "Two weeks, one question.", href: "/pilot" },
+    { n: "03", title: "Stress-test the controls", text: "Try to skip or fake a decision.", href: "/defense/lab" },
+    { n: "04", title: "Scope a private pilot", text: "Two weeks, one question.", href: "/pilot" },
   ];
   return <div className="space-y-14">
     <section aria-label="Workspace next action">

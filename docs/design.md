@@ -301,3 +301,10 @@ when needed):
 Font/icon policy: system sans (`ui-sans-serif, system-ui, -apple-system, Segoe
 UI`) plus `ui-monospace` only. Avoid a webfont download as a single point of
 failure. Prefer a few inline SVG icons over a large icon dependency.
+
+## Showing the work (trace, lab, audit chain)
+
+- **Run trace** (`RunTrace`): after "Analyze exposure", the stored run is replayed as a stepped timeline beside the dependency chain, with an agent cursor gliding between stages. It paces captured results for reading; it is not a live stream, and the panel says so.
+- **State language**: one colour and one all-caps label per decision state (`StatePill`): allowed, blocked, duplicate refused, tamper detected, verified.
+- **Stress-test lab** (`/defense/lab`, `apps/agent/src/lab.ts`): six scripted attempts to skip, fake or rewrite a decision. Each runs the real `DefenseStore` against a throwaway in-memory database, so outcomes are the production rules' own and touch no saved case. The lab routes are the only defence routes the web proxy forwards without a session.
+- **Audit chain**: each `defense_audit` row stores `prev_hash` and `hash` (SHA-256 over the previous hash and the entry). `GET /api/defense/briefs/:id/audit/verify` recomputes it and names the first broken entry. Rows written before chaining are reported as unchained, not failed. It detects edits to stored rows; it is not an authenticated signature.

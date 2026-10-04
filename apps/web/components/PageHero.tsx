@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ScatterHeading from "./ScatterHeading";
 
 export function SiteHeader({ className = "" }: { className?: string }) {
   return (
@@ -21,7 +22,7 @@ export default function PageHero({ eyebrow, title, lede, image }: { eyebrow: str
       <SiteHeader className="relative z-10" />
       <div className="page-hero-body px-5 pb-8 pt-10 sm:px-10 sm:pb-10 sm:pt-16">
         <p className="mono text-xs uppercase tracking-[0.2em]" style={{ color: "var(--cursor)" }}>{eyebrow}</p>
-        <h1 className="mt-3 max-w-4xl text-[clamp(2rem,5.5vw,4.25rem)] font-semibold leading-[0.98] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }}>{title}</h1>
+        <ScatterHeading text={title} className="mt-3 max-w-4xl text-[clamp(2rem,5.5vw,4.25rem)] font-semibold leading-[0.98] tracking-[-0.05em]" style={{ color: "var(--text-strong)" }} />
         {lede && <p className="mt-4 max-w-xl text-sm sm:text-base">{lede}</p>}
       </div>
     </section>

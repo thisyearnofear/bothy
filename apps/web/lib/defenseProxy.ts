@@ -20,6 +20,9 @@ const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
   { method: "GET", pattern: /^\/briefs\/[^/]+$/, key: "GET /briefs/:id" },
   { method: "GET", pattern: /^\/briefs\/[^/]+\/evidence$/, key: "GET /briefs/:id/evidence" },
   { method: "GET", pattern: /^\/briefs\/[^/]+\/audit$/, key: "GET /briefs/:id/audit" },
+  { method: "GET", pattern: /^\/briefs\/[^/]+\/audit\/verify$/, key: "GET /briefs/:id/audit/verify" },
+  { method: "GET", pattern: /^\/lab$/, key: "GET /lab" },
+  { method: "POST", pattern: /^\/lab\/[a-z-]+\/run$/, key: "POST /lab/:id/run" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/reassessment$/, key: "POST /briefs/:id/reassessment" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/review$/, key: "POST /briefs/:id/review" },
   { method: "POST", pattern: /^\/briefs\/[^/]+\/action$/, key: "POST /briefs/:id/action" },
@@ -33,6 +36,7 @@ const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
 const BODY_FIELDS: Record<string, readonly string[]> = {
   "POST /briefs": ["runId"],
   "POST /briefs/:id/revisions": ["runId"],
+  "POST /lab/:id/run": [],
   "POST /briefs/:id/review": ["decision", "note"],
   "POST /briefs/:id/reassessment": ["decision", "note"],
   "POST /briefs/:id/action": ["owner", "dueAt"],
@@ -104,6 +108,21 @@ export async function proxyDefense(
   // SameSite=Lax already blocks a cross-site cookie riding a POST; this makes
   // the CSRF boundary explicit for an endpoint that approves interventions.
   if (method !== "GET" && !isSameOrigin(request, env)) return json(403, "cross-origin request refused");
+
+  // The lab runs against a throwaway database and carries no credential, so it
+  // is forwarded even without a session. Nothing else on this list is.
+  if (route.key === "GET /lab" || route.key === "POST /lab/:id/run") {
+    try {
+      const response = await fetchImpl(`${env.AGENT_URL ?? "http://localhost:8787"}/api/defense${rawPath}`, {
+        method,
+        cache: "no-store",
+        ...(method === "POST" ? { headers: { "content-type": "application/json" }, body: "{}" } : {}),
+      });
+      return { status: response.status, body: await response.text(), headers: { "content-type": "application/json", "cache-control": "no-store" } };
+    } catch {
+      return json(502, "the defence service is unavailable");
+    }
+  }
 
   let session = await openSession(cookieValue(request, SESSION_COOKIE), env);
   // GET /session is the one public read: the agent answers it without a token so

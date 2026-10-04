@@ -6,6 +6,7 @@ import type { DefenseSession } from "../lib/api";
 import DefenseBriefPanel from "./DefenseBriefPanel";
 import DefenseCases from "./DefenseCases";
 import GalliumExplanation from "./GalliumExplanation";
+import RunTrace from "./RunTrace";
 import { catalogueLabel, exposureSummary, type CatalogueState } from "../lib/exposureSummary";
 
 const card = { borderColor: "var(--rule)", background: "var(--panel)" } as const;
@@ -150,6 +151,8 @@ export default function GraphPanel({ initialSession }: { initialSession?: Defens
           <details className="mt-2 text-xs"><summary className="cursor-pointer">Operation diagnostics</summary><p className="mt-2 break-all">{error}</p></details>
         </div>}
       </div>
+
+      <RunTrace key={rows?.runId ?? "none"} run={rows} busy={busy} />
 
       {rows?.scenarioId !== "gallium-chain" && <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Exposure summary" aria-live="polite">
         <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
