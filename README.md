@@ -1,86 +1,151 @@
-# Bothy — Accountable programme-impact briefs
+# Bothy — accountable programme-impact briefs
 
 [MIT license](LICENSE) · [Product vision](docs/product-vision.md) ·
-[Execution roadmap](docs/roadmap.md)
+[Execution roadmap](docs/roadmap.md) · [Deployment design](docs/deployment-design.md)
 
-**For European defence-prime supply-chain teams:** investigate a material,
-supplier, or transit disruption, trace programme exposure, and keep the evidence
-with the decision.
+**For a supply-chain analyst at a European defence prime:** investigate a
+material, supplier, or transit disruption, trace which platforms and programmes
+are exposed, and keep the evidence and the responsible person attached to the
+decision.
 
-The target workflow is exposure → cited brief → authorized review → owned
-action → recorded outcome. **The current defence prototype captures pinned
-graph evidence and generates deterministic, row-cited verification briefs.**
-The workspace includes a gallium exposure summary, clickable stored-evidence
-citations, brief-first layout, and status-specific recovery. Saved-case access
-is limited to creator analysts, assigned owners, and reviewers of the synthetic
-demo collection. An access-scoped saved-case collection, configured-owner picker,
-and stored-evidence reopening view are implemented. This is not customer tenancy
-or an identity-provider directory. Review/assignment/current-owner work filters
-and parent-linked, separately reviewed revisions are implemented.
-The `/defense` front door is role-aware; investigation, saved-case, and guided
-onboarding (`/defense?mode=onboarding`) modes are separate. Pilot onboarding agrees
-the decision, evidence/access boundary, process rehearsal, and acceptance before
-any private data transfer. Owner outcome recording is not reviewer acceptance or
-operational case closure. Reviewer reassessment now accepts the verification finding
-or requires further verification while preserving the original outcome; operational
-closure remains unimplemented. See [domain workspaces](docs/domain-workspaces.md)
-for the defence/flood split and [sample onboarding](docs/defence-prime-sample-onboarding.md)
-for the guided team exercise.
-A browser SSO session bridge (authorization code + PKCE, encrypted HttpOnly
-cookie, server-side bearer forwarding) is implemented, but review and owned-action
-APIs still fail closed until OIDC and SSO are configured. A real disposable local
-OIDC provider has been browser-rehearsed through live graph capture, approval,
-assignment, separate owner sign-in, acknowledgment and outcome. This validates
-local protocol integration, not a buyer identity provider. See the
-[local SSO runbook](docs/demo-sso-rehearsal.md). Continuous monitoring and
-independent operational validation are still outstanding.
-The separate `gallium-chain` scenario explains ten sampled synthetic dependency
-rows with a bounded final material segment; intermediate material names are not
-returned. Official USGS/EU context is linked separately from graph evidence.
-Dependencies are not proof of stoppage; query row limits are not total impact.
-A [six-slide HTML deck draft](docs/edth-deck.html) and live screenshots are available;
-final PDF/video, team details and event contribution attribution remain pending.
+> Turn a supply-chain disruption into a review-ready, auditable impact brief,
+> without losing the evidence or the owner of the next action.
+
+The workflow is **exposure → version-pinned evidence → cited brief → authorized
+review → owned action → recorded outcome**. A dependency is evidence of
+exposure, not proof that a programme stops: inventory, substitutes, timing, and
+missing relationships stay explicit, and a query's row limit is a sample rather
+than a total blast radius.
+
+## What the app is
+
+Four services, one decision loop. The web app is the operator surface; the agent
+generates deterministic cited briefs and owns the case state; a Python sidecar
+exposes an allowlisted read path into an embedded, versioned graph.
+
+| Surface | Route | What you do there |
+|---|---|---|
+| Briefing landing | `/` | The disruption, the countdown to the export-control deadline, a specimen brief, the workflow, and proof cases. Entry point for someone who has never seen the tool. |
+| Defence workspace | `/defense` | The operational door. Four modes: default workspace (role-aware case list), `?mode=investigate` (graph run), `?mode=onboarding` (guided four-role exercise), `?brief=<id>` (a saved case). |
+| Guided story | `/defense/demo`, `/defense/stories`, `/defense/stories/[slug]` | Date-scrubbed narrated case files — gallium exposure and a Red Sea diversion — replayable and printable as a case file. |
+| Stress lab | `/defense/lab` | Six scripted attempts to break the approval and audit rules: self-approval, replay, rewriting an audit entry. Shows the refusals, not just the happy path. |
+| Pilot scope | `/pilot` | What a two-week pilot agrees up front: decision, evidence and access boundary, rehearsal, acceptance. Collects contact interest only. |
+| Digest wall | `/digest` | Subscribe-and-notify loop for lane digests. |
+| Witness pack | `/witness/[hash]` | A captured graph run, reopened by hash from a share link. |
+| Earlier demos | `/watch`, `/case/[id]` | The winter-road and flood proof cases that preceded the defence work: deterministic scoring, timeline replay, MapLibre routes. Historical evidence that the pipeline generalizes, not a second product door. |
+
+Session bridge: the browser talks only to Next.js. `/api/auth/*` performs
+authorization-code + PKCE OIDC and keeps the session as an encrypted HttpOnly
+cookie; `/api/defense/*` forwards a server-side `Authorization: Bearer` to the
+agent through an allowlisted method/path/body filter. The agent never sees a
+cookie, and there is no password system or token-paste UI. Everything else under
+`/api/*` is rewritten straight to the agent.
 
 ## Run the defence demo
 
-Prerequisites: Node **22.13+** (or current Node 24), npm, Python + TuringDB,
-and the graph pack described in [graphs/README.md](graphs/README.md).
+Prerequisites: Node **22.13+** (or current Node 24), npm, Python + the TuringDB
+SDK, and the graph pack described in [graphs/README.md](graphs/README.md) (about
+470 MB, not in Git).
 
 ```bash
 npm install
 cp .env.example .env
 bash scripts/venue.sh        # TuringDB :6677 → sidecar :6777 → agent :8787 → web :3001
-bash scripts/venue.sh status
+bash scripts/venue.sh status # health of all four, colour-coded
 ```
 
-Open **http://localhost:3001/defense?scenario=gallium-exposure**.
-The defence route does not require the Postgres road catalogue. SQLite captures
-graph runs and witness artifacts in `apps/agent/data/bothy-loop.db`.
+Open **http://localhost:3001/defense?scenario=gallium-exposure**. The defence
+route does not require the Postgres road catalogue; SQLite captures graph runs
+and witness artifacts in `apps/agent/data/bothy-loop.db`.
 
-1. Choose an exposure question and run the catalogue query.
-2. Inspect the exposure summary and source/coverage caveats. Gallium results
-   identify captured platform names, not full paths or programme identities.
-3. Sign in to draft through the browser session bridge, then inspect citations
-   against stored evidence. The agent's synthetic draft endpoint remains public;
-   the browser bridge requires a session. Exported witnesses remain unapproved.
-4. With configured OIDC **and** a confidential OIDC client able to mint a
-   token for the API audience, sign in, review the brief, assign a configured
-   action owner, acknowledge it, and record an outcome.
-5. Advanced controls expose pinned replay/comparison. The temporary-marker
-   simulation requires an analyst/reviewer and cannot submit changes.
+1. Run a reviewed exposure question and inspect the summary with its
+   source/coverage caveats. Gallium results identify captured platform names,
+   not full paths or programme identities.
+2. Sign in through the browser session bridge to draft, then open a citation and
+   watch it resolve against the stored evidence row.
+3. With configured OIDC, a reviewer approves or requests further verification,
+   assigns a configured owner, that owner acknowledges and records an outcome,
+   and the audit trail keeps all of it in one SQLite transaction.
+4. Advanced controls expose pinned replay and version comparison. The temporary
+   branch simulation requires an analyst or reviewer and cannot submit changes.
 
-Graph unavailable is an explicit failure state, not fabricated fallback data.
-Reads use fresh per-request clients and an exact reviewed query allowlist.
-Only public/synthetic evidence is appropriate: public witness links are not
-private sharing, recorded outcomes are not proof of effectiveness, and abandoned
-daemon changes still need a reclamation policy.
-See [ops.md](docs/ops.md).
+`bash scripts/refusal-demo.sh` exercises the authority boundaries against a
+running agent and prints what it observed — see
+[docs/proof-no-self-approval.md](docs/proof-no-self-approval.md).
+
+## What is real, what is gated, what is missing
+
+This project's credibility rests on this table being accurate. When you change a
+claim, change it here.
+
+**Built and verified.** Role-aware workspace, saved cases with access scoping,
+deterministic row-cited briefs bound to a pinned graph revision and query hash,
+review/assignment/acknowledgment/outcome transitions with transactional audit,
+reviewer reassessment that preserves the original finding, linked revisions that
+never inherit approval, an exact reviewed-read allowlist (arbitrary Cypher and
+writes refused), evidence-tamper detection, and the browser session bridge. The
+full authorized journey has been rehearsed through a real disposable OIDC
+provider, and the hosted demo runs a synthetic provider end to end.
+
+**Implemented but needs configuration.** Review and owned-action APIs **fail
+closed** until OIDC is configured: absent, partial, or malformed configuration
+disables them rather than falling back to anything permissive. Roles come from a
+server-side subject allowlist, never from token claims, so a caller cannot
+self-grant `reviewer`. Nebius/NVIDIA inference is opt-in, server-only, connected
+mode; no model ID is guessed and no paid inference runs by opening a page.
+
+**Not built, not certified.** Operational case closure and risk elimination.
+Background monitoring. Customer tenancy (the access policy is scoped to a
+synthetic demo collection). Independent operational validation. Offline / DIL
+end-to-end operation. Artefact signing, bundle, and rollback for air-gapped
+delivery. A real buyer identity provider. Clean-clone graph setup.
+Export-control review.
+
+**Known gap worth naming.** `GET /api/subscriptions` has no error handling, and
+with `DATABASE_URL` unreachable the rejected promise terminates the agent
+process — which is the normal state for the defence demo, since it does not need
+Postgres. Details and the proposed fix are in
+[docs/deployment-design.md](docs/deployment-design.md) (G1).
+
+Earlier winter-road and flood demos retain deterministic scoring, timestamped
+citations, and an illustrative replay. They are not predictive validation. Live
+Open-Meteo context is frozen and score-neutral; audio, radio, and social are not
+ingested. Graph-unavailable is an explicit failure state, never a fabricated
+fallback.
+
+## Architecture
+
+```
+Browser ── Next.js :3001 ──┬── /api/defense/*, /api/auth/*  (session bridge)
+                           └── /api/*  (rewrite)
+                                    │
+                            Express agent :8787
+                            ├─ deterministic cited briefs + case state (SQLite)
+                            ├─ reviewed-read allowlist
+                            └─ Python graph sidecar :6777 → TuringDB :6677
+                                                        (versioned supply-chain graph)
+```
+
+The older road/flood path additionally uses Postgres + PostGIS for the road
+catalogue; the defence path does not. The two are not yet one fused decision loop.
+Full detail: [docs/architecture.md](docs/architecture.md).
+
+## Repository
+
+```text
+apps/web        Next.js · defence workspace, stories, lab, landing · session bridge · earlier road/flood demos
+apps/agent      Express · brief generation and case state · graph sidecar client · road agent · SQLite artifacts
+apps/demo-video HyperFrames composition for the demo recording
+packages/shared shared domain/API types
+bench/          measurement instruments (see docs/baseline-measurement.md)
+scripts/        venue startup · SSO rehearsal · refusal probe · witness QR · DB bootstrap · secret scan
+docs/           vision · architecture · design · deployment · proof · pilot scope · hackathon evidence
+graphs/         runtime graph stores (not in Git)
+deploy/ fly/    VPS + Caddy compose, and Fly.io configs
+assets/         submission screenshots and demo video
+```
 
 ## Earlier winter-road / flood demos
-
-These retain deterministic scoring, timestamped citations, and an illustrative
-replay. They are not predictive validation. Live Open-Meteo context is frozen
-and score-neutral; audio, radio, and social are not ingested.
 
 ```bash
 bash scripts/db-tunnel.sh    # remote Postgres/PostGIS → localhost:5433
@@ -88,76 +153,10 @@ npm run seed                # writes the demo catalogue; inspect seed.ts and pro
 npm run dev                 # agent :8787 · web :3000
 ```
 
-Open `/watch?replay=1` or `/watch?case=flood`. Decisions now require a verified
-OIDC reviewer; typed names cannot grant approval. Email queueing and sending require an
-approved assessment; log-only mode never marks an email delivered. External
+Open `/watch?replay=1` or `/watch?case=flood`. Decisions require a verified OIDC
+reviewer; typed names cannot grant approval. Email queueing and sending require an
+approved assessment, and log-only mode never marks an email delivered. External
 dispatch also requires `DIGEST_TOKEN`.
-
-## EDTH and Nebius × NVIDIA
-
-One product, two demonstrations:
-
-- **EDTH / TuringDB:** exposure reasoning, native versioning, and inspectable
-  evidence. [Track plan and historical weekend bright line](docs/hackathon-turingdb-defense.md).
-- **Nebius × NVIDIA:** the same workflow with an actually exercised eligible
-  NVIDIA model on Nebius. [Integration and submission gates](docs/hackathon-nebius-nvidia.md).
-
-Nebius provider wiring is **opt-in**, server-only, and connected/cloud mode.
-Set `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, and a verified `NEBIUS_MODEL` in the
-ignored runtime environment. All three are required; no model ID is guessed.
-Configuration alone does not establish a successful live integration or
-hackathon eligibility. No paid inference runs merely by opening `/defense`.
-
-The earlier road agent uses Strands / OpenAI-compatible providers with a
-deterministic scripted fallback. Its defence brief integration and bounded
-Strands handoff are subsequent roadmap gates, not completed claims.
-
-## Deploy
-
-### Option A: your own VPS (Docker + Caddy), no extra cost
-
-`deploy/docker-compose.demo.yml` runs Caddy (automatic HTTPS), the web app, the
-agent and the TuringDB graph service on one host, with Postgres/PostGIS on Neon. Only ports 80/443
-are published. This is what serves the live demo at `https://bothy.trustfall.xyz`.
-
-```bash
-# DNS: A record bothy.<your-domain> -> the VPS IPv4 address, then on the VPS:
-cd deploy
-cp .env.production.example .env.production   # set DATABASE_URL (Neon), URLs, keys
-docker compose -f docker-compose.demo.yml --env-file .env.production up -d --build
-docker compose -f docker-compose.demo.yml --env-file .env.production run --rm agent npm run seed
-curl https://bothy.<your-domain>/api/health
-curl https://bothy.<your-domain>/api/graph/health
-```
-
-The `graphs/` stores (about 470 MB) are not in Git; see `graphs/README.md`.
-Tester sign-in (invite-gated synthetic SSO) is described in `docs/ops.md`.
-Details: "Demo on a plain VPS" in [`docs/ops.md`](docs/ops.md).
-
-### Option B: Fly.io (pay-as-you-go, about $8/month for two always-on 512 MB apps)
-
-Fly has no free tier for new accounts. The configs in `fly/` define two
-always-on apps (`bothy-agent`, `bothy-web`) on shared-cpu-1x with 512 MB.
-Not yet provisioned for Fly: the TuringDB graph service (so the gallium
-investigation will report the analysis service as unavailable) and a database
-(bring your own PostGIS URL).
-
-```bash
-curl -L https://fly.io/install.sh | sh
-fly auth login
-fly apps create bothy-agent --org personal
-fly apps create bothy-web --org personal
-fly secrets set DATABASE_URL="<your-postgres-url>" \
-  WEB_ORIGIN="https://bothy.fly.dev" PUBLIC_WEB_URL="https://bothy.fly.dev" \
-  PORT=8787 --app bothy-agent
-fly secrets set AGENT_URL="http://bothy-agent.internal:8787" PORT=8080 --app bothy-web
-cp fly/agent.toml fly.toml && fly deploy --app bothy-agent
-cp fly/web.toml fly.toml && fly deploy --app bothy-web
-```
-
-The web image bakes the agent URL into its Next rewrites at build time;
-`fly/web.toml` passes it as a build argument. Full guide:
-[`fly/DEPLOY.md`](fly/DEPLOY.md).
 
 ## Validate
 
@@ -170,34 +169,42 @@ npm -w @bothy/web run build
 git diff --check
 ```
 
-Tests cover OIDC signature/role failures, atomic review/audit, cited brief/action
-transitions, evidence tampering, concurrent sidecar state, read-only enforcement,
-witness provenance, email gates, API contracts, and opt-in provider
+Tests cover OIDC signature/role failures, atomic review and audit, cited
+brief/action transitions, evidence tampering, concurrent sidecar state, read-only
+enforcement, witness provenance, email gates, API contracts, and opt-in provider
 configuration. The web suite additionally covers the session bridge: fail-closed
-SSO config, PKCE, encrypted-cookie tamper/wrong-key rejection, the path and body
-allowlist, CSRF origin checks, upstream status passthrough, and a full
-brief → review → assign → acknowledge → outcome journey driven through the real
-agent router. No external email or inference is required.
+SSO configuration, PKCE, encrypted-cookie tamper and wrong-key rejection, the
+path and body allowlist, CSRF origin checks, upstream status passthrough, and a
+full brief → review → assign → acknowledge → outcome journey driven through the
+real agent router. No external email or inference is required.
 
-## Repository
+Current measured counts on this worktree: **118 web + 32 agent TypeScript tests
+passing** (150 total), plus 6 Python sidecar boundary tests (mocked, not
+live-query proof). `9bf591a` recorded 103/32; these numbers were measured against
+uncommitted changes, so re-run on the final commit before quoting a total.
 
-```text
-apps/web        Next.js · defence workspace · SSO session bridge + earlier MapLibre road demos
-apps/agent      Express · graph sidecar client · road agent · local SQLite artifacts
-packages/shared shared domain/API types
-scripts/        venue startup · witness QR sheet · DB bootstrap · secret scanning
-docs/           vision · architecture · design · delivery gates · hackathon evidence
-```
+The 6 sidecar tests pass when discovery runs directly
+(`cd apps/agent && python3 -m unittest discover -s src/graph -p 'test_*.py'`).
+`npm -w @bothy/agent run test:graph` fails on this machine before any assertion:
+the npm lifecycle shell starts the universal `python3.14` as x86_64 and numpy's
+extension is arm64-only, so `import numpy` aborts the run. That is a local Python
+install issue, not a sidecar result — do not report it as a failing test.
 
-## Documentation and project steering
+## Documentation
 
-- [Product vision and review insights](docs/product-vision.md)
-- [Roadmap](docs/roadmap.md) and [dated execution log](docs/execution-log.md)
-- [Architecture](docs/architecture.md), [design](docs/design.md), [operations](docs/ops.md)
-- [Pilot scope and acceptance](docs/pilot-one-pager.md)
-- [Historical decision-replay concept](docs/dashboard.md) and [alignment](docs/alignment.md)
+| Read | For |
+|---|---|
+| [product-vision.md](docs/product-vision.md) | buyer, recurring decision, trust contract, pilot scope |
+| [roadmap.md](docs/roadmap.md) · [execution-log.md](docs/execution-log.md) | delivery gates and the dated work record |
+| [architecture.md](docs/architecture.md) · [design.md](docs/design.md) | how it is built and how it looks |
+| [deployment-design.md](docs/deployment-design.md) | running it in a customer environment, gap register, certification checklist |
+| [proof-no-self-approval.md](docs/proof-no-self-approval.md) | three layers of evidence that the agent cannot approve its own conclusion |
+| [graph-data-coverage.md](docs/graph-data-coverage.md) | what the graph actually contains, and which demos return rows |
+| [baseline-measurement.md](docs/baseline-measurement.md) | hand-trace versus query: instrument, protocol, results |
+| [domain-workspaces.md](docs/domain-workspaces.md) | the defence/flood split and shared case model |
+| [ops.md](docs/ops.md) | hosting, sign-in for testers, troubleshooting |
+| [pilot-one-pager.md](docs/pilot-one-pager.md) · [defence-prime-sample-onboarding.md](docs/defence-prime-sample-onboarding.md) | pilot scope and the guided team exercise |
+| [hackathon-turingdb-defense.md](docs/hackathon-turingdb-defense.md) · [hackathon-nebius-nvidia.md](docs/hackathon-nebius-nvidia.md) · [edth-submission-pack.md](docs/edth-submission-pack.md) | track alignment and submission evidence |
 
-The Kiro Ready, Spec, Ship submission is complete. Committed
-[`.kiro/steering/`](.kiro/steering/) preserves the product/evidence boundaries
-and validation workflow. Keep secrets and private customer data out of the repo,
-browser, public artifacts, and logs. Pre-commit runs lint-staged and a secret scan.
+Keep secrets and private customer data out of the repo, browser, public
+artifacts, and logs. Pre-commit runs lint-staged and a secret scan.

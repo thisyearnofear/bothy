@@ -86,22 +86,27 @@ Record a short actual demo only after those checks. A suggested 60-to-90-second 
 
 ## Evidence and contribution ledger
 
-Implementation baseline pushed: `2f42123` on `main` (3 October 2026).
+Implementation baseline pushed: `2f42123` on `main` (3 October 2026). The
+pre-event baseline for build-window attribution is `678ab41` (15 Sep, last
+commit before the user-supplied window); everything from `917f7de` onward is
+in-window — 35 commits, ~11,700 insertions.
 
 | Evidence | Status |
 |---|---|
-| TypeScript tests | Latest local verification: 91 web and 27 agent passed (118 total); earlier pushed baseline was 79/24. |
-| Python graph boundary tests | 6 passed on 3 October; mocked boundary tests, not live query proof |
-| Typecheck and production build | Passed after local OIDC rehearsal changes; final commit checks rerun before publication. |
+| TypeScript tests | 118 web and 32 agent passed (150 total), measured on the current worktree (4 Oct, uncommitted docs/UI changes included). `9bf591a` recorded 103/32; earlier counts were 91/27 and 79/24. Re-run on the final commit before publication. |
+| Python graph boundary tests | 6 boundary tests pass when discovery runs directly from `apps/agent` (`python3 -m unittest discover -s src/graph -p 'test_*.py'`). `npm -w @bothy/agent run test:graph` fails on this machine before any assertion: the npm lifecycle shell starts the universal `python3.14` as x86_64 while numpy's extension is arm64-only. Local Python install issue, not a sidecar failure. Mocked boundary tests, not live query proof. |
+| Typecheck, lint, and production build | Typecheck clean on 4 Oct; lint clean except one pre-existing unused-`compact` warning; build previously passed — rerun on the final commit before publication. |
 | Commit checks | ESLint staged checks and secret scan passed |
 | Local authenticated browser rehearsal | Real disposable OIDC provider, confidential code exchange/PKCE, signed API-token verification, live graph capture, reviewer approval/assignment, separate owner login, acknowledgment/outcome and persisted audit verified. Fixed synthetic accounts; not buyer-IdP validation. See `demo-sso-rehearsal.md`. |
-| Live graph on current worktree | Gallium-chain query rehearsed through the real sidecar/agent/UI at graph revision `fa702a0364247caf`; ten sampled rows returned. Rehearse again on the final submission commit. |
+| Live graph on current worktree | Re-rehearsed on `9bf591a` (4 Oct): gallium-exposure returned 34 platform names and gallium-chain returned 10 sampled rows through the real sidecar/agent/UI at graph revision `fa702a0364247caf`. |
 | Real buyer IdP | Not validated |
 | Clean-clone graph pack setup | Not rehearsed |
-| Submission visuals | Live desktop/mobile PNGs in `assets/`; six-slide print-ready `docs/edth-deck.html` draft rendered and image checked. No final PDF, recorded video, public upload or submission. |
+| Submission visuals | Refreshed 4 Oct on the rehearsed revision: `assets/edth-deck-*.png` crops plus `edth-new-*.png` live PNGs; six-slide `docs/edth-deck.html` rewritten to match the current UI. Final deck `docs/19_Bothy.pdf` rendered from that HTML with headless Chrome (6 pages, print-boxed); the test-count line was refreshed from 135 to 150 with the HTML and the PDF re-rendered. Page count verified on the rendered file; the PDF text layer could not be extracted here (no `pdftotext`), so the visible number was confirmed in the source HTML, not in the output. Recorded demo `assets/edth-demo.mp4`/`.webm` (116 s, real venue stack, dev build). No public upload performed from this worktree. |
 | Event eligibility/deadline/channel | Unconfirmed |
 
-Useful dated commits, all showing 3 October 2026 in local git history:
+Useful dated commits (local git history):
+- `9bf591a` → `ade55f7` (4 Oct 02:35–11:30): run trace, stress-test lab, hash-chained audit log, guided demo player, real-event stories, reviewer desk sandbox, defence identity layer, mission sheets.
+- `66aabea` → `15530de` (3 Oct 21:17–23:02): Docker+Caddy VPS demo stack with TuringDB and hosted invite-gated SSO; workspace/pilot/case redesign.
 - `06e3744`: audited reviewer finding reassessment.
 - `bf8d979`: role-aware workspace, presentation polish, pilot onboarding.
 - `de1052d`: live gallium explanation, local SSO rehearsal, deck draft.

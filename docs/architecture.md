@@ -72,13 +72,42 @@ Nebius configuration is server-only and opt-in. It is connected cloud inference,
 not DIL/offline inference. No eligible model or successful live call is claimed
 until the configured NVIDIA model is verified and exercised.
 
+## Current topology (defence path)
+
+```
+Browser
+  └─ Next.js :3001
+       ├─ /api/auth/{login,callback,logout}   authorization code + PKCE → encrypted HttpOnly session
+       ├─ /api/defense/*                       allowlisted method/path/body proxy, adds Bearer token
+       └─ /api/*                               plain rewrite
+                    │
+             Express agent :8787
+             ├─ /api/defense/*   brief generation, review/assignment/outcome, transactional audit → SQLite
+             ├─ /api/graph/*     reviewed-read allowlist, HEAD→pinned revision, capture
+             └─ /api/loop/*      digest subscribe/notify
+                    │
+             Python sidecar :6777  (per-request JSON client, exact catalogue queries only)
+                    │
+             TuringDB :6677        versioned graph store; supply_chain_deep, logistics_risk, power_plants
+```
+
+Postgres/PostGIS is used only by the older road/flood catalogue and is not on the
+defence path — see the caveat in [proof-no-self-approval.md](proof-no-self-approval.md)
+about the unauthenticated legacy route that still assumes it is reachable.
+
+Case state lives in `apps/agent/data/bothy-loop.db` (SQLite). The graph stores in
+`graphs/` are runtime data and are not in Git. Deployment modes, the identity
+federation seam, and the gap register are in
+[deployment-design.md](deployment-design.md); the surfaces a user actually sees
+are tabulated in the [README](../README.md).
+
 ## Historical road-assessment architecture
 
 This is the deep dive. For the two-line pitch see the [README](../README.md);
 for rationale see [decisions.md](decisions.md); for the original challenge
 framing see [alignment.md](alignment.md).
 
-## Topology
+### Topology (as it was)
 
 ```
 Browser (Next.js :3000) ──/api/*──> agent API (Express :8787) ──> Postgres + PostGIS
@@ -87,8 +116,9 @@ Browser (Next.js :3000) ──/api/*──> agent API (Express :8787) ──> Po
 ```
 
 The web app **proxies** `/api/*` to the agent via a Next.js rewrite
-(`next.config.ts`), so there's no CORS and no credentials in the browser.
-All agent state lives in Postgres.
+(`next.config.ts`), so there's no CORS and no credentials in the browser. In this
+path all agent state lives in Postgres; the defence path keeps its case state in
+SQLite, as above.
 
 ## Repository layout
 

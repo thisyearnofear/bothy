@@ -1,5 +1,88 @@
 # Execution log
 
+## 4 October 2026: submission artefacts, proof work, and a reliability finding
+
+EDTH submission prepared as team 19 on track 4. `docs/19_Bothy.pdf` rendered from
+`docs/edth-deck.html` (6 pages, print-boxed, verified newer than the last deck
+edit), demo video under `videos/bothy-edth-promo` with `assets/edth-demo.mp4`, and
+submission screenshots in `assets/`. The pitch script was reviewed against the
+claim boundaries; two corrections were recorded: the USGS concentration figure must
+keep its `primary low-purity production` qualification and source attribution, and
+the graph returns captured platform names rather than programme identities.
+
+Evidence work, four new documents plus one instrument:
+
+- `scripts/refusal-demo.sh` and [proof-no-self-approval.md](proof-no-self-approval.md)
+  — three layers showing the agent cannot approve its own conclusion: it has no
+  approval tool at all and `create_human_review` hard-codes `status: "pending"`;
+  every approval-capable surface returns 503 when OIDC is unconfigured (captured
+  live); and role separation is asserted by the suite. The script prints which of
+  the two states it ran in, because a 503 proves fail-closed defaults but not role
+  separation.
+- [deployment-design.md](deployment-design.md) — three deployment modes, data
+  classes, the four-variable identity-federation seam, an offline update/verify
+  path, a ten-item gap register, and a twelve-line certification checklist. Design
+  and gap register, not a certification.
+- [graph-data-coverage.md](graph-data-coverage.md) — probed read-only against the
+  live graph: only `Primary gallium` is wired into the bill of materials.
+  `Primary germanium` and `Primary antimony` exist as nodes with zero upstream
+  feeders, so a second-material demo returns empty and must not be promised.
+  `chn-ownership`, `taiwan-chokepoint`, `sanctions-exposure` and `loitering-bom`
+  all returned rows, which is the reuse demonstration that works today.
+- [baseline-measurement.md](baseline-measurement.md) and
+  `bench/gallium-bom-extract.csv` — 6,102 parent/child edges over 12 platforms
+  (6 gallium-dependent, 6 decoys) as a hand-trace instrument. Bothy side measured
+  at ~12 ms warm for 34 platforms across the whole graph (178 ms cold), end to end
+  through the agent including the capture write. **The manual column is
+  deliberately blank**: it requires a real stopwatch run and the builder is not an
+  analyst.
+
+Reliability finding, unfixed. The agent process was found dead mid-session. The log
+traces it to `GET /api/subscriptions` (`server.ts:614` → `repo.ts:245`): an
+unauthenticated async Express handler with no error handling, so an unreachable
+`DATABASE_URL` produces an unhandled rejection and Node terminates the process.
+That is the normal state for the defence demo, which does not need Postgres — so a
+request to the legacy road route can take down the service the defence workspace
+depends on. Recorded as G1 in the deployment design. The stack was restarted; the
+defect was not re-triggered deliberately, and the single observed crash plus the
+stack trace is the evidence.
+
+Verification: 118 web and 32 agent TypeScript tests pass on this worktree (150
+total, re-measured after the doc refresh); typecheck clean; lint clean apart from
+the pre-existing `CaseList.tsx` unused-`compact`
+warning. `docs/edth-submission-pack.md` had recorded 103 web for `9bf591a`; that
+row now carries both numbers, since 118/32 was measured against uncommitted
+changes and must be re-run on the final commit. No source files were
+changed by this work; all additions are documentation, one shell script, and one
+CSV. The 4 October UI surfaces (landing, stories, demo, lab, lane map, mission
+sheets) were inventoried from code and routes, not re-verified in a browser here.
+No deployment, publication, buyer contact, or paid inference occurred. No graph
+write, seed, or reset was run; every graph query in this work was a read.
+
+Same-day doc refresh: README rewritten to describe the whole app (surfaces, the
+session bridge, a real/gated/missing split, topology, repository map, validation)
+instead of only claim boundaries; `architecture.md` gained the current defence
+topology beside the original Postgres diagram. Two README claims written from
+assumption were corrected against the tree — `apps/demo-video` is a HyperFrames
+composition, not Remotion, and the Python sidecar suite needs the qualification
+below. `npm -w @bothy/agent run test:graph` fails here before any assertion runs:
+the npm lifecycle shell starts the universal `/usr/local/bin/python3.14` as x86_64
+while numpy's extension is arm64-only, so `import numpy` aborts. Running the same
+discovery directly passes 6/6. This is a local Python install issue, not a sidecar
+failure, and must not be reported either as passing via npm or as a broken test.
+
+Further in the same refresh: `docs/edth-submission-pack.md` test rows now carry
+118/32 beside the older `9bf591a` 103/32, the sidecar row records the npm/x86_64
+qualification, and the visuals row states that `docs/19_Bothy.pdf` exists and was
+re-rendered. `docs/edth-deck.html` claimed 135 TypeScript tests, which was stale by
+15, so the deck and the rendered PDF were both refreshed; the PDF still reports 6
+pages, and with no `pdftotext` available the corrected number was verified in the
+source HTML rather than in the output. Undated verification lines in
+`defence-prime-sample-onboarding.md` and `defense-product-flow.md` were dated and
+pointed at the current counts rather than rewritten. `docs/ops.md` had one broken
+relative link (`fly/DEPLOY.md` → `../fly/DEPLOY.md`); all relative links across
+`README.md` and `docs/*.md` now resolve. Typecheck re-run clean after these edits.
+
 ## 3 October 2026: positioning and guided sample onboarding
 
 Aligned landing, workspace, and defence header around a supply disruption and a

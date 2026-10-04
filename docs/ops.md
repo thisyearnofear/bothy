@@ -331,7 +331,7 @@ cp fly/agent.toml fly.toml && fly deploy --app bothy-agent
 cp fly/web.toml fly.toml && fly deploy --app bothy-web
 ```
 
-Full guide: [`fly/DEPLOY.md`](fly/DEPLOY.md)
+Full guide: [`fly/DEPLOY.md`](../fly/DEPLOY.md)
 
 ### Indicative cost
 

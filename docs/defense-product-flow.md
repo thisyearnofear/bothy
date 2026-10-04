@@ -34,7 +34,7 @@ Indicative pricing remains a proposal, not proof of demand. The pilot is not rep
 
 ## Verification
 
-88 web tests and 25 agent tests passed. Tests cover role defaults, combined-role precedence, route mode parsing, sample/private boundaries, and owner-first work. Web typecheck, production build, and diff checks passed; lint retains the existing CaseList warning. An initial combined check timed out; suites and checks were rerun separately.
+Verified on 3 October: 88 web tests and 25 agent tests passed. The current worktree measures 118 web and 32 agent (see `execution-log.md`). Tests cover role defaults, combined-role precedence, route mode parsing, sample/private boundaries, and owner-first work. Web typecheck, production build, and diff checks passed; lint retains the existing CaseList warning. An initial combined check timed out; suites and checks were rerun separately.
 
 Production-preview browser checks verified sample-to-investigation navigation, four onboarding steps without a file input, reviewer default awaiting-review view using isolated response fixtures, and 390px layout without page overflow. A final service-error copy refinement was type/test checked after the initial preview build. These checks do not establish customer usability or constitute a new live identity/graph rehearsal.
 
