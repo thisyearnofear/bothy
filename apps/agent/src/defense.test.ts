@@ -11,6 +11,8 @@ import { authFixture } from "./test/authFixture";
 import { DefenseStore, defenseRouter } from "./defense";
 import { captureGraphRun } from "./graph/witness";
 import { SCENARIOS } from "./graph/scenarios";
+import { federatedHash } from "./integrations/federated";
+import type { FederatedRun } from "../../../packages/shared/src/types";
 
 function fixture() {
   const db = new DatabaseSync(":memory:");
@@ -279,6 +281,61 @@ test("finding acceptance refuses changed evidence and retains the completed owne
     db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify(run), run.runId);
     assert.equal(store.reassess(brief.id, reviewer, "accepted", "Reference verified").reassessment?.decision, "accepted");
     assert.equal(store.get(brief.id).action?.outcome, "Reference checked");
+  } finally { db.close(); }
+});
+
+const fedFixture = (): FederatedRun => ({
+  runId: "fed-1",
+  questionId: "ops-inventory-contracts",
+  title: "Ops inventory and contract extract",
+  kind: "rows",
+  source: "zetaris",
+  sql: "SELECT * FROM BOTHY_OPS.inventory_contracts",
+  sqlHash: "0".repeat(64),
+  capturedAt: "2026-10-26T00:00:00.000Z",
+  columns: ["supplier", "on_hand_units"],
+  rows: [{ supplier: "Meridian Compound Semis", on_hand_units: 420 }, { supplier: "Baltic Photonics", on_hand_units: 12 }],
+  count: 2,
+  total: 2,
+  sourceBoundary: "Synthetic ops extract boundary.",
+});
+
+test("federated captures bind into the brief and tampering blocks decisions", () => {
+  const { db, store, run } = fixture();
+  const reviewer = { subject: "reviewer", roles: ["reviewer"] as "reviewer"[] };
+  try {
+    const fed = fedFixture();
+    const brief = store.draft(run.runId, undefined, { runs: [fed], unavailable: ["SEC filings source"] });
+    assert.deepEqual(brief.federated?.runIds, [fed.runId]);
+    assert.equal(brief.federated?.hash, federatedHash([fed]));
+    const cited = brief.claims.filter((claim) => claim.citations.some((cit) => cit.runId === fed.runId));
+    assert.equal(cited.length, 2);
+    assert.ok(cited[0].text.includes("Meridian Compound Semis"));
+    assert.ok(cited[0].text.includes("Ops inventory and contract extract"));
+    assert.ok(brief.gaps.some((gap) => gap.includes("SEC filings source")));
+    assert.ok(brief.gaps.some((gap) => gap.includes("Synthetic ops extract boundary")));
+    assert.deepEqual(store.federated(brief.id), [fed]);
+    // A missing or edited federated capture fails like tampered graph evidence.
+    db.prepare("UPDATE federated_runs SET run = ? WHERE id = ?").run(JSON.stringify({ ...fed, rows: [] }), fed.runId);
+    assert.throws(() => store.evidence(brief.id), /evidence changed/);
+    assert.throws(() => store.review(brief.id, reviewer, "approved", ""), /evidence changed/);
+    assert.equal(store.get(brief.id).status, "pending");
+    db.prepare("UPDATE federated_runs SET run = ? WHERE id = ?").run(JSON.stringify(fed), fed.runId);
+    store.review(brief.id, reviewer, "approved", "");
+    assert.equal(store.get(brief.id).status, "approved");
+    db.prepare("DELETE FROM federated_runs WHERE id = ?").run(fed.runId);
+    assert.throws(() => store.evidence(brief.id), /evidence changed/);
+  } finally { db.close(); }
+});
+
+test("context federated questions cite the reach, not individual rows", () => {
+  const { db, store, run } = fixture();
+  try {
+    const context = { ...fedFixture(), runId: "fed-ctx", kind: "context" as const, title: "EU registry" };
+    const brief = store.draft(run.runId, undefined, { runs: [context], unavailable: [] });
+    const claims = brief.claims.filter((claim) => claim.citations.some((cit) => cit.runId === "fed-ctx"));
+    assert.equal(claims.length, 1);
+    assert.match(claims[0].text, /captured for context/);
   } finally { db.close(); }
 });
 

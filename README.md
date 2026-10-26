@@ -104,6 +104,18 @@ writes refused), evidence-tamper detection, and the browser session bridge. The
 full authorized journey has been rehearsed through a real disposable OIDC
 provider, and the hosted demo runs a synthetic provider end to end.
 
+Federated evidence (Zetaris): a reviewed per-scenario Lightning SQL catalogue
+runs ops-filestore, registry and filings queries — including a single
+cross-source union statement — at draft time, pins them into `federated_runs`,
+binds them into the brief by hash, cites rows alongside graph rows, and refuses
+decisions when a stored federated capture is edited or missing. Case memory
+(vendored Meterless H-MEM) recalls prior investigations into new drafts and
+records decisions to an append-only trust ledger; every brief carries an agent
+reasoning trace (capture → federation legs → recall → generation → citation
+self-check). Optional model-drafted claim text (`BOTHY_BRIEF_ASSIST=llm`) uses
+the provider chain — self-hosted Nemotron via Ollama works — with per-row
+scripted fallback; citations are never model-controlled.
+
 **Implemented but needs configuration.** Review and owned-action APIs **fail
 closed** until OIDC is configured: absent, partial, or malformed configuration
 disables them rather than falling back to anything permissive. Roles come from a
@@ -194,9 +206,10 @@ path and body allowlist, CSRF origin checks, upstream status passthrough, and a
 full brief → review → assign → acknowledge → outcome journey driven through the
 real agent router. No external email or inference is required.
 
-Current measured counts on this worktree: **150 web + 32 agent TypeScript tests
-passing** (182 total), measured at `6deefe4`, plus 6 Python sidecar boundary
-tests (mocked, not live-query proof). `9bf591a` recorded 103/32.
+Current measured counts on this worktree: **150 web + 43 agent TypeScript tests
+passing** (193 total), measured on the hackathon federation branch, plus 6
+Python sidecar boundary tests (mocked, not live-query proof). `6deefe4`
+recorded 150/32; `9bf591a` recorded 103/32.
 
 Security snapshot (4 October 2026): `npm audit --omit=dev` reports **0**
 production-dependency findings in this lock and in the deployed agent

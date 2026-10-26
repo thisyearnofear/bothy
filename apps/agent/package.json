@@ -7,7 +7,7 @@
     "start": "tsx src/server.ts",
     "seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/*.test.ts src/agent/*.test.ts src/graph/*.test.ts",
+    "test": "tsx --test src/*.test.ts src/agent/*.test.ts src/graph/*.test.ts src/memory/*.test.ts src/integrations/*.test.ts",
     "test:graph": "python3 -m unittest discover -s src/graph -p 'test_*.py'"
   },
   "dependencies": {

@@ -2,12 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { Router } from "express";
 import { z } from "zod";
-import type { DefenseBrief, DefenseCasePage, DefenseCaseFilter, GraphRun } from "../../../packages/shared/src/types";
+import type { DefenseBrief, DefenseCasePage, DefenseCaseFilter, FederatedRun, GraphRun } from "../../../packages/shared/src/types";
 import { AccessError, type Principal, type createAuth } from "./auth";
 import { getScenarioDef } from "./graph/scenarios";
 import { witnessRunId } from "./graph/witness";
 import { LAB_SCENARIOS, runLab } from "./lab";
 import { actSandbox, createSandbox, type SandboxAction } from "./labSession";
+import { caseMemoryStatus, recallInvestigations, recordDecision, recordInvestigation } from "./memory/caseMemory";
+import { zetarisStatus } from "./integrations/zetaris";
+import { captureFederation, federatedHash, type FederationCapture } from "./integrations/federated";
+import { draftFederatedNarrative } from "./integrations/briefAssist";
 
 export const evidenceHash = (run: GraphRun) => createHash("sha256").update(JSON.stringify(run)).digest("hex");
 
@@ -18,6 +22,7 @@ const auditHash = (prev: string, briefId: string, subject: string, action: strin
 export class DefenseStore {
   constructor(private db: DatabaseSync) {
     db.exec(`CREATE TABLE IF NOT EXISTS graph_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS federated_runs (id TEXT PRIMARY KEY, run TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS defense_briefs (id TEXT PRIMARY KEY, status TEXT NOT NULL, brief TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS defense_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, brief_id TEXT NOT NULL, subject TEXT NOT NULL, action TEXT NOT NULL, at TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS defense_creator ON defense_briefs(json_extract(brief, '$.createdBySubject'));
@@ -61,6 +66,28 @@ export class DefenseStore {
     if (!row) throw new AccessError(404, "captured run not found");
     return JSON.parse(row.run);
   }
+  private federatedRun(id: string): FederatedRun {
+    const row = this.db.prepare("SELECT run FROM federated_runs WHERE id = ?").get(id) as { run: string } | undefined;
+    if (!row) throw new AccessError(409, "captured evidence changed");
+    return JSON.parse(row.run);
+  }
+  // The brief's federated captures in bound order, verified against the
+  // recorded hash — a missing or edited federated run fails the same way a
+  // tampered graph capture does.
+  federated(id: string): FederatedRun[] {
+    const brief = this.get(id);
+    return (brief.federated?.runIds ?? []).map((runId) => this.federatedRun(runId));
+  }
+  private verifyFederation(brief: DefenseBrief) {
+    if (!brief.federated) return;
+    if (federatedHash(this.federated(brief.id)) !== brief.federated.hash) {
+      throw new AccessError(409, "captured evidence changed");
+    }
+  }
+  /** Capture reviewed federated questions for the run's scenario (Zetaris). */
+  captureFederation(runId: string): Promise<FederationCapture> {
+    return captureFederation(this.run(runId).scenarioId);
+  }
   get(id: string): DefenseBrief {
     const row = this.db.prepare("SELECT brief FROM defense_briefs WHERE id = ?").get(id) as { brief: string } | undefined;
     if (!row) throw new AccessError(404, "brief not found");
@@ -70,6 +97,7 @@ export class DefenseStore {
     const brief = this.get(id);
     const run = this.run(brief.runId);
     if (evidenceHash(run) !== brief.evidenceHash) throw new AccessError(409, "captured evidence changed");
+    this.verifyFederation(brief);
     return run;
   }
   audit(id: string) {
@@ -109,7 +137,7 @@ export class DefenseStore {
       nextOffset: rows.length > 20 ? offset + 20 : null,
     };
   }
-  revise(id: string, runId: string, principal: Principal): DefenseBrief {
+  revise(id: string, runId: string, principal: Principal, federation?: FederationCapture): DefenseBrief {
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const parent = this.authorizeRead(id, principal);
@@ -119,7 +147,7 @@ export class DefenseStore {
       if (runId === parent.runId || capture.scenarioId !== previous.scenarioId || capture.graph !== previous.graph || capture.cypher !== previous.cypher) {
         throw new AccessError(409, "a separate capture of the same exposure question is required");
       }
-      const child = this.draft(runId, principal);
+      const child = this.draft(runId, principal, federation);
       child.parentBriefId = parent.id;
       this.db.prepare("UPDATE defense_briefs SET brief = ? WHERE id = ?").run(JSON.stringify(child), child.id);
       this.appendAudit(child.id, principal.subject, "revision_created");
@@ -127,45 +155,110 @@ export class DefenseStore {
       return child;
     } catch (e) { this.db.exec("ROLLBACK"); throw e; }
   }
-  draft(runId: string, creator?: Principal): DefenseBrief {
+  draft(runId: string, creator?: Principal, federation?: FederationCapture): DefenseBrief {
     const run = this.run(runId);
     if (!run.graphCommit || !run.queryHash) throw new AccessError(409, "rerun the question to capture pinned evidence");
     const scenario = getScenarioDef(run.scenarioId);
     if (!scenario || scenario.cypher !== run.cypher || scenario.graph !== run.graph) throw new AccessError(409, "evidence does not match the reviewed catalogue");
+    // Case memory recall runs before the draft so a repeat or related question
+    // surfaces prior investigations instead of starting cold.
+    const memory = recallInvestigations(`${scenario.title}. ${scenario.stakes}`);
+    const cell = (value: unknown) => {
+      const text = String(value ?? "not recorded");
+      return text.length > 120 ? `${text.slice(0, 117)}…` : text;
+    };
+    // Agent reasoning trace: what the draft actually did, in order — visible to
+    // reviewers and judges as the "how this output was reached" record.
+    const reasoning: { step: string; detail: string }[] = [
+      { step: "capture", detail: `${run.count} graph rows pinned at ${run.graph}@${run.graphCommit} · query ${run.queryHash.slice(0, 12)}` },
+    ];
+    const federatedClaims = (federation?.runs ?? []).flatMap((fed, fedIndex) => {
+      reasoning.push({ step: "federation", detail: `${fed.title}: ${fed.count} of ${fed.total} rows captured via Zetaris (${fed.sqlHash.slice(0, 12)})` });
+      return fed.kind === "context"
+        ? [{
+            text: `${fed.title}: ${fed.count} source row${fed.count === 1 ? "" : "s"} captured for context via Zetaris federation.`,
+            citations: fed.rows.length ? fed.columns.map((column) => ({ runId: fed.runId, row: 0, column })) : [],
+          }]
+        : fed.rows.slice(0, 3).map((row, index) => ({
+            text: federation?.narrative?.[fedIndex]?.[index] ?? `${fed.title} — ` + fed.columns.map((column) => `${column}: ${cell(row[column])}`).join("; "),
+            citations: fed.columns.map((column) => ({ runId: fed.runId, row: index, column })),
+          }));
+    });
+    for (const title of federation?.unavailable ?? []) {
+      reasoning.push({ step: "federation", detail: `${title}: unavailable at draft time — recorded as a stated gap` });
+    }
+    reasoning.push({ step: "memory", detail: memory && memory.recalled.length ? `recalled ${memory.recalled.length} prior investigation${memory.recalled.length === 1 ? "" : "s"} (H-MEM)` : "no prior investigations recalled" });
+    reasoning.push({ step: "generate", detail: `${federation?.narrativeModel ?? "deterministic generator"} drafted ${run.rows.slice(0, 5).length + federatedClaims.length} cited claims` });
+    const claims = [
+      ...run.rows.slice(0, 5).map((row, index) => ({
+        text: run.columns.map((column) => `${column}: ${cell(row[column])}`).join("; "),
+        citations: run.columns.map((column) => ({ runId, row: index, column })),
+      })),
+      ...federatedClaims,
+    ];
+    // Critique/validate step: every citation is resolved back against the
+    // stored captures before the brief exists. A claim that cannot cite a
+    // real captured row would be caught here, not by a downstream reviewer.
+    const fedById = new Map((federation?.runs ?? []).map((fed) => [fed.runId, fed]));
+    let verified = 0;
+    let total = 0;
+    for (const claim of claims) {
+      for (const citation of claim.citations) {
+        total += 1;
+        const source = citation.runId === runId ? run : fedById.get(citation.runId);
+        if (source && Number.isInteger(citation.row) && citation.row >= 0 && citation.row < source.rows.length &&
+            source.columns.includes(citation.column) && Object.hasOwn(source.rows[citation.row], citation.column)) {
+          verified += 1;
+        }
+      }
+    }
+    reasoning.push({ step: "verify", detail: `citation self-check: ${verified}/${total} resolve against stored captures` });
     const brief: DefenseBrief = {
       accessScope: "synthetic-demo", ...(creator ? { createdBySubject: creator.subject } : {}),
       id: randomUUID(), runId, title: `${scenario.title}: verification brief`,
       createdAt: new Date().toISOString(), evidenceHash: evidenceHash(run),
       graphCommit: run.graphCommit, queryHash: run.queryHash, resultCount: run.count,
       generator: { id: "bothy-scripted", version: "defense-brief-v1", cloudInference: false },
-      claims: run.rows.slice(0, 5).map((row, index) => ({
-        text: run.columns.map((column) => `${column}: ${String(row[column] ?? "not recorded")}`).join("; "),
-        citations: run.columns.map((column) => ({ runId, row: index, column })),
-      })),
+      claims,
       gaps: [
         run.sourceBoundary,
+        ...(federation?.runs ?? []).map((fed) => fed.sourceBoundary),
+        ...(federation?.unavailable ?? []).map((title) => `Federated source "${title}" could not be captured at draft time; the brief cites no rows from it.`),
         "The first five rows are summarized. Query limits may truncate results; captured rows are not a total programme-impact count.",
         "Inventory, qualified substitutes, delivery timing, and actual production effects are not established by these dependency rows.",
       ],
+      ...(federation && (federation.runs.length || federation.unavailable.length)
+        ? { federated: { engine: "zetaris" as const, runIds: federation.runs.map((fed) => fed.runId), hash: federatedHash(federation.runs), unavailable: federation.unavailable } }
+        : {}),
+      reasoning,
       recommendedAction: "Ask the programme supply-chain owner to verify inventory, substitutes, and delivery timing against the cited dependencies before an operational decision.",
       status: "pending",
+      ...(memory && memory.recalled.length ? { memory } : {}),
     };
+    for (const fed of federation?.runs ?? []) {
+      this.db.prepare("INSERT INTO federated_runs (id, run) VALUES (?, ?)").run(fed.runId, JSON.stringify(fed));
+    }
     this.db.prepare("INSERT INTO defense_briefs (id, status, brief) VALUES (?, ?, ?)").run(brief.id, brief.status, JSON.stringify(brief));
+    recordInvestigation(brief, run, runId);
     return brief;
   }
   private transition(id: string, principal: Principal, action: string, change: (brief: DefenseBrief) => void) {
     this.db.exec("BEGIN IMMEDIATE");
+    let brief: DefenseBrief;
     try {
-      const brief = this.authorizeRead(id, principal);
+      brief = this.authorizeRead(id, principal);
       change(brief);
       this.db.prepare("UPDATE defense_briefs SET status = ?, brief = ? WHERE id = ?").run(brief.status, JSON.stringify(brief), id);
       this.appendAudit(id, principal.subject, action);
       this.db.exec("COMMIT");
-      return brief;
     } catch (e) {
       this.db.exec("ROLLBACK");
       throw e;
     }
+    // Case memory records decisions after the audited commit; a memory fault
+    // can never roll back or fail the workflow transition.
+    recordDecision(brief, action, principal.subject);
+    return brief;
   }
   review(id: string, principal: Principal, decision: "approved" | "rejected", note: string) {
     if (!principal.roles.includes("reviewer")) throw new AccessError(403, "reviewer role required");
@@ -176,6 +269,7 @@ export class DefenseStore {
           run.graphCommit !== brief.graphCommit || run.queryHash !== brief.queryHash) {
         throw new AccessError(409, "captured evidence changed; generate a new brief");
       }
+      this.verifyFederation(brief);
       brief.status = decision;
       brief.review = { subject: principal.subject, decision, note, at: new Date().toISOString() };
     });
@@ -242,6 +336,23 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     res.setHeader("Cache-Control", "no-store");
     res.json(result);
   });
+  // Optional model-drafted claim narrative (BOTHY_BRIEF_ASSIST=llm): the
+  // provider chain writes claim text; citations and fallbacks stay
+  // deterministic. Never throws — a dead chain just means scripted text.
+  const assist = async (federation: FederationCapture) => {
+    if (process.env.BOTHY_BRIEF_ASSIST !== "llm") return;
+    try {
+      const narrative = await draftFederatedNarrative(federation.runs);
+      if (narrative) {
+        federation.narrative = narrative.narrative;
+        federation.narrativeModel = narrative.model;
+      } else {
+        console.warn("brief-assist: provider chain returned no narrative; scripted text stands");
+      }
+    } catch (e) {
+      console.warn("brief-assist:", e instanceof Error ? e.message : e);
+    }
+  };
   const sandboxActions = new Set<SandboxAction>(["approve", "reject", "assign", "acknowledge", "complete", "accept", "verify", "attack-self-approve", "attack-replay", "attack-edit-evidence", "attack-rewrite-audit"]);
   router.post("/lab/sandbox", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
@@ -265,7 +376,14 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
       try { creator = await auth.authenticate(req.headers.authorization); }
       catch (e) { const error = e as AccessError; return res.status(error.status).json({ error: error.message }); }
     }
-    handle(() => store.draft(runId, creator), res, true);
+    try {
+      const federation = await store.captureFederation(runId);
+      await assist(federation);
+      handle(() => store.draft(runId, creator, federation), res, true);
+    } catch (e) {
+      const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
+      res.status(error.status).json({ error: error.message });
+    }
   });
   router.use(auth.require("analyst", "reviewer", "action-owner"));
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
@@ -277,17 +395,30 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     if (Object.keys(req.query).length || !/^(0|[1-9]\d*)$/.test(req.params.offset) || !["all", "review", "assignment", "work"].includes(req.params.filter)) return res.status(400).json({ error: "invalid case page" });
     handle(() => store.list(res.locals.principal, Number(req.params.offset), req.params.filter as DefenseCaseFilter), res);
   });
-  router.post("/briefs/:id/revisions", (req, res) => {
+  router.post("/briefs/:id/revisions", async (req, res) => {
     const runId = witnessRunId(req.body);
     if (!runId) return res.status(400).json({ error: "only runId is accepted" });
-    handle(() => store.revise(req.params.id, runId, res.locals.principal), res, true);
+    try {
+      const federation = await store.captureFederation(runId);
+      await assist(federation);
+      handle(() => store.revise(req.params.id, runId, res.locals.principal, federation), res, true);
+    } catch (e) {
+      const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
+      res.status(error.status).json({ error: error.message });
+    }
   });
+  // Case memory surface: engine status, ledger totals and recent recalls.
+  router.get("/memory", (_req, res) => handle(() => caseMemoryStatus(), res));
+  // Federated-data surface (Zetaris): reports configured/reachable so the UI
+  // can show whether the agent can reach sources outside the graph.
+  router.get("/federated/status", async (_req, res) => res.json(await zetarisStatus()));
   router.get("/owners", (_req, res) => {
     if (!res.locals.principal.roles.includes("reviewer")) return res.status(403).json({ error: "reviewer role required" });
     handle(() => ({ owners: auth.eligibleOwners() }), res);
   });
   router.get("/briefs/:id", (req, res) => handle(() => store.authorizeRead(req.params.id, res.locals.principal), res));
   router.get("/briefs/:id/evidence", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.evidence(req.params.id); }, res));
+  router.get("/briefs/:id/federated", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.federated(req.params.id); }, res));
   router.get("/briefs/:id/audit", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return { entries: store.audit(req.params.id) }; }, res));
   router.get("/briefs/:id/audit/verify", (req, res) => handle(() => { store.authorizeRead(req.params.id, res.locals.principal); return store.verifyAudit(req.params.id); }, res));
   router.post("/briefs/:id/review", (req, res) => {

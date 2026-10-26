@@ -1,0 +1,11 @@
+part_family,supplier,on_hand_units,contract_ref,last_delivery,delivery_country,notes
+GaAs wafer 150mm,Meridian Compound Semis,420,SUP-2024-118,2026-08-14,MYS,"primary gallium feedstock; single qualified source"
+FPGA module C7,Kestrel Logic Systems,95,SUP-2025-033,2026-09-02,TWN,"ITAR-controlled; substitute qualification open"
+RF power amplifier X4,Nordwave Microwave,60,SUP-2024-201,2026-06-30,DEU,"gallium nitride die; dual-source review pending"
+IMU tactical grade,Helvion Inertial,310,SUP-2023-087,2026-09-19,CHE,"qualified substitute available Q1 2027"
+Thermal imager 640,Baltic Photonics,12,SUP-2025-140,2026-07-22,EST,"long-lead; gallium-dependent detector"
+Secure radio module S9,Meridian Compound Semis,240,SUP-2024-118,2026-09-28,GBR,"shared contract line with GaAs wafer"
+Servo actuator M2,Alpen Antrieb,800,SUP-2022-055,2026-09-30,AUT,"no gallium dependency; control group"
+Radar T/R module,Nordwave Microwave,45,SUP-2025-071,2026-05-11,FRA,"AESA array; highest gallium exposure"
+Battery pack 28V,Vesta Energy Cells,1500,SUP-2024-302,2026-10-01,POL,"lithium; unaffected by gallium controls"
+Optical seeker dome,Baltic Photonics,8,SUP-2025-140,2026-04-17,EST,"sapphire blank; alternate source in JPN"

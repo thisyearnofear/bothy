@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, isAbortError, recoveryMessage, type DefenseSession } from "../lib/api";
 import { workspaceFocus } from "../lib/workspace";
 import DefenseCases from "./DefenseCases";
+import CaseStatusPanel from "./CaseStatusPanel";
 import WorkflowStrip from "./WorkflowStrip";
 
 export default function DefenseWorkspace({ initialSession }: { initialSession: DefenseSession }) {
@@ -46,6 +47,7 @@ export default function DefenseWorkspace({ initialSession }: { initialSession: D
       {!session.authenticated && !session.configured && !session.error && <p className="hint mt-5">Sample analysis available. Saving and reviewing need SSO, not configured here.</p>}
       <button className="mt-2 text-xs underline" style={{ color: "var(--text-faint)" }} onClick={() => setRetry((value) => value + 1)}>Refresh workspace connection</button>
     </section>
+    <CaseStatusPanel session={session} />
     {session.authenticated ? <DefenseCases key={`${session.subject}-${focus.filter}`} session={session} initialFilter={focus.filter} /> : <section aria-label="Team workflow">
       <h3 className="eyebrow mb-5">One case. Named handoffs.</h3>
       <WorkflowStrip />

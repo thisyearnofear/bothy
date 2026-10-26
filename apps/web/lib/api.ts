@@ -14,9 +14,10 @@ import type {
   DefenseBrief,
   DefenseCasePage,
   DefenseCaseFilter,
+  FederatedRun,
 } from "../../../packages/shared/src/types";
 
-export type { GraphScenario, GraphRows, GraphRun, GraphWitness, DefenseBrief };
+export type { GraphScenario, GraphRows, GraphRun, GraphWitness, DefenseBrief, FederatedRun };
 
 export interface DefenseSession {
   configured: boolean;
@@ -239,9 +240,12 @@ export const api = {
   defenseCases: (offset = 0, signal?: AbortSignal, filter: DefenseCaseFilter = "all") => get<DefenseCasePage>(`/api/defense/briefs/page/${filter}/${offset}`, signal),
   reviseDefenseBrief: (id: string, runId: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/revisions`, { runId }),
   defenseOwners: (signal?: AbortSignal) => get<{ owners: { subject: string }[] }>("/api/defense/owners", signal),
+  defenseMemory: (signal?: AbortSignal) =>
+    get<{ engine: string; memories: number; ledger: Record<string, number>; recent: { id: string; content: string; layer: string; tags: string[]; at: string }[] }>("/api/defense/memory", signal),
   draftDefenseBrief: (runId: string) => post<DefenseBrief>("/api/defense/briefs", { runId }),
   defenseBrief: (id: string, signal?: AbortSignal) => get<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}`, signal),
   defenseEvidence: (id: string) => get<GraphRun>(`/api/defense/briefs/${encodeURIComponent(id)}/evidence`),
+  defenseFederated: (id: string, signal?: AbortSignal) => get<FederatedRun[]>(`/api/defense/briefs/${encodeURIComponent(id)}/federated`, signal),
   reviewDefenseBrief: (id: string, decision: "approved" | "rejected", note: string) =>
     post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/review`, { decision, note }),
   reassessDefenseFinding: (id: string, decision: "accepted" | "further-verification", note: string) =>

@@ -211,6 +211,20 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
         </div>}
       </div>
 
+      <ol className="journey-steps" aria-label="Investigation journey">
+        {[
+          { n: "1", label: "Question", anchor: "#investigation-question", done: !!active, current: !rows },
+          { n: "2", label: "Evidence", anchor: "#investigation-evidence", done: !!rows, current: !!rows && !brief },
+          { n: "3", label: "Brief", anchor: "#investigation-brief", done: !!brief, current: !!brief && !brief.review },
+          { n: "4", label: "Review & action", anchor: "#investigation-brief", done: !!brief?.review, current: !!brief?.review },
+        ].map((step) => (
+          <li key={step.n} className={`journey-step${step.done ? " is-done" : ""}${step.current ? " is-current" : ""}`}>
+            <span className="journey-n" aria-hidden>{step.n}</span>
+            <a href={step.anchor} className="text-inherit no-underline hover:underline">{step.label}</a>
+          </li>
+        ))}
+      </ol>
+
       <InvestigationAtlas
         run={rows}
         busy={captureBusy}
@@ -251,11 +265,7 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
         }
       />
 
-      <div id="investigation-brief" tabIndex={-1}>
-        <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} onBriefChange={onBriefChange} />
-      </div>
-
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
+      <div id="investigation-evidence" tabIndex={-1} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
         <section className="min-w-0 card p-4 sm:p-5" aria-label="Captured evidence">
           <div className="receipt-strip"><div><p className="eyebrow">Captured evidence</p><p className="readout mt-3">{rows ? rows.rows.length : "—"} <span className="readout-label">rows</span></p></div>
           <Inspector label="Inspect captured rows" title="Captured query evidence" disabled={!rows}>
@@ -321,6 +331,10 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
             </div>
           )}
         </aside>
+      </div>
+
+      <div id="investigation-brief" tabIndex={-1}>
+        <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} onBriefChange={onBriefChange} />
       </div>
 
       <div className="receipt-strip"><p className="hint">Stay with the captured evidence, or inspect its mechanics.</p><Inspector label="Open query & version workbench" title="Query, replay and simulation">

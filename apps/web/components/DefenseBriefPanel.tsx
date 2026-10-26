@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ApiError, ApiAuthError, api, isAbortError, recoveryMessage, type DefenseBrief, type DefenseSession, type GraphRun } from "../lib/api";
+import { ApiError, ApiAuthError, api, isAbortError, recoveryMessage, type DefenseBrief, type DefenseSession, type FederatedRun, type GraphRun } from "../lib/api";
 import { briefStage } from "../lib/briefStage";
-import { validateCitation } from "../lib/citation";
+import { validateCitation, validateFederatedCitation } from "../lib/citation";
 import AuditBadge from "./AuditBadge";
 import { card, control } from "../lib/ui";
 import Inspector from "./Inspector";
@@ -20,7 +20,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
 
 export default function DefenseBriefPanel({ run, session, savedCase = false, onBriefChange }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean; onBriefChange?: (brief: DefenseBrief | null) => void }) {
   const [brief, setBrief] = useState<DefenseBrief | null>(null);
-  const [evidence, setEvidence] = useState<GraphRun | null>(null);
+  const [evidence, setEvidence] = useState<GraphRun | FederatedRun | null>(null);
   const [busy, setBusy] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [conflicted, setConflicted] = useState(false);
@@ -160,8 +160,17 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
             {brief.status.toUpperCase()} · {brief.resultCount} captured query rows · {brief.generator.version}<br />
             graph {brief.graphCommit} · query {brief.queryHash}<br />
             evidence {brief.evidenceHash}
+            {brief.federated && <><br />federated {brief.federated.hash} · {brief.federated.runIds.length} Zetaris capture{brief.federated.runIds.length === 1 ? "" : "s"}</>}
           </p></Inspector>
           {brief.parentBriefId && <p className="text-sm">Linked revision of <a className="underline" href={`/defense?brief=${encodeURIComponent(brief.parentBriefId)}`}>the prior case</a>. Access to that case is checked separately. This revision requires its own review.</p>}
+          {brief.reasoning && <section aria-label="Agent reasoning"><h3 className="eyebrow">Agent trace — how this brief was produced</h3>
+            <ol className="mt-3 space-y-1.5">
+              {brief.reasoning.map((item, index) => <li key={index} className="flex gap-3 text-sm">
+                <span className="mono shrink-0 text-xs uppercase" style={{ color: "var(--text-faint)", minWidth: "7em" }}>{item.step}</span>
+                <span className="break-words" style={{ color: "var(--text)" }}>{item.detail}</span>
+              </li>)}
+            </ol>
+          </section>}
           <section aria-label="Cited findings"><h3 className="eyebrow">{brief.claims.length} cited findings / select a row to inspect</h3>
           <ol className="mt-4 space-y-3">
             {brief.claims.map((claim, index) => <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
@@ -171,9 +180,19 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
                   disabled={busy || !authenticated} onClick={async () => {
                     setBusy(true); setError("");
                     try {
-                      const captured = await api.defenseEvidence(brief.id);
-                      const match = validateCitation(brief, captured, citation);
-                      if (alive.current) { setEvidence(captured); setSelected({ row: match.row, column: match.column }); }
+                      if (citation.runId === brief.runId) {
+                        const captured = await api.defenseEvidence(brief.id);
+                        const match = validateCitation(brief, captured, citation);
+                        if (alive.current) { setEvidence(captured); setSelected({ row: match.row, column: match.column }); }
+                      } else if ((brief.federated?.runIds ?? []).includes(citation.runId)) {
+                        const runs = await api.defenseFederated(brief.id);
+                        const captured = runs.find((fed) => fed.runId === citation.runId);
+                        if (!captured) throw new Error("The cited federated capture is not bound to this brief.");
+                        const match = validateFederatedCitation(brief, captured, citation);
+                        if (alive.current) { setEvidence(captured); setSelected({ row: match.row, column: match.column }); }
+                      } else {
+                        throw new Error("The citation does not match the captured evidence. Inspection was blocked.");
+                      }
                     } catch (e) {
                       if (alive.current) {
                         setEvidence(null); setSelected(null);
@@ -190,6 +209,16 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
             <h3 className="text-sm font-semibold">Known gaps</h3>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">{brief.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
           </div>
+          {brief.memory && brief.memory.recalled.length > 0 && <div>
+            <h3 className="text-sm font-semibold">Recalled case memory</h3>
+            <ul className="mt-2 space-y-2 text-sm">
+              {brief.memory.recalled.map((item) => <li key={item.id} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
+                <p className="break-words">{item.content}</p>
+                <p className="mono text-xs" style={{ color: "var(--text-faint)" }}>{item.id} · {item.layer} · relevance {item.relevance}</p>
+              </li>)}
+            </ul>
+            <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>Meterless H-MEM recall · {brief.memory.strategy} · {brief.memory.retrievalReason}</p>
+          </div>}
           <p className="text-sm leading-relaxed"><strong>Next verification:</strong> {brief.recommendedAction}</p>
           {!authenticated && <p className="text-sm">Sign in with case access to inspect citations and full evidence.</p>}
           {evidence && selected && <div ref={target} tabIndex={-1} className="rounded-lg border p-4" style={{ borderColor: "var(--cursor)" }} aria-label={`Captured evidence row ${selected.row + 1}, ${selected.column}`}>
@@ -198,7 +227,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
               <dt className="font-semibold">{column}{column === selected.column ? " (cited)" : ""}</dt>
               <dd>{String(evidence.rows[selected.row][column] ?? "Not recorded")}</dd>
             </div>)}</dl>
-            <p className="mt-3 text-sm">This is the stored capture, not a new graph query.</p>
+            <p className="mt-3 text-sm">This is the stored capture, not a new query.</p>
           </div>}
           {evidence && <Inspector label="Inspect full evidence JSON" title="Full captured evidence and provenance"><pre className="mono max-h-[65vh] overflow-auto whitespace-pre-wrap break-words text-xs" tabIndex={0} aria-label="Full brief evidence">{JSON.stringify(evidence, null, 2)}</pre></Inspector>}
           {brief.status === "pending" && (

@@ -59,6 +59,26 @@ export interface BriefClaim {
   citations: { runId: string; row: number; column: string }[];
 }
 
+// A federated evidence capture: one reviewed Lightning SQL question run through
+// Zetaris at draft time, frozen into federated_runs and bound into the brief by
+// hash — the same pin-and-verify discipline as a graph_runs capture.
+export interface FederatedRun {
+  runId: string;
+  questionId: string;
+  title: string;
+  // "rows" claims cite each captured row; "context" claims cite the reach.
+  kind: "rows" | "context";
+  source: "zetaris";
+  sql: string;
+  sqlHash: string;
+  capturedAt: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  count: number;
+  total: number;
+  sourceBoundary: string;
+}
+
 export interface DefenseBrief {
   // Missing metadata denotes a legacy synthetic demo case, not customer tenancy.
   accessScope?: "synthetic-demo";
@@ -75,6 +95,27 @@ export interface DefenseBrief {
   resultCount: number;
   claims: BriefClaim[];
   gaps: string[];
+  // Case memory (Meterless H-MEM): prior related investigations recalled when
+  // this brief was drafted. Absent on legacy briefs and when recall found none.
+  memory?: {
+    recalled: { id: string; content: string; layer: string; relevance: number }[];
+    retrievalReason: string;
+    strategy: string;
+  };
+  // Federated evidence (Zetaris): ids of the captured runs bound into this
+  // brief, their combined integrity hash, and any reviewed questions that
+  // could not be captured at draft time. Absent on legacy briefs and when no
+  // federated catalogue applies to the scenario.
+  federated?: {
+    engine: "zetaris";
+    runIds: string[];
+    hash: string;
+    unavailable: string[];
+  };
+  // Agent reasoning trace: the steps the draft actually took — capture,
+  // federation legs, memory recall, claim generation and the citation
+  // self-check — so a reviewer sees how the output was reached.
+  reasoning?: { step: string; detail: string }[];
   recommendedAction: string;
   status: "pending" | "approved" | "rejected";
   reassessment?: { subject: string; decision: "accepted" | "further-verification"; note: string; at: string };
