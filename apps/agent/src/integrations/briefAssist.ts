@@ -85,7 +85,7 @@ export async function critiqueNarrative(
       for (const { runIndex, entries } of work) {
         const res = await chatFn(def, rl, {
           messages: [{ role: "user", content: critiquePrompt(runs[runIndex], entries) }],
-          maxTokens: 400,
+          maxTokens: 1500,
           temperature: 0.1,
         });
         const verdicts = res.content
@@ -119,7 +119,10 @@ export async function draftFederatedNarrative(runs: FederatedRun[]): Promise<Nar
       for (const index of targets) {
         const res = await chat(def, rl, {
           messages: [{ role: "user", content: prompt(runs[index]) }],
-          maxTokens: 500,
+          // Reasoning models (Nemotron-3 on Nebius) spend ~2-3k tokens on a
+          // thinking pass before content — smaller budgets finish as
+          // `length` with empty content. 4000 leaves headroom to emit.
+          maxTokens: 4000,
           temperature: 0.2,
         });
         const lines = res.content

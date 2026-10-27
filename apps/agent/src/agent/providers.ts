@@ -230,6 +230,9 @@ function builder(e: NodeJS.ProcessEnv): ProviderDef[] {
       maxTokens: num(e.BOTHY_LLM_MAX_TOKENS, 1500),
       timeoutMs: num(e.NEBIUS_TIMEOUT, 25_000),
       temperature: 0.2,
+      // Nemotron-3 reasoning models emit reasoning tokens before content; a
+      // low effort keeps claim/critique prompts answering directly.
+      reasoningEffort: e.NEBIUS_REASONING ?? "low",
     });
   }
 

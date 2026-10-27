@@ -36,18 +36,38 @@ never invent it.
 
 ## Eligible-model verification
 
-- [ ] Model id `TBD` confirmed in the Nebius catalogue (link/date)
-- [ ] `chat()` round-trip through `apps/agent/src/agent/providers.ts` connected
-      lane — no guessed SKU; require explicit `NEBIUS_MODEL`
+- [x] `GET /v1/models` → 30-model catalogue, NVIDIA Nemotron family confirmed
+      (27 Oct 2026): Nano-30B-A3B, Nemotron-3_5-Lightning, Super-120b,
+      Ultra-550b, Super-VL
+- [x] Model in use: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` — set explicitly
+      via `NEBIUS_MODEL`; connected lane only, no guessed SKU
+- [x] `chat()` round-trip verified live (HTTP 200, real inference)
+- [x] Live draft verified: `generate → nebius:…Nano-30B-A3B drafted 11 cited
+      claims`, `critique → … 3 checked · all pass`,
+      `generator.assist = "nebius:nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"`
 
-## Measurements vs scripted baseline (fill from live runs)
+### Model quirks recorded
 
-| Metric | Scripted | Nebius `<model>` | Ollama nemotron-mini |
+- Nemotron-3 is a **reasoning model**: output lands in `message.reasoning`
+  first. `reasoning_effort: "low"` is set on the provider def and token
+  budgets are sized so content emits (narrative 4000, critique 1500) —
+  smaller budgets finish `length` with empty `content`.
+- `GET /v1/fine_tuning/jobs` → **HTTP 200** — the fine-tuning API is
+  available on this account (empty job list).
+
+## Measurements vs scripted baseline (gallium-exposure draft)
+
+| Metric | Scripted | Ollama nemotron-mini | Nebius Nano-30B-A3B |
 |---|---|---|---|
-| Draft latency (gallium-exposure, 3 runs) | TBD | TBD | ~17s |
-| Claims emitted | TBD | TBD | TBD |
-| Invalid/unverifiable claims | 0 (by construction) | TBD | TBD |
-| Critic flags | n/a | TBD | TBD |
+| Draft latency (assist on) | ~2s | ~34s | ~62s incl. 2 reasoning calls |
+| Claims emitted | 11 | 11 | 11 |
+| Invalid/unverifiable claims | 0 (by construction) | 0 (row-matched + critic) | 0 (row-matched + critic) |
+| Critic flags | n/a | 0/3 | 0/3 |
+
+Latency note: Nebius calls are individually fast (~10s incl. reasoning) — the
+draft's total is two sequential reasoning calls. A non-reasoning model or
+parallel calls would cut this substantially; the deterministic baseline is
+always available when the flag is off.
 
 ## Egress disclosure
 
