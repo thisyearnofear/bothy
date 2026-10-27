@@ -82,7 +82,8 @@ export async function critiqueNarrative(
       const rl = new RateLimiter(def.burst, def.reqPerMin);
       let checked = 0;
       let flagged = 0;
-      for (const { runIndex, entries } of work) {
+      // Runs are independent — critique them in parallel (rate limiter caps).
+      await Promise.all(work.map(async ({ runIndex, entries }) => {
         const res = await chatFn(def, rl, {
           messages: [{ role: "user", content: critiquePrompt(runs[runIndex], entries) }],
           maxTokens: 1500,
@@ -99,7 +100,7 @@ export async function critiqueNarrative(
             narrative[runIndex][entry.rowIndex] = undefined;
           }
         });
-      }
+      }));
       return { model: `${def.id}:${def.model}`, checked, flagged };
     } catch {
       // try the next provider in the chain
@@ -116,7 +117,8 @@ export async function draftFederatedNarrative(runs: FederatedRun[]): Promise<Nar
       const rl = new RateLimiter(def.burst, def.reqPerMin);
       const narrative: (string | undefined)[][] = runs.map(() => []);
       let any = false;
-      for (const index of targets) {
+      // Runs are independent — draft them in parallel (rate limiter caps).
+      await Promise.all(targets.map(async (index) => {
         const res = await chat(def, rl, {
           messages: [{ role: "user", content: prompt(runs[index]) }],
           // Reasoning models (Nemotron-3 on Nebius) spend ~2-3k tokens on a
@@ -131,7 +133,7 @@ export async function draftFederatedNarrative(runs: FederatedRun[]): Promise<Nar
           .filter((line) => line.length > 15 && line.length <= 200 && !line.includes('":'));
         narrative[index] = runs[index].rows.slice(0, MAX_ROWS).map((row) => linesForRow(lines, row));
         if (narrative[index].some(Boolean)) any = true;
-      }
+      }));
       if (any) return { model: `${def.id}:${def.model}`, narrative };
     } catch {
       // try the next provider in the chain

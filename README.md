@@ -111,10 +111,12 @@ binds them into the brief by hash, cites rows alongside graph rows, and refuses
 decisions when a stored federated capture is edited or missing. Case memory
 (vendored Meterless H-MEM) recalls prior investigations into new drafts and
 records decisions to an append-only trust ledger; every brief carries an agent
-reasoning trace (capture → federation legs → recall → generation → citation
-self-check). Optional model-drafted claim text (`BOTHY_BRIEF_ASSIST=llm`) uses
-the provider chain — self-hosted Nemotron via Ollama works — with per-row
-scripted fallback; citations are never model-controlled.
+reasoning trace (capture → federation legs → recall → generation → critic →
+citation self-check). Optional model-drafted claim text and a faithfulness
+critic (`BOTHY_BRIEF_ASSIST=llm`) run through the provider chain — verified
+end-to-end on Nebius Token Factory (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`,
+recorded per-brief in `generator.assist`), with self-hosted Ollama as
+fallback — per-row scripted fallback; citations are never model-controlled.
 
 **Implemented but needs configuration.** Review and owned-action APIs **fail
 closed** until OIDC is configured: absent, partial, or malformed configuration
@@ -206,8 +208,8 @@ path and body allowlist, CSRF origin checks, upstream status passthrough, and a
 full brief → review → assign → acknowledge → outcome journey driven through the
 real agent router. No external email or inference is required.
 
-Current measured counts on this worktree: **150 web + 43 agent TypeScript tests
-passing** (193 total), measured on the hackathon federation branch, plus 6
+Current measured counts on this worktree: **150 web + 47 agent TypeScript tests
+passing** (197 total), measured on the hackathon federation branch, plus 6
 Python sidecar boundary tests (mocked, not live-query proof). `6deefe4`
 recorded 150/32; `9bf591a` recorded 103/32.
 
