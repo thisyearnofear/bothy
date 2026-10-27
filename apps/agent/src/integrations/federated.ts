@@ -64,6 +64,9 @@ export interface FederationCapture {
   // or short entries fall back to the deterministic field rendering.
   narrative?: (string | undefined)[][] | null;
   narrativeModel?: string;
+  // Optional critic pass over the narrative: how many model-drafted lines
+  // were checked for faithfulness and how many were flagged back to scripted.
+  critique?: { model: string; checked: number; flagged: number };
 }
 
 export const federatedHash = (runs: FederatedRun[]) =>

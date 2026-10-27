@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Dev-only: the disposable SSO demo (scripts/demo-sso.mjs) binds web and its
+  // OIDC redirect URIs to 127.0.0.1, so dev resources must load from that host.
+  allowedDevOrigins: ["127.0.0.1"],
   async rewrites() {
     const agent = process.env.AGENT_URL ?? "http://localhost:8787";
     return [

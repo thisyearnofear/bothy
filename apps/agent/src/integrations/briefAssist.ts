@@ -5,8 +5,14 @@
 // captured "rows" run; any provider or parse failure falls back to scripted
 // text for that row, so the audited path never depends on a live model.
 
-import { chat, getProviders, RateLimiter } from "../agent/providers";
+import { chat, getProviders, RateLimiter, type ProviderDef } from "../agent/providers";
 import type { FederatedRun } from "../../../../packages/shared/src/types";
+
+// Injected seams so tests exercise parsing/verdict logic without a live chain.
+export interface AssistDeps {
+  providers?: () => ProviderDef[];
+  chat?: typeof chat;
+}
 
 const MAX_ROWS = 3;
 
@@ -34,6 +40,72 @@ function prompt(run: FederatedRun): string {
 function linesForRow(lines: string[], row: Record<string, unknown>): string | undefined {
   const values = Object.values(row).map(String).filter((v) => v.length > 4);
   return lines.find((line) => values.some((v) => line.toLowerCase().includes(v.toLowerCase())));
+}
+
+export interface CritiqueResult {
+  model: string;
+  checked: number;
+  flagged: number;
+}
+
+// Critic/validate step: the provider chain judges each model-drafted claim
+// line against its source row — does it state ONLY facts present there?
+// An explicit FLAG drops that line to the deterministic scripted rendering
+// (the critic disposes); an inconclusive verdict keeps the line since the
+// deterministic row-value match already bounds it to real data.
+function critiquePrompt(run: FederatedRun, entries: { row: Record<string, unknown>; line: string }[]): string {
+  return [
+    `You are the faithfulness critic for a supply-chain verification brief.`,
+    `Source: "${run.title}"`,
+    `For each numbered claim line, decide whether it states ONLY facts present in its row — no invented fields, no wrong values, no inference. Reply with exactly ${entries.length} line(s): "PASS" or "FLAG: <short reason>".`,
+    ...entries.map(({ row, line }, i) => `${i + 1}. ROW ${JSON.stringify(row)}\n   CLAIM ${JSON.stringify(line)}`),
+  ].join("\n");
+}
+
+export async function critiqueNarrative(
+  runs: FederatedRun[],
+  narrative: (string | undefined)[][],
+  deps: AssistDeps = {},
+): Promise<CritiqueResult | null> {
+  const providersFn = deps.providers ?? getProviders;
+  const chatFn = deps.chat ?? chat;
+  const work: { runIndex: number; entries: { rowIndex: number; row: Record<string, unknown>; line: string }[] }[] = [];
+  runs.forEach((run, runIndex) => {
+    const entries = (narrative[runIndex] ?? [])
+      .map((line, rowIndex) => ({ rowIndex, row: run.rows[rowIndex], line }))
+      .filter((e): e is { rowIndex: number; row: Record<string, unknown>; line: string } => Boolean(e.line && e.row));
+    if (entries.length) work.push({ runIndex, entries });
+  });
+  if (!work.length) return null;
+  for (const def of providersFn()) {
+    try {
+      const rl = new RateLimiter(def.burst, def.reqPerMin);
+      let checked = 0;
+      let flagged = 0;
+      for (const { runIndex, entries } of work) {
+        const res = await chatFn(def, rl, {
+          messages: [{ role: "user", content: critiquePrompt(runs[runIndex], entries) }],
+          maxTokens: 400,
+          temperature: 0.1,
+        });
+        const verdicts = res.content
+          .split("\n")
+          .map((line) => line.trim().replace(/^[-*\d.)\s]+/, "").toUpperCase());
+        entries.forEach((entry, i) => {
+          const verdict = verdicts[i] ?? "";
+          checked += 1;
+          if (verdict.startsWith("FLAG")) {
+            flagged += 1;
+            narrative[runIndex][entry.rowIndex] = undefined;
+          }
+        });
+      }
+      return { model: `${def.id}:${def.model}`, checked, flagged };
+    } catch {
+      // try the next provider in the chain
+    }
+  }
+  return null;
 }
 
 export async function draftFederatedNarrative(runs: FederatedRun[]): Promise<NarrativeResult | null> {

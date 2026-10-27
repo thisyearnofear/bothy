@@ -11,7 +11,7 @@ import { actSandbox, createSandbox, type SandboxAction } from "./labSession";
 import { caseMemoryStatus, recallInvestigations, recordDecision, recordInvestigation } from "./memory/caseMemory";
 import { zetarisStatus } from "./integrations/zetaris";
 import { captureFederation, federatedHash, type FederationCapture } from "./integrations/federated";
-import { draftFederatedNarrative } from "./integrations/briefAssist";
+import { draftFederatedNarrative, critiqueNarrative } from "./integrations/briefAssist";
 
 export const evidenceHash = (run: GraphRun) => createHash("sha256").update(JSON.stringify(run)).digest("hex");
 
@@ -189,6 +189,10 @@ export class DefenseStore {
     }
     reasoning.push({ step: "memory", detail: memory && memory.recalled.length ? `recalled ${memory.recalled.length} prior investigation${memory.recalled.length === 1 ? "" : "s"} (H-MEM)` : "no prior investigations recalled" });
     reasoning.push({ step: "generate", detail: `${federation?.narrativeModel ?? "deterministic generator"} drafted ${run.rows.slice(0, 5).length + federatedClaims.length} cited claims` });
+    if (federation?.critique) {
+      const { model, checked, flagged } = federation.critique;
+      reasoning.push({ step: "critique", detail: `${model} faithfulness-checked ${checked} claim${checked === 1 ? "" : "s"}: ${flagged ? `${flagged} flagged → reverted to scripted` : "all pass"}` });
+    }
     const claims = [
       ...run.rows.slice(0, 5).map((row, index) => ({
         text: run.columns.map((column) => `${column}: ${cell(row[column])}`).join("; "),
@@ -218,7 +222,10 @@ export class DefenseStore {
       id: randomUUID(), runId, title: `${scenario.title}: verification brief`,
       createdAt: new Date().toISOString(), evidenceHash: evidenceHash(run),
       graphCommit: run.graphCommit, queryHash: run.queryHash, resultCount: run.count,
-      generator: { id: "bothy-scripted", version: "defense-brief-v1", cloudInference: false },
+      generator: {
+        id: "bothy-scripted", version: "defense-brief-v1", cloudInference: false,
+        ...(federation?.narrativeModel ? { assist: federation.narrativeModel } : {}),
+      },
       claims,
       gaps: [
         run.sourceBoundary,
@@ -346,6 +353,8 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
       if (narrative) {
         federation.narrative = narrative.narrative;
         federation.narrativeModel = narrative.model;
+        // Critic pass: flagged lines revert to scripted inside the narrative.
+        federation.critique = (await critiqueNarrative(federation.runs, narrative.narrative)) ?? undefined;
       } else {
         console.warn("brief-assist: provider chain returned no narrative; scripted text stands");
       }

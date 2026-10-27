@@ -91,7 +91,16 @@ export interface DefenseBrief {
   evidenceHash: string;
   graphCommit: string;
   queryHash: string;
-  generator: { id: "bothy-scripted"; version: "defense-brief-v1"; cloudInference: false };
+  generator: {
+    id: "bothy-scripted";
+    version: "defense-brief-v1";
+    cloudInference: false;
+    // Model provenance: when a provider-chain model drafted claim text
+    // (BOTHY_BRIEF_ASSIST=llm), its "provider:model" id is recorded here —
+    // e.g. "ollama:nemotron-mini", "nebius:<model>". Absent when the
+    // deterministic generator wrote everything.
+    assist?: string;
+  };
   resultCount: number;
   claims: BriefClaim[];
   gaps: string[];
