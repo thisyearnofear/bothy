@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "type": "container",
+  "meta": {
+    "trigger": "cli"
+  },
+  "ops": [
+    {
+      "type": "container/run",
+      "id": "bothy-agent",
+      "args": {
+        "image": "ghcr.io/thisyearnofear/bothy-agent:latest",
+        "expose": [
+          {
+            "port": 8787,
+            "health_checks": [
+              {
+                "type": "http",
+                "path": "/api/health",
+                "method": "GET",
+                "expected_status": 200
+              }
+            ]
+          }
+        ],
+        "env": {
+          "PORT": "8787",
+          "AGENT_HOST": "0.0.0.0",
+          "WEB_ORIGIN": "https://bothy.app",
+          "ARWEAVE_HOST": "arweave.net",
+          "ARWEAVE_GATEWAY": "https://arweave.net"
+        }
+      }
+    }
+  ]
+}

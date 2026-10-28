@@ -28,6 +28,7 @@ import {
 import { sendDigest } from "./digest";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
+import { postEvidenceReceipt } from "./integrations/arweave";
 import { hasProviders, providerSummary, rehearseChain } from "./agent/providers";
 import { createAuth } from "./auth";
 import { defenseRouter } from "./defense";
@@ -151,7 +152,14 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
     force: Boolean(req.body.force),
     rehearseFallback: Boolean(req.body.rehearseFallback),
   });
-  res.json(assessment);
+
+  // Decentralize AI: anchor a hash-only evidence receipt to Arweave mainnet
+  // so the brief is permanently verifiable. Never blocks/fails the assessment —
+  // degrades to { posted: false, reason } when ARWEAVE_JWK is absent or the
+  // wallet is unfunded. See integrations/arweave.ts + docs/decentralize-ai-2026.md.
+  const arweave = await postEvidenceReceipt(sc, at, assessment);
+
+  res.json({ ...(assessment as object), arweave });
 });
 
 // Live agent trace as a POST stream: each tool call streams as it happens, then
