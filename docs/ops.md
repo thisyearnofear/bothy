@@ -348,21 +348,6 @@ fly postgres create --name bothy-db --org personal
 fly postgres attach --app bothy-agent --database-app bothy-db
 ```
 
-## Deploy to Railway (paid, simpler)
-
-Railway has managed Postgres and a simpler DX. Good if you want zero-config
-hosting without Fly's volume setup.
-
-```bash
-npm install -g @railway/cli
-railway login
-railway init -p bothy-production
-railway add -s agent --service apps/agent/railway.toml
-railway add -s web --service apps/web/railway.toml
-# Set DATABASE_URL, WEB_ORIGIN, PUBLIC_WEB_URL, AGENT_URL
-railway up -s agent && railway up -s web
-```
-
 ## Local Docker Compose (self-hosted)
 
 For a quick local or self-hosted test:

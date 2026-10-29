@@ -1,12 +1,13 @@
-name: Deploy to Railway
+name: CI
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +30,7 @@ jobs:
       - name: Build web app
         run: npm -w @bothy/web run build
 
-      # The look-and-fix loop gates deploys: screenshots eight surfaces under
+      # The look-and-fix loop: screenshots eight surfaces under
       # prefers-reduced-motion and scores them against docs/design.md rules.
       # CI has no Postgres/TuringDB/OIDC, so designed-degradation 503s are
       # expected and reported as notes, not failures (no --strict here).
@@ -51,17 +52,3 @@ jobs:
           name: qa-shots
           path: apps/web/qa/
           retention-days: 14
-
-      - name: Deploy agent to Railway
-        uses: railway/deploy-action@v2
-        with:
-          railway-token: ${{ secrets.RAILWAY_TOKEN }}
-          service: ${{ vars.AGENT_SERVICE_ID }}
-          project: ${{ vars.RAILWAY_PROJECT_ID }}
-
-      - name: Deploy web to Railway
-        uses: railway/deploy-action@v2
-        with:
-          railway-token: ${{ secrets.RAILWAY_TOKEN }}
-          service: ${{ vars.WEB_SERVICE_ID }}
-          project: ${{ vars.RAILWAY_PROJECT_ID }}

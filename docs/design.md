@@ -430,7 +430,7 @@ Each page is scored against this document's own rules:
 - no console errors, and no 5xx without a JSON `{"error": …}` body;
 - zero axe violations (`@axe-core/playwright`) — the accessibility rules on this page are now enforced, not asserted.
 
-The same loop gates deploys: `deploy-railway.yml` runs it after `build`, before the two deploy steps, and uploads the screenshots as an artifact on failure. CI runs it unflagged because the runner has no Postgres, TuringDB or OIDC — designed degradations are expected there.
+The same loop runs in CI: `.github/workflows/ci.yml` executes it on every push to main and every pull request, after `build`, and uploads the screenshots as an artifact on failure. CI runs it unflagged because the runner has no Postgres, TuringDB or OIDC — designed degradations are expected there. Deploys themselves stay manual (SSH + `docker compose` per ops.md), so the loop gates code, not releases.
 
 The last rule encodes the degradation contract: a 5xx that answers with JSON is the agent saying "system of record unavailable" — designed, reported as `[degraded: …]`, not a failure. A 5xx with anything else means something is actually down. `--strict` counts designed degradations as failures, for CI against a full stack.
 
