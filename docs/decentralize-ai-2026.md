@@ -77,9 +77,15 @@ Arweave anchoring, wired end-to-end and verified. `git -C bothy status` shows th
 2. Fetch `arweave.url` → the anchored JSON `{ scenario, at, digest, assessmentId, source, timestamp }`.
 3. Recompute `sha256(JSON.stringify(assessment))` over the assessment in the same response → equals `digest`. The hash proves that exact brief existed at `timestamp`.
 
-## Next — Day 2 (29 Oct) & Day 3 (30 Oct)
+## Build log — Day 2 (28–29 Oct 2026)
 
-- **D2 — land a real mainnet tx.** Set `ARWEAVE_JWK` (any funded Arweave wallet; `npx tsx src/arweaveWallet.ts` generates one + prints the address to fund). Then `npx tsx src/arweaveWallet.ts` confirms the balance, and a seeded `POST /api/scenario/gallium-exposure/assess` returns `{ arweave: { posted: true, txId, url } }`. Screenshot `arweave.net/<txId>` — that's the Round-1 artifact. `git commit -S` the hunk.
+- **Project wallet created + funded.** `npx tsx src/arweaveWallet.ts` generated a dedicated bothy wallet; `ARWEAVE_JWK` lives in repo-root `.env` (gitignored, loaded by `loadEnv`). Address `xxyrVvBYSyvppbptU0EG1V6h4HMDFCDRW4SRK0hMrik`, funded 0.1 AR.
+- **First real mainnet tx anchored.** `src/arweaveSmoke.ts` → `postEvidenceReceipt` → **`gDFj0KEiW8S4v0BCABkqmyJEfiPNs-3WRyDAaJVoRSs`**, mined at block **2031528**. `/tx/<id>` confirms `data_size: 168` with `data_root` committed + all tags (`App-Name`, `Scenario`, `Digest`, `Bothy-Source`). Gateway data-body lags a few minutes behind mining — normal.
+- **Endpoint path blocked by local Postgres** (pre-existing: `runAssessment` → `getScenario` → `pg`). `schema.sql` needs PostGIS; brew `postgresql@14` lacks it and Homebrew no longer bottles for Intel macOS. Options: Supabase free tier (PostGIS included, **and** reachable from a Nosana container — `localhost` is dead on a remote node anyway) or Postgres.app locally. The async 503 wrapper in `server.ts` already converts this failure cleanly.
+
+## Next — Day 2 remainder & Day 3 (30 Oct)
+
+- **D2 remainder:** stand up Postgres (Supabase preferred — works for the Nosana deploy too), `npm run seed`, then `POST /api/scenario/gallium-exposure/assess` → `{ arweave: { posted: true, txId, url } }` from the real assessment. Screenshot `arweave.net/<txId>`.
 - **D3 — Nosana.** Claim credits → `docker build -f apps/agent/Dockerfile -t ghcr.io/thisyearnofear/bothy-agent:latest .` → make the GHCR package **public** → `nosana job post --file nosana.json` (or deploy.nosana.com) → run the same seeded assess through the deployed endpoint → screenshot the deployment + tx.
   - **Never put `ARWEAVE_JWK` in `nosana.json`** — job definitions are published to public IPFS; a JWK there is a leaked private key. Leave it out for the CPU deployment (receipts degrade gracefully), or use a Confidential Job / dashboard secret if the deployed instance must anchor.
   - GPU/local-Llama swap is the next milestone after the CPU replica proves the deploy path.

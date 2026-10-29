@@ -8,6 +8,7 @@
 // so you can fund it, then re-run with the key set. With a JWK it prints the
 // derived address and the winston/AR balance — exactly what postEvidenceReceipt
 // checks before posting.
+import "./loadEnv";
 import Arweave from "arweave";
 import { walletInfo } from "./integrations/arweave";
 
