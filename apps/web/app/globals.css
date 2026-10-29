@@ -656,6 +656,8 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 }
 .btn:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in oklch, var(--text-strong) 8%, transparent); }
 .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--cursor); }
+/* MapLibre's attribution toggle ships a blue ring — keep the room one surface. */
+.maplibregl-ctrl-attrib-button:focus-visible { box-shadow: var(--focus-ring) !important; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 .btn-primary { border-color: var(--cursor); color: var(--cursor); }
 .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in oklch, var(--cursor) 12%, transparent); }
@@ -734,6 +736,7 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 }
 
 .scatter-letter { display: inline-block; transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 700ms ease-out, filter 700ms ease-out; }
+.scatter-letter[data-in="false"] { transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--rot)); opacity: 0; filter: blur(6px); }
 @media (prefers-reduced-motion: reduce) { .scatter-letter { transition: none; transform: none !important; opacity: 1 !important; filter: none !important; } }
 
 /* ---- Stories ---- */

@@ -416,3 +416,22 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 - Exercise steps show task, output and limit. Stories retain source links and historical facts in native disclosures. Actual captured evidence, known gaps, action restrictions and demo limitations remain inspectable; essential safety notices stay visible.
 - Contact forms keep persistent labels and native email validation. No request counter or traction claim. Never submit sensitive data here.
 - Assessment pages use labelled readouts. Notification messages and secondary road-entry controls disclose on demand. No captured claims or user-recorded findings are shortened.
+
+## Visual QA loop
+
+`npm -w @bothy/web run qa:visual` (`apps/web/scripts/qa-visual.mjs`) screenshots eight surfaces — landing, defence desktop and mobile, watch, pilot, stories, digest, gallium — under `prefers-reduced-motion` (the worst case: every animation off) and writes `apps/web/qa/shots/` plus a `report.json`. The machine looks at its own output; a page does not pass because someone hoped it looked right.
+
+Each page is scored against this document's own rules:
+
+- no horizontal overflow;
+- a visible focus indicator on the first Tab — an outline *or* a `--focus-ring` box-shadow both count;
+- nothing stuck invisible under reduced motion — disabled controls are exempt, since dimming is the signal;
+- every `<img>` reaches pixels — a lazy image still in flight is pending, not broken; only an errored one fails;
+- no console errors, and no 5xx without a JSON `{"error": …}` body.
+
+The last rule encodes the degradation contract: a 5xx that answers with JSON is the agent saying "system of record unavailable" — designed, reported as `[degraded: …]`, not a failure. A 5xx with anything else means something is actually down. `--strict` counts designed degradations as failures, for CI against a full stack.
+
+Two traps this loop already caught, kept here so they stay caught:
+
+- SSR/client drift on raw floats: browsers normalize `transform`, `opacity` and `filter` values on parse (`0.0067606025048007725em` → `0.0067606em`), so the hydration checker sees a different string than the client rendered. `ScatterHeading` sends its per-letter offsets as CSS custom properties — verbatim round-trip — and keeps the hidden state in `.scatter-letter[data-in="false"]`. Any future scattered or seeded styling should do the same.
+- Express 4 never forwards async rejections to error middleware: one `await` on a dead Postgres was an unhandled rejection that killed the agent and every healthy route with it. `server.ts` wraps every handler and answers 503 from a final middleware, so a dead system of record degrades its own routes only.

@@ -22,9 +22,17 @@ export default function ScatterHeading({ text, className, style }: { text: strin
       <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
       {[...word].map((letter, l) => {
         const i = index++;
+        // Scatter offsets travel as custom properties: CSSOM preserves them
+        // verbatim, so SSR HTML and the hydration pass always agree. Numbers
+        // in transform/opacity/filter would be normalized by the browser and
+        // trip the hydration checker.
         const style: CSSProperties = visible
-          ? { transitionDelay: `${(i / total) * 380 + Math.abs(rand(i + 7)) * 220}ms` }
-          : { transform: `translate3d(${rand(i + 1) * 0.9}em, ${rand(i + 3) * 0.7}em, 0) rotate(${rand(i + 5) * 24}deg)`, opacity: 0, filter: "blur(6px)" };
+          ? { transitionDelay: `${((i / total) * 380 + Math.abs(rand(i + 7)) * 220).toFixed(1)}ms` }
+          : ({
+              "--dx": `${(rand(i + 1) * 0.9).toFixed(4)}em`,
+              "--dy": `${(rand(i + 3) * 0.7).toFixed(4)}em`,
+              "--rot": `${(rand(i + 5) * 24).toFixed(4)}deg`,
+            } as CSSProperties);
         return <span key={l} className="scatter-letter" data-in={visible} style={style}>{letter}</span>;
       })}
       </span>{w < text.split(" ").length - 1 ? " " : ""}

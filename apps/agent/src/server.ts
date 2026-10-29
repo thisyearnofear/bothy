@@ -39,6 +39,18 @@ const auth = createAuth();
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
 
+// Express 4 never forwards async rejections to error middleware — a dead
+// Postgres turned one repo `await` into an unhandled rejection that killed the
+// process and every healthy route (SQLite loop, graph proxy) mid-flight.
+// Wrap each handler so a failed await reaches the 503 middleware at the bottom
+// of this file instead, matching the "degrades to 503" contract the graph
+// routes already document.
+for (const method of ["get", "post", "put", "patch", "delete"] as const) {
+  const register = app[method].bind(app) as unknown as (path: string, ...handlers: express.RequestHandler[]) => void;
+  (app as unknown as Record<string, unknown>)[method] = (path: string, ...handlers: express.RequestHandler[]) =>
+    register(path, ...handlers.map((h) => (req: express.Request, res: express.Response, next: express.NextFunction) => { void Promise.resolve(h(req, res, next)).catch(next); }));
+}
+
 const PORT = Number(process.env.PORT ?? 8787);
 
 function agentVisibleAt(value: unknown, horizon: string) {
@@ -632,6 +644,13 @@ app.post("/api/digest/send", async (req, res) => {
   const provided = req.headers["x-digest-token"] ?? req.body.token;
   if (token && provided !== token) return res.status(401).json({ error: "unauthorized" });
   res.json({ ...(await sendDigest()), at: new Date().toISOString() });
+});
+
+// Final error boundary for wrapped handlers above. A route whose system of
+// record is unreachable answers 503; it must never take the process down.
+app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) return next(err);
+  res.status(503).json({ error: `system of record unavailable: ${err.message}` });
 });
 
 app.listen(PORT, process.env.AGENT_HOST ?? "0.0.0.0", () => {

@@ -196,6 +196,7 @@ npm -w @bothy/agent run test:graph  # requires the installed TuringDB Python SDK
 npm run typecheck
 npm run lint
 npm -w @bothy/web run build
+npm -w @bothy/web run qa:visual   # screenshots + design rubric; needs web and agent running
 git diff --check
 ```
 
