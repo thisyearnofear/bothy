@@ -29,6 +29,29 @@ jobs:
       - name: Build web app
         run: npm -w @bothy/web run build
 
+      # The look-and-fix loop gates deploys: screenshots eight surfaces under
+      # prefers-reduced-motion and scores them against docs/design.md rules.
+      # CI has no Postgres/TuringDB/OIDC, so designed-degradation 503s are
+      # expected and reported as notes, not failures (no --strict here).
+      - name: Visual QA loop
+        run: |
+          npx playwright install --with-deps chromium
+          npm -w @bothy/agent run start &
+          (cd apps/web && npm run start) &
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8787/api/health >/dev/null && curl -sf http://localhost:3000 >/dev/null; then break; fi
+            sleep 1
+          done
+          cd apps/web && node scripts/qa-visual.mjs --base http://localhost:3000
+
+      - name: Upload QA screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-shots
+          path: apps/web/qa/
+          retention-days: 14
+
       - name: Deploy agent to Railway
         uses: railway/deploy-action@v2
         with:

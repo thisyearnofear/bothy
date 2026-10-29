@@ -5,6 +5,7 @@
  * Exit code: 0 if all pages pass, 1 if any page fails.
  */
 import { chromium } from "playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -33,6 +34,7 @@ const RUBRIC = {
   "reduced-motion-safe": 1,
   "images-load": 2,
   "console-errors": 2,
+  "a11y-violations": 2,
   "honesty-copy-present": 1,
 };
 
@@ -169,7 +171,19 @@ for (const p of PAGES) {
     entry.checks["console-errors"] = consoleErrors.length === 0;
     if (consoleErrors.length) entry.issues.push(`console errors: ${consoleErrors.slice(0, 3).join(" | ")}`);
 
-    // 6. honesty copy present on public pages
+    // 6. axe — the doc's accessibility claims, checked mechanically
+    const axe = await new AxeBuilder({ page }).analyze();
+    entry.checks["a11y-violations"] = axe.violations.length === 0;
+    if (axe.violations.length) {
+      entry.issues.push(`a11y: ${axe.violations.slice(0, 4).map((v) => `${v.id}×${v.nodes.length}`).join(", ")}`);
+      entry.axe = axe.violations.map((v) => ({
+        id: v.id,
+        impact: v.impact,
+        targets: v.nodes.slice(0, 5).map((n) => String(n.target?.[0] ?? "").slice(0, 80)),
+      }));
+    }
+
+    // 7. honesty copy present on public pages
     const text = await page.evaluate(() => document.body.innerText);
     entry.checks["honesty-copy-present"] = HONESTY_PATTERNS.some((re) => re.test(text));
     if (!entry.checks["honesty-copy-present"]) entry.issues.push("no honesty/limitation copy found on page");

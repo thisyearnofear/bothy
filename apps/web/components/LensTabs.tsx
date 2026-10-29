@@ -17,7 +17,6 @@ export default function LensTabs({ label, items, variant = "reference" }: {
     <div className="lens-rail" role="tablist" aria-label={label}>
       {items.map((item, index) => <button key={item.id} ref={(el) => { buttons.current[index] = el; }}
         type="button" role="tab" id={`${uid}-tab-${index}`} aria-controls={`${uid}-panel-${index}`}
-        aria-label={item.caption ? `${item.label}: ${item.caption}` : item.label}
         aria-selected={index === active} tabIndex={index === active ? 0 : -1}
         onClick={() => setSelected(item.id)} onKeyDown={(event) => {
           const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;

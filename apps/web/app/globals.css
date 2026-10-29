@@ -286,8 +286,10 @@ button:not(:disabled):hover {
   100% {
     opacity: 1;
   }
+  /* Floor stays above the point where --text-faint on --panel drops under
+     4.5:1 — a status readout may breathe but may not leave contrast. */
   50% {
-    opacity: 0.62;
+    opacity: 0.85;
   }
 }
 .resting {

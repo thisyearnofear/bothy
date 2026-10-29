@@ -89,8 +89,15 @@ export default function WatchBackdrop({ caseId }: { caseId: ScenarioId | null })
           pixelRatio: 1,
         });
         mapRef.current = map;
+        // The backdrop is aria-hidden, so the controls MapLibre injects must
+        // leave the tab order — the parent is pointer-events-none anyway, so
+        // they were never operable. Attribution stays visible.
+        const unfocus = () =>
+          container.current?.querySelectorAll("a, button, summary").forEach((el) => el.setAttribute("tabindex", "-1"));
+        unfocus();
         map.on("load", () => {
           if (!alive) return;
+          unfocus();
           const dest = PLACES[placeRef.current];
           try {
             map.jumpTo(dest);
