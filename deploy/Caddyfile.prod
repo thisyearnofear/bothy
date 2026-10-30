@@ -1,0 +1,20 @@
+# Production (nuncio-vultr): Traefik terminates TLS and forwards plain HTTP
+# here, so this site is HTTP-only and Caddy never tries to obtain certificates.
+http://{$BOTHY_DOMAIN:bothy.trustfall.xyz} {
+	encode zstd gzip
+
+	# The demo identity provider has no passwords, so its account picker is
+	# invite-only. Token, JWKS and authorize endpoints stay open for the
+	# browser redirect and the server-to-server code exchange.
+	@gate path /idp/interaction/*
+	basic_auth @gate {
+		import /etc/caddy/invite
+	}
+
+	handle /idp/* {
+		reverse_proxy idp:9099
+	}
+	handle {
+		reverse_proxy web:8080
+	}
+}
