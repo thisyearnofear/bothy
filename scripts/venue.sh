@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Venue freeze: one command to bring the whole defense stack up, idempotent,
 # with health gates. Brings up: TuringDB (:6677) -> sidecar (:6777) ->
-# agent (:8787) -> web (:3001). Re-running is safe; already-up services are
+# agent (:8787) -> web (:8477). Re-running is safe; already-up services are
 # detected and left alone.
 #
 # Usage:  bash scripts/venue.sh            # start everything
@@ -20,7 +20,7 @@ TURING_PORT="${TURING_PORT:-6677}"
 UI_PORT="${UI_PORT:-8087}"
 SIDECAR_PORT="${SIDECAR_PORT:-6777}"
 AGENT_PORT="${AGENT_PORT:-8787}"
-WEB_PORT="${WEB_PORT:-3001}"
+WEB_PORT="${WEB_PORT:-8477}"
 export PATH="$HOME/.local/bin:$PATH"
 
 # Detach into a fresh session: survives Ctrl-C, terminal close, and CJ/CI

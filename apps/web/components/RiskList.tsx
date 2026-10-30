@@ -1,7 +1,7 @@
 "use client";
 
-import { byWeight, citationClause, KIND_LABEL, routeShortName, sourceShort } from "../lib/derive";
-import type { EvidenceCitation } from "../../../packages/shared/src/types";
+import { byWeight, citationClause, KIND_LABEL, riskTextColor, routeShortName, sourceShort } from "../lib/derive";
+import type { EvidenceCitation, RiskLabel } from "../../../packages/shared/src/types";
 
 export type RiskRow = {
   routeId: string;
@@ -60,14 +60,14 @@ export default function RiskList({
                   </span>
                   {compact ? routeShortName(r.name) : r.name}
                 </span>
-                <span className="mono tnum text-sm" style={{ color: r.color }}>
+                <span className="mono tnum text-sm" style={{ color: riskTextColor(r.label as RiskLabel) }}>
                   {r.score.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span
                   className="rounded px-1.5 py-0.5 font-semibold"
-                  style={{ background: `color-mix(in oklch, ${r.color} 16%, transparent)`, color: r.color }}
+                  style={{ background: `color-mix(in oklch, ${r.color} 16%, transparent)`, color: riskTextColor(r.label as RiskLabel) }}
                 >
                   {r.label}
                 </span>

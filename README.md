@@ -67,11 +67,11 @@ Express 4 versus `@strands-agents/sdk` peer mismatch can block a plain install.
 ```bash
 npm ci --legacy-peer-deps
 cp .env.example .env
-bash scripts/venue.sh        # TuringDB :6677 → sidecar :6777 → agent :8787 → web :3001
+bash scripts/venue.sh        # TuringDB :6677 → sidecar :6777 → agent :8787 → web :8477
 bash scripts/venue.sh status # health of all four, colour-coded
 ```
 
-Open **http://localhost:3001/defense?scenario=gallium-exposure**. The defence
+Open **http://localhost:8477/defense?scenario=gallium-exposure**. The defence
 route does not require the Postgres road catalogue; SQLite captures graph runs
 and witness artifacts in `apps/agent/data/bothy-loop.db`.
 
@@ -147,7 +147,7 @@ fallback.
 ## Architecture
 
 ```
-Browser ── Next.js :3001 ──┬── /api/defense/*, /api/auth/*  (session bridge)
+Browser ── Next.js :8477 ──┬── /api/defense/*, /api/auth/*  (session bridge)
                            └── /api/*  (rewrite)
                                     │
                             Express agent :8787
@@ -180,7 +180,7 @@ assets/         submission screenshots and demo video
 ```bash
 bash scripts/db-tunnel.sh    # remote Postgres/PostGIS → localhost:5433
 npm run seed                # writes the demo catalogue; inspect seed.ts and protect existing data first
-npm run dev                 # agent :8787 · web :3000
+npm run dev                 # agent :8787 · web :8477
 ```
 
 Open `/watch?replay=1` or `/watch?case=flood`. Decisions require a verified OIDC

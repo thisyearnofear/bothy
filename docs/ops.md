@@ -7,7 +7,7 @@ those out of the repo in `.env` (never committed).
 ## Defence workspace and witness contract
 
 Start the local stack with `bash scripts/venue.sh`, then open
-`http://localhost:3001/defense?scenario=gallium-exposure`. This path does not
+`http://localhost:8477/defense?scenario=gallium-exposure`. This path does not
 query the Postgres road catalogue. Node 22.13+ or Node 24 is required for
 `node:sqlite`. Do not seed/reset databases for a graph rehearsal.
 For an isolated local smoke, set `AGENT_HOST=127.0.0.1`, a spare `PORT`, and
@@ -357,7 +357,7 @@ cd deploy
 cp .env.production.example .env.production
 docker compose -f docker-compose.local.yml up -d --build
 curl http://localhost:8787/api/health
-open http://localhost:3001
+open http://localhost:8477
 ```
 
 ## Existing VPS + Coolify/Traefik

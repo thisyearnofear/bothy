@@ -345,14 +345,15 @@ button:not(:disabled):hover {
   animation: bothy-receipt 240ms var(--ease-base) both;
 }
 
-/* MapLibre chrome onto the token palette — popups are instrument surfaces, not white cards. */
+/* MapLibre chrome onto the token palette — popups are instrument surfaces, not white cards.
+   MapLibre's stylesheet loads after globals and wins ties, so these must be !important. */
 .maplibregl-popup-content {
-  background: var(--panel);
-  color: var(--text-body);
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  padding: 8px 10px;
-  box-shadow: 0 4px 16px oklch(10% 0.01 250 / 0.6);
+  background: var(--panel) !important;
+  color: var(--text-body) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  box-shadow: 0 4px 16px oklch(10% 0.01 250 / 0.6) !important;
 }
 .maplibregl-popup-tip {
   border-top-color: var(--rule);
@@ -661,7 +662,7 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 /* MapLibre's attribution toggle ships a blue ring — keep the room one surface. */
 .maplibregl-ctrl-attrib-button:focus-visible { box-shadow: var(--focus-ring) !important; }
 /* Link inside the attribution text must not rely on colour alone. */
-.maplibregl-ctrl-attrib a { text-decoration: underline; }
+.maplibregl-ctrl-attrib a { text-decoration: underline !important; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 .btn-primary { border-color: var(--cursor); color: var(--cursor); }
 .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in oklch, var(--cursor) 12%, transparent); }

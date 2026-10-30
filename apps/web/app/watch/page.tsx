@@ -2,9 +2,8 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import MapView, { type MapBeat, type RouteOnMap } from "../../components/MapView";
-import Timeline, { type Series } from "../../components/Timeline";
-import RiskList, { type RiskRow } from "../../components/RiskList";
+import type { Beat } from "../../components/Timeline";
+import type { RiskRow } from "../../components/RiskList";
 import Detail from "../../components/Detail";
 import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
@@ -20,10 +19,11 @@ import WatchFooter from "../../components/WatchFooter";
 import WatchErrorBanner from "../../components/WatchErrorBanner";
 import WatchEmptyState from "../../components/WatchEmptyState";
 import WatchStoryStrip from "../../components/WatchStoryStrip";
+import WatchMapStage from "../../components/WatchMapStage";
 import { CaseSwitch } from "../../components/CaseList";
-import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
+import { caseFromSearch, caseUrl, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
-import { causalHeadline, firstCrossed, inflections, KIND_LABEL, leadTimeLabel, ms, pointAt, riskColor, snapshotAt, sourceShort } from "../../lib/derive";
+import { causalHeadline, firstCrossed, inflections, KIND_LABEL, leadTimeLabel, ms, riskColor, riskTextColor, snapshotAt, sourceShort } from "../../lib/derive";
 import type {
   Assessment,
   AuditEntry,
@@ -294,18 +294,8 @@ export default function Watch() {
     [routes, snapshots, t]
   );
 
-  const series: Series[] = useMemo(
-    () =>
-      routes.map((r) => ({
-        id: r.id,
-        color: riskColor((snapshotAt(snapshots[r.id] ?? [], range.horizon)?.label ?? "LOW") as RiskLabel),
-        points: (snapshots[r.id] ?? []).map((s) => [ms(s.at), s.score] as [number, number]),
-      })),
-    [routes, snapshots, range.horizon]
-  );
-
   // timeline beats: kind + source so arriving reports read as a feed, not anonymous ticks
-  const snaps = useMemo(() => {
+  const snaps = useMemo<Beat[]>(() => {
     const map = new Map<number, { t: number; label: string; delta: number }>();
     routes.forEach((r) =>
       inflections(snapshots[r.id] ?? []).forEach((n) => {
@@ -321,25 +311,7 @@ export default function Watch() {
     return [...map.values()].sort((a, b) => a.t - b.t);
   }, [routes, snapshots]);
 
-  // beats pinned onto the map: each signal lands at the point along its route the day had reached
-  const mapBeats = useMemo<MapBeat[]>(() => {
-    const span = range.end - range.start || 1;
-    return routes.flatMap((r) =>
-      inflections(snapshots[r.id] ?? []).map((n) => ({
-        id: `${r.id}:${n.atMs}`,
-        routeId: r.id,
-        atMs: n.atMs,
-        lngLat: pointAt(r.coords, (n.atMs - range.start) / span),
-        text: n.signal,
-        delta: n.delta,
-        kind: KIND_LABEL[n.kind],
-        source: n.source,
-      }))
-    );
-  }, [routes, snapshots, range.start, range.end]);
-
   const selected = routes.find((r) => r.id === selectedId) ?? null;
-  const selectedLiveWeather = liveWeather?.routes.find((weather) => weather.routeId === selectedId) ?? null;
   const selectedAssessment = scenario && selectedId ? assessments[assessmentKey(scenario.id, selectedId)] ?? null : null;
 
   // Room posture — the Night Watch: the room is *quiet* until a corridor is a
@@ -359,7 +331,7 @@ export default function Watch() {
   }, [scenario, selected, snapshots]);
   const selSnap = selected ? snapshotAt(snapshots[selected.id] ?? [], t) : undefined;
   const selHorizon = selected ? snapshotAt(snapshots[selected.id] ?? [], range.horizon) : undefined;
-  const selColor = selHorizon ? riskColor(selHorizon.label) : "var(--text-faint)";
+  const selColor = selHorizon ? riskTextColor(selHorizon.label) : "var(--text-faint)";
 
   // "the point it became inevitable": the earliest moment from which the selected
   // route stays HIGH (>=0.75) through the agent's horizon. Computed, never asserted.
@@ -373,7 +345,7 @@ export default function Watch() {
   }, [selected, snapshots, range.horizon]);
 
   const overlaySnap = selSnap ?? selHorizon;
-  const overlayColor = overlaySnap ? riskColor(overlaySnap.label) : "var(--text-faint)";
+  const overlayColor = overlaySnap ? riskTextColor(overlaySnap.label) : "var(--text-faint)";
 
   // money shot: a causal sentence from the heaviest reports + terrain, numbers beside it
   const headline = selected && overlaySnap ? causalHeadline(selected, overlaySnap) : null;
@@ -800,139 +772,30 @@ export default function Watch() {
               citations={selSnap?.citations}
             />
 
-            <section className="stage-in spot-dim order-1 min-w-0 space-y-4 xl:order-2" style={{ ["--stage" as string]: 0 }}>
-              <section
-                className="relative h-[300px] overflow-hidden rounded-lg border sm:h-[58vh] xl:h-[min(66vh,760px)]"
-                style={{ borderColor: "var(--rule)" }}
-                aria-label="Route risk map"
-              >
-                <MapView
-                  key={scenario?.id}
-                  routes={routes.map<RouteOnMap>((r) => {
-                    const s = snapshotAt(snapshots[r.id] ?? [], t);
-                    const label = (s?.label ?? "LOW") as RiskLabel;
-                    return { route: r, color: riskColor(label), score: s?.score ?? 0, label };
-                  })}
-                  selectedId={selectedId}
-                  hoverId={hoverId}
-                  onSelect={setSelectedId}
-                  cursorMs={t}
-                  startMs={range.start}
-                  endMs={range.end}
-                  beats={mapBeats}
-                  revealed={revealed}
-                  revealMs={range.outcome}
-                />
-                {selected && overlaySnap && !compact && (
-                  <div
-                    className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg border px-3 py-2"
-                    style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
-                  >
-                    <p className="mt-0.5 text-sm font-medium" style={{ color: "var(--text-strong)" }}>
-                      {selected.name}
-                    </p>
-                    <p className="mono mt-1 text-xs" style={{ color: overlayColor }}>
-                      {overlaySnap.label} {overlaySnap.score.toFixed(2)}
-                    </p>
-                  </div>
-                )}
-                {/* severity legend — colour + label, never colour alone. The time
-                    lives in the timeline bubble; the corridor + score live in the
-                    headline and the rail — no need to repeat them on the map. */}
-                <div
-                  className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded-lg border px-2.5 py-1.5"
-                  style={{ borderColor: "var(--rule)", background: "color-mix(in oklch, var(--panel) 85%, transparent)" }}
-                >
-                  <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
-                    risk
-                  </span>
-                  {(["LOW", "MODERATE", "ELEVATED", "HIGH"] as const).map((l) => (
-                    <span key={l} className="flex items-center gap-1 text-xs" style={{ color: "var(--text-body)" }}>
-                      <span
-                        aria-hidden="true"
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: riskColor(l) }}
-                      />
-                      {l}
-                    </span>
-                  ))}
-                </div>
-              </section>
-
-              {scenario?.id === "live" && selectedLiveWeather && (
-                <section
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
-                  style={
-                    selectedLiveWeather.acquisitionMode === "demo-fallback"
-                      ? { borderColor: "oklch(80% 0.14 85)", background: "var(--panel)", color: "var(--text-body)" }
-                      : { borderColor: "var(--rule)", background: "var(--panel)", color: "var(--text-body)" }
-                  }
-                >
-                  <div>
-                    <span
-                      className="mono mr-2 uppercase tracking-wider"
-                      style={{ color: selectedLiveWeather.acquisitionMode === "demo-fallback" ? "oklch(80% 0.14 85)" : "var(--cursor)" }}
-                    >
-                      {selectedLiveWeather.acquisitionMode === "demo-fallback" ? "live context unavailable" : "not in the score"}
-                    </span>
-                    <strong>{selectedLiveWeather.condition}</strong>
-                    {selectedLiveWeather.temperatureC != null && <> · {selectedLiveWeather.temperatureC.toFixed(1)}°C</>}
-                    {selectedLiveWeather.windGustKph != null && <> · gusts {Math.round(selectedLiveWeather.windGustKph)} km/h</>}
-                    {selectedLiveWeather.snowfallCm != null && selectedLiveWeather.snowfallCm > 0 && <> · snow {selectedLiveWeather.snowfallCm.toFixed(1)} cm</>}
-                  </div>
-                  <a href={selectedLiveWeather.sourceUrl} target="_blank" rel="noreferrer" className="mono underline" style={{ color: "var(--text-faint)" }}>
-                    {selectedLiveWeather.source} · {selectedLiveWeather.mode}
-                    {selectedLiveWeather.acquisitionMode ? ` · ${selectedLiveWeather.acquisitionMode}` : ""}
-                  </a>
-                  <p className="basis-full" style={{ color: "var(--text-faint)" }}>
-                    Open-Meteo frozen snapshot — operator-fetched API, never score evidence
-                    {liveWeather?.ingestedAt && <> · ingested {new Date(liveWeather.ingestedAt).toLocaleString()}</>}
-                  </p>
-                </section>
-              )}
-
-              <section
-                className="stage-in spot-dim"
-                style={{ ["--stage" as string]: 2 }}
-                aria-label="Decision replay timeline"
-              >
-                <Timeline
-                  startMs={range.start}
-                  endMs={range.end}
-                  horizonMs={range.horizon}
-                  t={t}
-                  onSeek={seek}
-                  onPrevStep={() => step(-1)}
-                  onNextStep={() => step(1)}
-                  series={series}
-                  snaps={snaps}
-                  inevitableMs={inevitableMs}
-                  revealMs={range.outcome}
-                  revealText={revealText}
-                  playing={playing}
-                  onTogglePlay={togglePlay}
-                />
-                {scenario?.id === "backtest" && (
-                  <p className="mt-2 px-1 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
-                    <span className="mono uppercase tracking-wider" style={{ color: "var(--cursor)" }}>
-                      sourced news · beyond the hatch
-                    </span>
-                    {" — "}
-                    Reported facts are sourced; modeled signals and timing are labelled so the decision trail stays honest.
-                    {scenario.outcome ? ` ${scenario.outcome}` : ""}{" "}
-                    <a
-                      href={A66_OUTCOME_SOURCE.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline"
-                      style={{ color: "var(--cursor)" }}
-                    >
-                      {A66_OUTCOME_SOURCE.name}, {A66_OUTCOME_SOURCE.date}
-                    </a>
-                  </p>
-                )}
-              </section>
-            </section>
+            <WatchMapStage
+              scenario={scenario}
+              routes={routes}
+              snapshots={snapshots}
+              t={t}
+              range={range}
+              revealed={revealed}
+              selectedId={selectedId}
+              hoverId={hoverId}
+              onSelect={setSelectedId}
+              selected={selected}
+              overlaySnap={overlaySnap}
+              overlayColor={overlayColor}
+              compact={compact}
+              liveWeather={liveWeather}
+              snaps={snaps}
+              inevitableMs={inevitableMs}
+              revealText={revealText}
+              playing={playing}
+              onSeek={seek}
+              onPrevStep={() => step(-1)}
+              onNextStep={() => step(1)}
+              onTogglePlay={togglePlay}
+            />
 
             <aside
               aria-label="Decision case"

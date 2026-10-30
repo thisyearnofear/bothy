@@ -21,6 +21,21 @@ export function riskColor(label: RiskLabel): string {
   }
 }
 
+// Same hues as riskColor, raised lightness: >=4.5:1 on --panel so severity text
+// (labels, score readouts, pills) clears WCAG AA. Graphics keep riskColor.
+export function riskTextColor(label: RiskLabel): string {
+  switch (label) {
+    case "LOW":
+      return "oklch(78% 0.16 155)";
+    case "MODERATE":
+      return "oklch(82% 0.14 85)";
+    case "ELEVATED":
+      return "oklch(79% 0.17 55)";
+    case "HIGH":
+      return "oklch(88% 0.21 25)";
+  }
+}
+
 export function fmtTime(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;

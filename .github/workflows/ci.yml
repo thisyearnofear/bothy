@@ -38,12 +38,12 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm -w @bothy/agent run start &
-          (cd apps/web && npm run start) &
+          (cd apps/web && npx next start -p 8477) &
           for i in $(seq 1 90); do
-            if curl -sf http://localhost:8787/api/health >/dev/null && curl -sf http://localhost:3000 >/dev/null; then break; fi
+            if curl -sf http://localhost:8787/api/health >/dev/null && curl -sf http://localhost:8477 >/dev/null; then break; fi
             sleep 1
           done
-          cd apps/web && node scripts/qa-visual.mjs --base http://localhost:3000
+          cd apps/web && node scripts/qa-visual.mjs
 
       - name: Upload QA screenshots on failure
         if: failure()

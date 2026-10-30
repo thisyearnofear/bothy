@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { site } from "../../../lib/site";
 import { SiteHeader } from "../../../components/PageHero";
-import { riskColor } from "../../../../../packages/shared/src/lib";
+import { riskTextColor } from "../../../../../packages/shared/src/lib";
 import { firstCrossed, leadTimeLabel, ms } from "../../../lib/derive";
 import type { Assessment, RiskLabel, RiskSnapshot } from "../../../../../packages/shared/src/types";
 import AnchorCard from "../../../components/AnchorCard";
@@ -99,7 +99,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         {c.routeName}
       </h1>
       <dl className="mission-metrics mt-5" aria-label="Assessment">
-        <div><dt className="readout-label">Risk</dt><dd className="text-lg font-semibold" style={{ color: riskColor(c.label as RiskLabel) }}>{c.label}</dd></div>
+        <div><dt className="readout-label">Risk</dt><dd className="text-lg font-semibold" style={{ color: riskTextColor(c.label as RiskLabel) }}>{c.label}</dd></div>
         <div><dt className="readout-label">Score</dt><dd className="readout">{Number(c.score).toFixed(2)}</dd></div>
         <div><dt className="readout-label">Confidence</dt><dd className="readout">{Number(c.confidence).toFixed(2)}</dd></div>
         <div><dt className="readout-label">Status</dt><dd>{c.status}</dd></div>

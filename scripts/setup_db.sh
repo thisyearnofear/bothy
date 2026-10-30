@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Bootstrap local Postgres 17 + PostGIS + pgvector for the Bothy demo.
 # (Homebrew bottles of postgis/pgvector target PG17/PG18, so we run 17.)
+# Intel Macs get no Homebrew bottles (source builds stall) — use the
+# Postgres.app cask instead, which bundles PG17 + PostGIS + pgvector prebuilt:
+#   brew install --cask postgres-app
+#   /Applications/Postgres.app/Contents/Versions/17/bin/initdb -D ~/pg-data
+#   ...then pg_ctl -o "-p 5433" start and createdb bothy (matches .env).
 set -uo pipefail
 
 echo "==> [1/4] Ensuring postgresql@17 + postgis + pgvector are installed"

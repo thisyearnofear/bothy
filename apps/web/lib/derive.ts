@@ -1,4 +1,4 @@
-import { riskColor, riskLabel } from "../../../packages/shared/src/lib";
+import { riskColor, riskLabel, riskTextColor } from "../../../packages/shared/src/lib";
 import type { EventKind, EvidenceCitation, RiskLabel, RiskSnapshot, RouteInfo } from "../../../packages/shared/src/types";
 
 export const ms = (iso: string) => new Date(iso).getTime();
@@ -229,4 +229,4 @@ const fmtAt = (iso: string) => {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-export { riskColor, riskLabel };
+export { riskColor, riskLabel, riskTextColor };

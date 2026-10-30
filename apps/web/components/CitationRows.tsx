@@ -29,6 +29,7 @@ export default function CitationRows({
         <div
           className="mb-2 flex h-1.5 overflow-hidden rounded-full"
           style={{ background: "var(--rule)" }}
+          role="img"
           aria-label={mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)} percent`).join(", ")}
           title={mix.map((m) => `${KIND_LABEL[m.kind]} ${Math.round(m.share * 100)}%`).join(" · ")}
         >

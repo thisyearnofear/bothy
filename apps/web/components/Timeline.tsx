@@ -104,7 +104,7 @@ export default function Timeline({
                 transform: "translateX(-8px)",
                 background: "var(--panel)",
                 borderColor: tag.tone === "alert" ? "oklch(64% 0.21 25)" : "var(--rule)",
-                color: tag.tone === "alert" ? "oklch(80% 0.08 25)" : "var(--text-strong)",
+                color: tag.tone === "alert" ? "oklch(84% 0.08 25)" : "var(--text-strong)",
               }}
             >
               {tag.label}

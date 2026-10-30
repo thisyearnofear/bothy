@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Bothy look-and-fix loop: screenshot key pages, run QA checks, score against a rubric.
- * Usage: node scripts/qa-visual.mjs [--base http://localhost:3000] [--out qa/shots]
+ * Usage: node scripts/qa-visual.mjs [--base http://localhost:8477] [--out qa/shots]
  * Exit code: 0 if all pages pass, 1 if any page fails.
  */
 import { chromium } from "playwright";
@@ -11,7 +11,7 @@ import path from "node:path";
 
 const BASE = process.argv.includes("--base")
   ? process.argv[process.argv.indexOf("--base") + 1]
-  : process.env.QA_BASE || "http://localhost:3000";
+  : process.env.QA_BASE || "http://localhost:8477";
 const OUT = process.argv.includes("--out")
   ? process.argv[process.argv.indexOf("--out") + 1]
   : "qa/shots";
