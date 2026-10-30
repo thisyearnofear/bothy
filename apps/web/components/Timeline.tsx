@@ -92,8 +92,10 @@ export default function Timeline({
   return (
     <div className="rounded-lg border p-3" style={{ background: "var(--panel)", borderColor: "var(--rule)" }}>
       <div className="relative">
-        {/* tags sit in their own track so they don't fight the risk curves */}
-        <div className="relative mb-1 h-[52px]">
+        {/* tags sit in their own track so they don't fight the risk curves;
+            overflow-hidden because a late-cursor tag can extend past the
+            track's right edge on narrow viewports */}
+        <div className="relative mb-1 h-[52px] overflow-hidden">
           {tags.map((tag) => (
             <span
               key={tag.key}

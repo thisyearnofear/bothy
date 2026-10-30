@@ -423,7 +423,7 @@ failure. Prefer a few inline SVG icons over a large icon dependency.
 
 ## Visual QA loop
 
-`npm -w @bothy/web run qa:visual` (`apps/web/scripts/qa-visual.mjs`) screenshots eight surfaces — landing, defence desktop and mobile, watch, pilot, stories, digest, gallium — under `prefers-reduced-motion` (the worst case: every animation off) and writes `apps/web/qa/shots/` plus a `report.json`. The machine looks at its own output; a page does not pass because someone hoped it looked right.
+`npm -w @bothy/web run qa:visual` (`apps/web/scripts/qa-visual.mjs`) screenshots ten surfaces — landing, defence, watch, gallium at desktop and 390px, plus pilot, stories, digest — under `prefers-reduced-motion` (the worst case: every animation off) and writes `apps/web/qa/shots/` plus a `report.json`. Each screenshot is also pixel-diffed against the committed goldens in `apps/web/qa/baseline/` (`--update-baseline` rewrites them deliberately); MapLibre canvas regions are masked out of the diff because tile pixels are external, nondeterministic raster data — layout around them is still checked. The machine looks at its own output; a page does not pass because someone hoped it looked right.
 
 Each page is scored against this document's own rules:
 

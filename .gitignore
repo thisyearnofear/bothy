@@ -23,7 +23,8 @@ apps/agent/data/
 __pycache__/
 
 # QA loop output (generated screenshots + report)
-apps/web/qa/
+apps/web/qa/*
+!apps/web/qa/baseline/
 
 # Screenshots / video frames at the repo root (not part of the app)
 /*.png

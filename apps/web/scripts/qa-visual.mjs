@@ -6,7 +6,9 @@
  */
 import { chromium } from "playwright";
 import { AxeBuilder } from "@axe-core/playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { PNG } from "pngjs";
+import pixelmatch from "pixelmatch";
 import path from "node:path";
 
 const BASE = process.argv.includes("--base")
@@ -21,11 +23,17 @@ const PAGES = [
   { name: "defense", path: "/defense", wait: "main" },
   { at: 390, name: "defense-mobile", path: "/defense", wait: "main" },
   { name: "watch", path: "/watch", wait: "main" },
+  { at: 390, name: "watch-mobile", path: "/watch", wait: "main" },
   { name: "pilot", path: "/pilot", wait: "main" },
   { name: "stories", path: "/defense/stories", wait: "main" },
   { name: "digest", path: "/digest", wait: "main" },
   { name: "gallium", path: "/experience/gallium", wait: "main" },
+  { at: 390, name: "gallium-mobile", path: "/experience/gallium", wait: "main" },
 ];
+
+const UPDATE_BASELINE = process.argv.includes("--update-baseline");
+const BASELINE_DIR = "qa/baseline";
+const DIFF_THRESHOLD = 0.01; // fraction of pixels allowed to differ
 
 // Rubric weights — docs/design.md principles, each check maps to a design-doc rule.
 const RUBRIC = {
@@ -36,6 +44,7 @@ const RUBRIC = {
   "console-errors": 2,
   "a11y-violations": 2,
   "honesty-copy-present": 1,
+  "pixel-diff": 2,
 };
 
 const STRICT = process.argv.includes("--strict");
@@ -188,7 +197,54 @@ for (const p of PAGES) {
     entry.checks["honesty-copy-present"] = HONESTY_PATTERNS.some((re) => re.test(text));
     if (!entry.checks["honesty-copy-present"]) entry.issues.push("no honesty/limitation copy found on page");
 
-    await page.screenshot({ path: path.join(OUT, `${p.name}.png`), fullPage: true });
+    const shotPath = path.join(OUT, `${p.name}.png`);
+    // MapLibre raster tiles decode after networkidle — give canvases a settle
+    // window so the baseline diff compares rendered, not half-painted, maps.
+    const canvases = await page.locator(".maplibregl-canvas").all();
+    if (canvases.length) await page.waitForTimeout(2500);
+    // Tile pixels are external raster data and repaint nondeterministically —
+    // mask canvas regions out of the diff; layout around them is still checked.
+    const maskRects = await page.evaluate(() =>
+      [...document.querySelectorAll(".maplibregl-canvas")].map((c) => {
+        const r = c.getBoundingClientRect();
+        return { x: Math.max(0, Math.floor(r.left)), y: Math.max(0, Math.floor(r.top + window.scrollY)), w: Math.ceil(r.width), h: Math.ceil(r.height) };
+      })
+    );
+    await page.screenshot({ path: shotPath, fullPage: true });
+
+    // 8. pixel diff against the committed golden baseline — structural checks
+    // can't see "looks off". --update-baseline rewrites the goldens.
+    const basePath = path.join(BASELINE_DIR, `${p.name}.png`);
+    if (UPDATE_BASELINE) {
+      await mkdir(BASELINE_DIR, { recursive: true });
+      await writeFile(basePath, await readFile(shotPath));
+      entry.checks["pixel-diff"] = true;
+    } else {
+      try {
+        const [cur, base] = [PNG.sync.read(await readFile(shotPath)), PNG.sync.read(await readFile(basePath))];
+        if (cur.width !== base.width || cur.height !== base.height) {
+          entry.checks["pixel-diff"] = false;
+          entry.issues.push(`screenshot size changed: ${cur.width}x${cur.height} vs baseline ${base.width}x${base.height}`);
+        } else {
+          const dpr = cur.width / entry.width;
+          for (const img of [cur, base]) {
+            for (const r of maskRects) {
+              const [x0, y0, w, h] = [r.x * dpr, r.y * dpr, r.w * dpr, r.h * dpr];
+              for (let y = y0; y < Math.min(img.height, y0 + h); y++)
+                for (let x = x0; x < Math.min(img.width, x0 + w); x++)
+                  img.data.fill(0, (Math.floor(y) * img.width + Math.floor(x)) * 4, (Math.floor(y) * img.width + Math.floor(x)) * 4 + 4);
+            }
+          }
+          const diff = pixelmatch(cur.data, base.data, null, cur.width, cur.height, { threshold: 0.15 });
+          const pct = diff / (cur.width * cur.height);
+          entry.checks["pixel-diff"] = pct <= DIFF_THRESHOLD;
+          if (!entry.checks["pixel-diff"]) entry.issues.push(`pixel diff ${(pct * 100).toFixed(2)}% vs baseline`);
+        }
+      } catch {
+        entry.checks["pixel-diff"] = false;
+        entry.issues.push("no baseline screenshot — run with --update-baseline");
+      }
+    }
   } catch (err) {
     entry.issues.push(`page load failed: ${String(err).slice(0, 200)}`);
   }
