@@ -434,6 +434,8 @@ The same loop runs in CI: `.github/workflows/ci.yml` executes it on every push t
 
 The last rule encodes the degradation contract: a 5xx that answers with JSON is the agent saying "system of record unavailable" — designed, reported as `[degraded: …]`, not a failure. A 5xx with anything else means something is actually down. `--strict` counts designed degradations as failures, for CI against a full stack.
 
+One caveat on coverage: a degraded page audits shallow. Until `/api/scenarios` answered, axe only ever saw the watch room's empty state — the first full-content run surfaced violations that had been unreachable, not absent (MapLibre pin attrs, risk-colour contrast on readouts, two unnamed complementary landmarks). A green run on a degraded surface proves the degraded surface only.
+
 Two traps this loop already caught, kept here so they stay caught:
 
 - SSR/client drift on raw floats: browsers normalize `transform`, `opacity` and `filter` values on parse (`0.0067606025048007725em` → `0.0067606em`), so the hydration checker sees a different string than the client rendered. `ScatterHeading` sends its per-letter offsets as CSS custom properties — verbatim round-trip — and keeps the hidden state in `.scatter-letter[data-in="false"]`. Any future scattered or seeded styling should do the same.
