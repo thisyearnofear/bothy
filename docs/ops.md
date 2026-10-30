@@ -409,9 +409,11 @@ After the agent is healthy, refresh an operator snapshot before rehearsal:
 curl -X POST https://bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
 ```
 
-The agent container reaches the existing PostGIS container through the private
-`bothy-internal` Docker network using the `bothy-db` hostname. Do not expose
-Postgres publicly or replace the existing Coolify proxy with another listener.
+The agent reaches Postgres over `DATABASE_URL` — a managed Neon database
+(external to the host), not the local `bothy-db` PostGIS container, which is
+dev-only (reached from a Mac via `scripts/db-tunnel.sh` on :5433). Do not
+expose `bothy-db` publicly or replace the existing Coolify proxy with another
+listener.
 
 Without `.env.sso` the public pages still serve; sign-in, saved cases and
 reviewer actions stay disabled by design. The lab routes and the synthetic
@@ -518,39 +520,41 @@ When syncing the repo to the server, quote exclusions so the shell does not
 expand them (`--exclude '.env*' --exclude invite.caddy --exclude .invite-passphrase`);
 an unquoted `.env*` once deleted the server's `.env.production`.
 
-### Current deployment: `/opt/bothy` mirror on `snapflip-vultr` (October 2026)
+### Current deployment: `~/bothy` mirror on `nuncio-vultr` (migrated 30 October 2026)
 
-The live `/opt/bothy` directory on `snapflip-vultr` is **not a Git checkout**
-(`git -C /opt/bothy status` is fatal). Updates are a checkout-free `tar` overlay
-from a committed local `HEAD`: it writes files only, never deletes, and never
-runs `git pull`. It must preserve the ignored live configuration
-(`deploy/.env.production`, `deploy/.env.sso`, `invite.caddy`,
-`.invite-passphrase`), the graph stores under `graphs/`, and the Docker volumes —
-never `rsync --delete`, never let an unquoted `.env*` expand.
+The live `~/bothy` directory on `nuncio-vultr` (`144.202.117.160`) is **not a
+Git checkout** (`git -C ~/bothy status` is fatal). Updates are a checkout-free
+`tar` overlay from a committed local `HEAD`: it writes files only, never
+deletes, and never runs `git pull`. It must preserve the ignored live
+configuration (`deploy/.env.production`, `deploy/.env.sso`, `invite.caddy`,
+`.invite-passphrase`), the graph stores under `graphs/`, and the Docker
+volumes — never `rsync --delete`, never let an unquoted `.env*` expand.
 
-Before overlaying, take a versioned backup under `/root/bothy-art` of the
-web/agent source, root package files and the live ignored configuration —
-protect file permissions and never print or commit secret values.
+Before overlaying, take a versioned backup of the app source and the live
+ignored configuration — protect file permissions and never print or commit
+secret values.
 
-The archive scope is web/agent/shared plus the root package files only:
-deployment config, graph, IdP or proxy changes need a separate planned
-migration, and the local `HEAD` must be the tested commit (pushing to GitHub is
-independent of this source mirror).
+The archive scope is the committed tree only; deployment config changes
+(compose, Caddyfile, IdP, graphs) are synced in the same overlay since the
+full repo is shipped:
 
 ```bash
 set -o pipefail
-git archive --format=tar HEAD apps/web apps/agent packages/shared package.json package-lock.json .gitignore | ssh snapflip-vultr 'tar -x -C /opt/bothy'
-ssh snapflip-vultr 'cd /opt/bothy/deploy && docker compose -f docker-compose.demo.yml --env-file .env.production build agent web && docker compose -f docker-compose.demo.yml --env-file .env.production up -d --no-deps agent web'
+git archive --format=tar HEAD | ssh nuncio-vultr 'tar -x -C ~/bothy'
+ssh nuncio-vultr 'cd ~/bothy/deploy && docker compose -p bothy -f docker-compose.prod.yml --env-file .env.production up -d --build'
 ```
+
+Always pass `-p bothy`: the default compose project name `deploy` on this host
+is shared with an unrelated app, and a bare `docker compose down` under it
+would take that app down.
 
 Smoke afterwards:
 
 ```bash
 curl -fsS https://bothy.trustfall.xyz/api/health
-curl -fSI https://bothy.trustfall.xyz/maplibre/maplibre-gl-worker.mjs
-curl -fSI https://bothy.trustfall.xyz/maplibre/maplibre-gl-shared.mjs
-curl -fsS -o /dev/null -w '%{http_code}\n' https://bothy.trustfall.xyz/experience/gallium
-ssh snapflip-vultr 'docker ps --filter name=bothy --format "{{.Names}} {{.Status}}"'
+curl -fsS https://bothy.trustfall.xyz/api/scenarios
+curl -fsS https://bothy.trustfall.xyz/api/graph/health
+ssh nuncio-vultr 'docker ps --filter name=bothy --format "{{.Names}} {{.Status}}"'
 ```
 
 The agent should report `healthy`; the web container should be `Up` and return

@@ -104,6 +104,15 @@ Judges explore the UI, not the API, and the UI never showed anchoring. The watch
 - **Tests:** agent 66/66, web 150/150, typechecks clean.
 - **Not yet exercised over HTTP:** `POST /api/assessments/:id/decision` (needs reviewer OIDC, not configured locally). The same anchoring code was run directly against real Postgres + mainnet.
 
+## Build log — Day 3 continued (30 Oct 2026): production migrated + anchoring live
+
+`snapflip-vultr` was being retired, so production moved to `nuncio-vultr`:
+
+- **Stack:** same 5 services (graph, idp, agent, web, caddy) behind Coolify's Traefik (`deploy/docker-compose.prod.yml` + `Caddyfile.prod`; Traefik terminates TLS, Caddy keeps the invite gate). Compose project is `-p bothy` — the host's default name `deploy` is shared with an unrelated app. Neon `DATABASE_URL` unchanged (external); `graphs/` (466 MB), IdP key and the SQLite loop volume were moved; DNS flipped and a real LE cert issued. The stale agent-only `docker-compose.vps.yml` was retired.
+- **Arweave live in production:** the project wallet `ARWEAVE_JWK` is in nuncio's `.env.production`. First production-anchored assessment `a-flood-r-A6108-1793402244148` → tx **`uy2raHTZgIsTw7KG9ZabR4wYQ1V_7tGp3SrrIwAT2NY`** (`arweave.net/uy2raHTZgIsTw7KG9ZabR4wYQ1V_7tGp3SrrIwAT2NY`). `https://bothy.trustfall.xyz/case/a-flood-r-A6108-1793402244148` shows the anchored card — a judge can click **Verify** on the live URL.
+- **Drop:** Zetaris + Ollama stayed on snapflip (~6 GB RAM; nuncio has 7.7 GB total). Federation shows "not configured" and the model chain falls back to cloud/scripted — by design.
+- Old snapflip bothy containers stopped, not deleted (rollback path until it decommissions).
+
 ## Next — Day 3 (30 Oct)
 
 - **Decide the deployed demo's wallet story.** Without `ARWEAVE_JWK` the Nosana instance's cards read "Not anchored — this deployment has no project wallet configured", which is what judges would see. Options: a Nosana confidential job/secret holding a low-balance key, or steer judges to `/case/<id>` links for already-anchored records.
