@@ -17,6 +17,9 @@ import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
 import WatchRoutesRail from "../../components/WatchRoutesRail";
 import WatchFooter from "../../components/WatchFooter";
+import WatchErrorBanner from "../../components/WatchErrorBanner";
+import WatchEmptyState from "../../components/WatchEmptyState";
+import WatchStoryStrip from "../../components/WatchStoryStrip";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
@@ -714,59 +717,12 @@ export default function Watch() {
         </div>
       </header>
 
-      {error && (
-        <div
-          role="alert"
-          className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded border p-2 text-sm"
-          style={{ borderColor: "oklch(64% 0.21 25)", background: "oklch(64% 0.21 25 / 0.1)", color: "oklch(80% 0.06 25)" }}
-        >
-          <span className="min-w-0">{error}</span>
-          <button
-            type="button"
-            onClick={() => void load(lastCase.current)}
-            className="mono shrink-0 rounded border px-2.5 py-1 text-xs transition-transform active:scale-[0.96]"
-            style={{ borderColor: "oklch(80% 0.06 25)", color: "oklch(80% 0.06 25)" }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <WatchErrorBanner error={error} onRetry={() => void load(lastCase.current)} />}
 
       {loading && routes.length === 0 ? (
         <WatchLoading embedded />
       ) : routes.length === 0 ? (
-        <div className="grid h-[60vh] place-items-center">
-          <div
-            className="max-w-md rounded-lg border px-6 py-5 text-center"
-            style={{ borderColor: "var(--rule)", background: "var(--panel)" }}
-          >
-            <p className="text-lg font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>
-              The watch room is empty.
-            </p>
-            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-body)" }}>
-              No scenario answered — is the agent running? Nothing is being watched, and nothing will be decided, until
-              it returns.
-            </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => void load(lastCase.current)}
-                className="rounded-lg border-2 px-4 py-2 text-sm font-medium transition-transform active:scale-[0.96]"
-                style={{ borderColor: "var(--text-strong)", color: "var(--text-strong)" }}
-              >
-                Retry the case
-              </button>
-              <Link
-                href="/"
-                transitionTypes={["nav-back"]}
-                className="rounded-lg border px-4 py-2 text-sm transition-transform active:scale-[0.96]"
-                style={{ borderColor: "var(--rule)", color: "var(--text-body)" }}
-              >
-                Back to the shelter
-              </Link>
-            </div>
-          </div>
-        </div>
+        <WatchEmptyState onRetry={() => void load(lastCase.current)} />
       ) : (
         <>
           {coach && !tape && (
@@ -824,23 +780,7 @@ export default function Watch() {
             />
           )}
           {showStory && selected && headline && overlaySnap && (
-            <section
-              className="stage-in mb-4 rounded-lg border px-4 py-3"
-              style={{ borderColor: "var(--rule)", background: "var(--panel)", ["--stage" as string]: 0 }}
-            >
-              <p className="max-w-5xl text-base leading-relaxed" style={{ color: "var(--text-body)" }}>
-                {selected.name} is{" "}
-                <span className="font-semibold" style={{ color: overlayColor }}>
-                  {overlaySnap.label}
-                </span>
-                : {headline}{" "}
-                <span className="mono tnum" style={{ color: overlayColor }}>
-                  {overlaySnap.score.toFixed(2)}
-                </span>
-              </p>
-              {/* no citation chips here — the sentence names the top signals and
-                  "Why this rank" beside it carries the weights; chips were a repeat */}
-            </section>
+            <WatchStoryStrip name={selected.name} snap={overlaySnap} color={overlayColor} headline={headline} />
           )}
 
           <div
@@ -995,6 +935,7 @@ export default function Watch() {
             </section>
 
             <aside
+              aria-label="Decision case"
               className="stage-in order-2 xl:order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
               style={{ ["--stage" as string]: 3 }}
             >

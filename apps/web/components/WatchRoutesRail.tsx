@@ -17,7 +17,7 @@ export default function WatchRoutesRail({ rows, selectedId, onSelect, onHover, f
   citations: RiskListProps["citations"];
 }) {
   return (
-    <aside className="stage-in spot-dim order-3 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
+    <aside aria-label="Corridors" className="stage-in spot-dim order-3 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
       <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
