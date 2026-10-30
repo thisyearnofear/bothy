@@ -660,6 +660,8 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--cursor); }
 /* MapLibre's attribution toggle ships a blue ring — keep the room one surface. */
 .maplibregl-ctrl-attrib-button:focus-visible { box-shadow: var(--focus-ring) !important; }
+/* Link inside the attribution text must not rely on colour alone. */
+.maplibregl-ctrl-attrib a { text-decoration: underline; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 .btn-primary { border-color: var(--cursor); color: var(--cursor); }
 .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in oklch, var(--cursor) 12%, transparent); }

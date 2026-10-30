@@ -370,7 +370,10 @@ function pinPresentations(map: any, beats: MapBeat[], expandedId?: string): Map<
 
 /** A signal pin is compact by default; the selected route's latest signal expands. */
 function pinEl(b: MapBeat, expanded: boolean): HTMLElement {
-  const wrap = document.createElement("div");
+  // A real button: it opens the citation popup on click, so it needs widget
+  // semantics — a div with aria-label is prohibited and keyboard-inert.
+  const wrap = document.createElement("button");
+  wrap.type = "button";
   updatePinElement(wrap, b, expanded);
   return wrap;
 }
@@ -383,6 +386,9 @@ function updatePinElement(el: HTMLElement, b: MapBeat, expanded: boolean) {
   el.style.flexDirection = "column";
   el.style.alignItems = "center";
   el.style.cursor = "pointer";
+  el.style.border = "none";
+  el.style.background = "none";
+  el.style.padding = "0";
   el.title = `${time} · ${label}`;
   el.setAttribute("aria-label", `${time}: ${label}`);
   el.innerHTML = expanded
