@@ -1,36 +1,25 @@
 import { createHash } from "node:crypto";
 import Arweave from "arweave";
 import type { JWKInterface } from "arweave/node/lib/wallet";
+import { canonicalJSON } from "../../../../packages/shared/src/anchor";
 
 // ---------------------------------------------------------------------------
-// Arweave evidence-receipt adapter (Decentralize AI: "verifiable AI systems").
+// Arweave receipt poster (Decentralize AI: "verifiable AI systems").
 //
-// After a brief is produced we anchor a hash-only *evidence receipt* to
-// Arweave mainnet so the finding is permanently checkable by anyone:
-//   { scenario, at, digest: sha256(assessment), source: "bothy", timestamp }
-//
-// The receipt lands at https://arweave.net/<txId> — a verifier recomputes
-// sha256 over the assessment JSON from the same /assess response and compares
-// it to `digest` in the anchored payload.
+// The agent anchors hash-only *evidence receipts* to Arweave mainnet so a
+// finding — assessment generated, officer decision, defence brief drafted or
+// reviewed — is permanently checkable by anyone. The receipt lands at
+// https://arweave.net/<txId>; a verifier recomputes sha256 over the canonical
+// anchor payload (packages/shared/src/anchor.ts) and compares it to `digest`.
 //
 // Grace notes (the live dev loop must never break):
-//  - If ARWEAVE_JWK is unset the endpoint still succeeds; the result is
-//    { posted: false, reason } with the digest + receipt so the hash is
-//    still observable.
+//  - If ARWEAVE_JWK is unset the caller still succeeds; the result is
+//    { posted: false, reason }.
 //  - A malformed or unfunded key is reported the same way — never thrown.
 //
 // Defaults point at mainnet. For local dry runs, run `npx arlocal` and set
 // ARWEAVE_HOST=localhost ARWEAVE_PORT=1984 ARWEAVE_PROTOCOL=http.
 // ---------------------------------------------------------------------------
-
-export interface EvidenceReceipt {
-  scenario: string;
-  at: string | number;
-  digest: string; // sha256 of the assessment JSON (the evidence)
-  assessmentId?: string;
-  source: "bothy";
-  timestamp: number; // epoch ms
-}
 
 export interface ArweaveResult {
   posted: boolean;
@@ -38,9 +27,6 @@ export interface ArweaveResult {
   /** Permanent URL of the anchored receipt, e.g. https://arweave.net/<txId> */
   url?: string;
   gateway: string;
-  digest: string;
-  /** The exact payload posted — recompute the digest from the assessment to verify */
-  receipt?: EvidenceReceipt;
   /** Address derived from ARWEAVE_JWK — share this to get the wallet funded */
   address?: string;
   /** Wallet balance in winston, when the probe succeeded */
@@ -58,9 +44,11 @@ const ARWEAVE_GATEWAY =
   }`;
 const ARWEAVE_APP = process.env.ARWEAVE_APP_NAME ?? "bothy-evidence";
 
+// Strings hash as-is; objects hash their canonical form so the digest is
+// reproducible regardless of stored key order.
 export const sha256Hex = (v: unknown): string =>
   createHash("sha256")
-    .update(typeof v === "string" ? v : JSON.stringify(v))
+    .update(typeof v === "string" ? v : canonicalJSON(v))
     .digest("hex");
 
 function client(): Arweave {
@@ -68,27 +56,8 @@ function client(): Arweave {
     host: ARWEAVE_HOST,
     port: ARWEAVE_PORT,
     protocol: ARWEAVE_PROTOCOL,
-    timeout: 30_000,
+    timeout: 15_000,
   });
-}
-
-export async function buildReceipt(
-  scenario: string,
-  at: string | number,
-  assessment: unknown,
-): Promise<EvidenceReceipt> {
-  const id =
-    typeof assessment === "object" && assessment !== null && "id" in assessment
-      ? String((assessment as { id?: unknown }).id)
-      : undefined;
-  return {
-    scenario,
-    at,
-    digest: sha256Hex(assessment),
-    assessmentId: id,
-    source: "bothy",
-    timestamp: Date.now(),
-  };
 }
 
 /** Derive the wallet address + balance from ARWEAVE_JWK. Throws on bad input. */
@@ -106,18 +75,13 @@ export async function walletInfo(): Promise<{
   return { address, balanceWinston };
 }
 
-export async function postEvidenceReceipt(
-  scenario: string,
-  at: string | number,
-  assessment: unknown,
+/** Post a receipt object to Arweave mainnet. Never throws — every failure is
+ *  reported as { posted: false, reason }. */
+export async function postReceipt(
+  receipt: Record<string, unknown>,
+  tags: Record<string, string>,
 ): Promise<ArweaveResult> {
-  const receipt = await buildReceipt(scenario, at, assessment);
-  const base: ArweaveResult = {
-    posted: false,
-    gateway: ARWEAVE_GATEWAY,
-    digest: receipt.digest,
-    receipt,
-  };
+  const base: ArweaveResult = { posted: false, gateway: ARWEAVE_GATEWAY };
 
   const jwkEnv = process.env.ARWEAVE_JWK;
   if (!jwkEnv) return { ...base, reason: "ARWEAVE_JWK not set" };
@@ -162,9 +126,7 @@ export async function postEvidenceReceipt(
     );
     tx.addTag("App-Name", ARWEAVE_APP);
     tx.addTag("Content-Type", "application/json");
-    tx.addTag("Scenario", String(scenario));
-    tx.addTag("Digest", receipt.digest);
-    tx.addTag("Bothy-Source", "agent-assess");
+    for (const [name, value] of Object.entries(tags)) tx.addTag(name, value);
 
     // tx.id is populated by sign() — it's the hash of the signature.
     await arweave.transactions.sign(tx, wallet);
@@ -182,8 +144,6 @@ export async function postEvidenceReceipt(
       txId: tx.id,
       url: `${ARWEAVE_GATEWAY}/${tx.id}`,
       gateway: ARWEAVE_GATEWAY,
-      digest: receipt.digest,
-      receipt,
       address,
       balanceWinston,
     };

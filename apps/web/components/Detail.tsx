@@ -6,6 +6,7 @@ import { clamp01, fmtDateTime, riskLabel } from "../../../packages/shared/src/li
 import { pipelineLines } from "../lib/derive";
 import { copyText, formatCaseRecord, printCaseRecord, readOfficerName, writeOfficerName } from "../lib/caseRecord";
 import AgentBeat from "./AgentBeat";
+import AnchorCard from "./AnchorCard";
 import CitationRows from "./CitationRows";
 import Inspector from "./Inspector";
 
@@ -220,6 +221,15 @@ export default function Detail({
           </p>
           {!expanded && draftClipped && <Inspector label="Read full draft" title="Unapproved duty-officer draft"><p className="whitespace-pre-wrap">{assessment.draft}</p></Inspector>}
         </div>
+      )}
+
+      {!running && assessment && (
+        <AnchorCard
+          kind="assessment"
+          subjectId={assessment.id}
+          record={assessment}
+          version={`${assessment.id}-${assessment.status}`}
+        />
       )}
 
       <div className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>

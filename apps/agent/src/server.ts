@@ -28,7 +28,13 @@ import {
 import { sendDigest } from "./digest";
 import type { ScenarioId } from "../../../packages/shared/src/types";
 import { getLiveWeather } from "./integrations/openMeteo";
-import { postEvidenceReceipt } from "./integrations/arweave";
+import { sha256Hex } from "./integrations/arweave";
+import { AnchorStore } from "./anchors";
+import {
+  assessmentAnchorPayload,
+  decisionAnchorPayload,
+  type AnchorKind,
+} from "../../../packages/shared/src/anchor";
 import { hasProviders, providerSummary, rehearseChain } from "./agent/providers";
 import { createAuth } from "./auth";
 import { defenseRouter } from "./defense";
@@ -166,12 +172,11 @@ app.post("/api/scenario/:scenario/assess", async (req, res) => {
   });
 
   // Decentralize AI: anchor a hash-only evidence receipt to Arweave mainnet
-  // so the brief is permanently verifiable. Never blocks/fails the assessment —
-  // degrades to { posted: false, reason } when ARWEAVE_JWK is absent or the
-  // wallet is unfunded. See integrations/arweave.ts + docs/decentralize-ai-2026.md.
-  const arweave = await postEvidenceReceipt(sc, at, assessment);
+  // so the brief is permanently verifiable. Never fails the assessment — a
+  // degraded post lands as a `failed` anchor row instead.
+  await anchorAssessmentGenerated(assessment.id).catch(() => {});
 
-  res.json({ ...(assessment as object), arweave });
+  res.json({ ...(assessment as object), anchors: anchorStore.list("assessment", assessment.id) });
 });
 
 // Live agent trace as a POST stream: each tool call streams as it happens, then
@@ -198,6 +203,10 @@ app.post("/api/scenario/:scenario/assess/stream", async (req, res) => {
       onTrace: (t) => send("trace", t),
     });
     send("assessment", assessment);
+    // Anchor in the background — the stream must not wait on Arweave. The
+    // `pending` row is written synchronously inside anchor(), so the UI's
+    // first poll already sees the attempt.
+    void anchorAssessmentGenerated(assessment.id).catch(() => {});
   } catch (e) {
     send("error", { message: e instanceof Error ? e.message : String(e) });
   } finally {
@@ -279,7 +288,34 @@ CREATE TABLE IF NOT EXISTS loop_subs (email TEXT, route_id TEXT, scenario TEXT, 
 CREATE TABLE IF NOT EXISTS loop_digests (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient TEXT, subject TEXT, body TEXT, case_href TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, n INTEGER);
 INSERT OR IGNORE INTO counters (name, n) VALUES ('pilot_fallback', 0);`);
-app.use("/api/defense", defenseRouter(loopDb, auth));
+
+// Evidence anchoring (Decentralize AI): hash-only fingerprints of assessments
+// and defence briefs, posted to Arweave mainnet and tracked in SQLite so the
+// UI can show pending -> anchored and anyone can recompute the digest.
+const anchorStore = new AnchorStore(loopDb);
+
+const ANCHOR_KINDS = new Set<AnchorKind>(["assessment", "defense-brief"]);
+
+// Digest from the persisted row, not the in-memory object: Postgres is the
+// source of truth (float4 round-trip on score/confidence), and cached
+// assessments re-anchor the same digest without spending AR again.
+async function anchorAssessmentGenerated(id: string) {
+  const row = await getAssessment(id);
+  if (!row) return;
+  const digest = sha256Hex(assessmentAnchorPayload(row));
+  await anchorStore.anchor("assessment", id, "generated", digest, {
+    scenario: row.scenario,
+    routeId: row.routeId,
+  });
+}
+
+app.get("/api/anchors/:kind/:id", (req, res) => {
+  const kind = req.params.kind as AnchorKind;
+  if (!ANCHOR_KINDS.has(kind)) return res.status(400).json({ error: "kind must be assessment|defense-brief" });
+  res.json(anchorStore.list(kind, req.params.id));
+});
+
+app.use("/api/defense", defenseRouter(loopDb, auth, anchorStore));
 const witnessByHash = new Map<string, WitnessEntry>(
   (loopDb.prepare(`SELECT hash, prev, at, pack FROM witness ORDER BY rowid`).all() as { hash: string; prev: string | null; at: string; pack: string }[])
     .map((r) => [r.hash, { hash: r.hash, prev: r.prev, at: r.at, pack: JSON.parse(r.pack) } as WitnessEntry]),
@@ -531,6 +567,22 @@ app.post("/api/assessments/:id/decision", auth.require("reviewer"), async (req, 
       return res.status(existing ? 409 : 404).json({ error: existing ? "assessment already decided" : "assessment not found" });
     }
     await logAudit(row.scenario, officer, `${decision}`, `assessment ${row.id} (${row.routeId})`);
+    // Anchor the decision itself: the officer stays hashed, never revealed;
+    // subjectDigest chains this receipt to the generation anchor.
+    {
+      const generated = anchorStore.get("assessment", row.id, "generated");
+      const subjectDigest = generated?.digest ?? sha256Hex(assessmentAnchorPayload(row));
+      const decisionPayload = decisionAnchorPayload({
+        subjectDigest,
+        decision,
+        decidedAt: row.decidedAt ?? new Date().toISOString(),
+        actorDigest: sha256Hex(officer),
+      });
+      anchorStore.anchorInBackground("assessment", row.id, "decided", sha256Hex(decisionPayload), {
+        ...decisionPayload,
+        generationTx: generated?.txId ?? null,
+      });
+    }
     if (decision === "approved") {
       // A queue failure must not make a recorded decision appear unrecorded.
       try { await (await import("./repo")).notifySubscribers(row); }

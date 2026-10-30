@@ -12,6 +12,8 @@ import { caseMemoryStatus, recallInvestigations, recordDecision, recordInvestiga
 import { zetarisStatus } from "./integrations/zetaris";
 import { captureFederation, federatedHash, type FederationCapture } from "./integrations/federated";
 import { draftFederatedNarrative, critiqueNarrative } from "./integrations/briefAssist";
+import { briefAnchorPayload, decisionAnchorPayload, canonicalJSON } from "../../../packages/shared/src/anchor";
+import type { AnchorStore } from "./anchors";
 
 export const evidenceHash = (run: GraphRun) => createHash("sha256").update(JSON.stringify(run)).digest("hex");
 
@@ -102,7 +104,14 @@ export class DefenseStore {
   }
   audit(id: string) {
     this.get(id);
-    return this.db.prepare("SELECT subject, action, at FROM defense_audit WHERE brief_id = ? ORDER BY id").all(id);
+    return this.db.prepare("SELECT subject, action, at, hash FROM defense_audit WHERE brief_id = ? ORDER BY id").all(id);
+  }
+  /** Latest chained audit hash for the brief — committed into the decided
+   *  anchor so the anchored decision also pins the audit trail's head. */
+  auditHead(id: string): string | null {
+    this.get(id);
+    const row = this.db.prepare("SELECT hash FROM defense_audit WHERE brief_id = ? AND hash IS NOT NULL ORDER BY id DESC LIMIT 1").get(id) as { hash: string } | undefined;
+    return row?.hash ?? null;
   }
   authorizeRead(id: string, principal: Principal): DefenseBrief {
     const brief = this.get(id);
@@ -319,7 +328,7 @@ const assignmentBody = z.object({ owner: z.string().trim().min(1).max(200), dueA
 const reassessmentBody = z.object({ decision: z.enum(["accepted", "further-verification"]), note: z.string().trim().min(1).max(2000) }).strict();
 const outcomeBody = z.object({ outcome: z.string().trim().min(1).max(2000) }).strict();
 
-export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAuth>) {
+export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAuth>, anchors?: AnchorStore) {
   const router = Router();
   const store = new DefenseStore(db);
   const handle = (operation: () => unknown, res: import("express").Response, created = false) => {
@@ -327,6 +336,44 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     catch (e) {
       const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
       res.status(error.status).json({ error: error.message });
+    }
+  };
+  // Evidence anchoring: drafts/revisions commit a hash-only fingerprint of the
+  // brief; reviews commit the decision plus the audit head. Fire-and-forget —
+  // a slow gateway must never hold the response, and a failed post is recorded
+  // as a `failed` row rather than breaking the workflow.
+  const anchorGenerated = (brief: DefenseBrief) => {
+    try {
+      if (!anchors) return;
+      const digest = createHash("sha256").update(canonicalJSON(briefAnchorPayload(brief))).digest("hex");
+      anchors.anchorInBackground("defense-brief", brief.id, "generated", digest, { runId: brief.runId });
+    } catch (e) {
+      // Runs after res.json — a throw here must never reach the route's catch.
+      console.warn("brief anchor:", e instanceof Error ? e.message : e);
+    }
+  };
+  const anchorDecided = (brief: DefenseBrief) => {
+    try {
+      if (!anchors || !brief.review) return;
+      const generated = anchors.get("defense-brief", brief.id, "generated");
+      const subjectDigest =
+        generated?.digest ??
+        createHash("sha256").update(canonicalJSON(briefAnchorPayload(brief))).digest("hex");
+      const auditHead = store.auditHead(brief.id);
+      const decisionPayload = decisionAnchorPayload({
+        subjectDigest,
+        decision: brief.review.decision,
+        decidedAt: brief.review.at,
+        actorDigest: createHash("sha256").update(brief.review.subject).digest("hex"),
+        ...(auditHead ? { auditHead } : {}),
+      });
+      const digest = createHash("sha256").update(canonicalJSON(decisionPayload)).digest("hex");
+      anchors.anchorInBackground("defense-brief", brief.id, "decided", digest, {
+        ...decisionPayload,
+        generationTx: generated?.txId ?? null,
+      });
+    } catch (e) {
+      console.warn("brief anchor:", e instanceof Error ? e.message : e);
     }
   };
   router.get("/session", async (req, res) => {
@@ -388,7 +435,9 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     try {
       const federation = await store.captureFederation(runId);
       await assist(federation);
-      handle(() => store.draft(runId, creator, federation), res, true);
+      const brief = store.draft(runId, creator, federation);
+      res.status(201).json(brief);
+      anchorGenerated(brief);
     } catch (e) {
       const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
       res.status(error.status).json({ error: error.message });
@@ -410,7 +459,9 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     try {
       const federation = await store.captureFederation(runId);
       await assist(federation);
-      handle(() => store.revise(req.params.id, runId, res.locals.principal, federation), res, true);
+      const child = store.revise(req.params.id, runId, res.locals.principal, federation);
+      res.status(201).json(child);
+      anchorGenerated(child);
     } catch (e) {
       const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
       res.status(error.status).json({ error: error.message });
@@ -433,7 +484,14 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
   router.post("/briefs/:id/review", (req, res) => {
     const parsed = reviewBody.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "decision and optional note required; identity/evidence fields are forbidden" });
-    handle(() => store.review(req.params.id, res.locals.principal, parsed.data.decision, parsed.data.note), res);
+    try {
+      const brief = store.review(req.params.id, res.locals.principal, parsed.data.decision, parsed.data.note);
+      res.json(brief);
+      anchorDecided(brief);
+    } catch (e) {
+      const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
+      res.status(error.status).json({ error: error.message });
+    }
   });
   router.post("/briefs/:id/action", (req, res) => {
     const parsed = assignmentBody.safeParse(req.body);

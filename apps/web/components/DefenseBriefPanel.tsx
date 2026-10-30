@@ -5,6 +5,7 @@ import { ApiError, ApiAuthError, api, isAbortError, recoveryMessage, type Defens
 import { briefStage } from "../lib/briefStage";
 import { validateCitation, validateFederatedCitation } from "../lib/citation";
 import AuditBadge from "./AuditBadge";
+import AnchorCard from "./AnchorCard";
 import { card, control } from "../lib/ui";
 import Inspector from "./Inspector";
 
@@ -34,6 +35,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
   const [ownerError, setOwnerError] = useState("");
   const [ownerRetry, setOwnerRetry] = useState(0);
   const [dueAt, setDueAt] = useState("");
+  const [auditHashes, setAuditHashes] = useState<string[] | undefined>(undefined);
   const [outcome, setOutcome] = useState("");
   const [findingNote, setFindingNote] = useState("");
   const alive = useRef(true);
@@ -66,6 +68,22 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
     alive.current = true;
     return () => { alive.current = false; };
   }, []);
+
+  // Chained audit hashes let the anchor card check the decided receipt's
+  // pinned audit head. The audit log itself needs a verified session.
+  useEffect(() => {
+    setAuditHashes(undefined);
+    if (!authenticated || !brief?.id) return;
+    const ctl = new AbortController();
+    api.defenseAudit(brief.id, ctl.signal)
+      .then(({ entries }) => {
+        if (!ctl.signal.aborted) {
+          setAuditHashes(entries.map((e) => e.hash).filter((h): h is string => Boolean(h)));
+        }
+      })
+      .catch(() => {});
+    return () => ctl.abort();
+  }, [authenticated, brief?.id, brief?.status]);
 
   useEffect(() => { onBriefChange?.(brief); }, [brief, onBriefChange]);
   useEffect(() => () => onBriefChange?.(null), [onBriefChange]);
@@ -154,6 +172,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
           {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
+          <AnchorCard kind="defense-brief" subjectId={brief.id} record={brief} auditHashes={auditHashes} version={`${brief.id}-${brief.status}`} />
           {brief.action?.status === "completed" && <div className="record-status"><span>Owner finding recorded</span><span>Reviewer: accept / further work</span><span>Not operational closure or eliminated risk</span></div>}
           <Inspector label="Inspect evidence receipt" title="Evidence receipt and version">
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>

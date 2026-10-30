@@ -16,6 +16,9 @@ import type {
   DefenseCaseFilter,
   FederatedRun,
 } from "../../../packages/shared/src/types";
+import type { AnchorKind, AnchorRecord } from "../../../packages/shared/src/anchor";
+
+export type { AnchorKind, AnchorRecord };
 
 export type { GraphScenario, GraphRows, GraphRun, GraphWitness, DefenseBrief, FederatedRun };
 
@@ -134,7 +137,9 @@ export const api = {
   assessments: (id: ScenarioId, signal?: AbortSignal) =>
     get<Assessment[]>(`/api/scenario/${id}/assessments`, signal),
   assess: (id: ScenarioId, opts: { routeId?: string; engine?: "llm" | "scripted"; force?: boolean } = {}, signal?: AbortSignal) =>
-    post<Assessment>(`/api/scenario/${id}/assess`, { ...opts }, signal),
+    post<Assessment & { anchors?: AnchorRecord[] }>(`/api/scenario/${id}/assess`, { ...opts }, signal),
+  anchors: (kind: AnchorKind, id: string, signal?: AbortSignal) =>
+    get<AnchorRecord[]>(`/api/anchors/${kind}/${encodeURIComponent(id)}`, signal),
   // Live assessment trace over a one-shot POST stream. Unlike EventSource GET,
   // the command is not silently retried by the browser after a disconnect.
   assessStream: async (
@@ -236,6 +241,8 @@ export const api = {
   createSandbox: (runId?: string, signal?: AbortSignal) => post<SandboxState>("/api/defense/lab/sandbox", runId ? { runId } : {}, signal),
   sandboxAct: (sid: string, action: SandboxAction, signal?: AbortSignal) => post<SandboxState>(`/api/defense/lab/sandbox/${encodeURIComponent(sid)}/${action}`, {}, signal),
   verifyAudit: (id: string, signal?: AbortSignal) => get<AuditVerification>(`/api/defense/briefs/${encodeURIComponent(id)}/audit/verify`, signal),
+  defenseAudit: (id: string, signal?: AbortSignal) =>
+    get<{ entries: { subject: string; action: string; at: string; hash?: string | null }[] }>(`/api/defense/briefs/${encodeURIComponent(id)}/audit`, signal),
   defenseSession: (signal?: AbortSignal) => get<DefenseSession>("/api/defense/session", signal),
   defenseCases: (offset = 0, signal?: AbortSignal, filter: DefenseCaseFilter = "all") => get<DefenseCasePage>(`/api/defense/briefs/page/${filter}/${offset}`, signal),
   reviseDefenseBrief: (id: string, runId: string) => post<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}/revisions`, { runId }),

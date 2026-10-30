@@ -3,7 +3,8 @@ import { site } from "../../../lib/site";
 import { SiteHeader } from "../../../components/PageHero";
 import { riskColor } from "../../../../../packages/shared/src/lib";
 import { firstCrossed, leadTimeLabel, ms } from "../../../lib/derive";
-import type { RiskLabel, RiskSnapshot } from "../../../../../packages/shared/src/types";
+import type { Assessment, RiskLabel, RiskSnapshot } from "../../../../../packages/shared/src/types";
+import AnchorCard from "../../../components/AnchorCard";
 
 export const metadata: Metadata = {
   title: "Bothy case",
@@ -27,6 +28,7 @@ type CaseData = {
   engine: string;
   awake: boolean;
   leadText?: string;
+  record: Assessment;
 };
 
 const AGENT = () => process.env.AGENT_URL ?? "http://localhost:8787";
@@ -42,21 +44,7 @@ const get = async <T,>(path: string): Promise<T | null> => {
 };
 
 async function getCase(id: string): Promise<CaseData | null> {
-  const a = await get<{
-    id: string;
-    scenario: string;
-    routeId: string;
-    at: string;
-    score: number;
-    label: string;
-    confidence: number;
-    causalChain: string[];
-    draft: string;
-    responsibleActor: string;
-    priority: string;
-    status: string;
-    engine: string;
-  }>(`/api/assessments/${id}`);
+  const a = await get<Assessment>(`/api/assessments/${id}`);
   if (!a) return null;
 
   const sc = await get<{ scenario: { start: string; outcomeAt?: string; outcome?: string; title: string }; routes: { id: string; name: string }[] }>(
@@ -78,7 +66,7 @@ async function getCase(id: string): Promise<CaseData | null> {
   }
 
   const awake = a.label === "ELEVATED" || a.label === "HIGH";
-  return { ...a, routeName, awake, leadText };
+  return { ...a, routeName, awake, leadText, record: a };
 }
 
 export default async function CasePage({ params }: { params: Promise<{ id: string }> }) {
@@ -141,6 +129,14 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           ))}
         </ol>
       </section>
+      <div className="mt-6">
+        <AnchorCard
+          kind="assessment"
+          subjectId={c.id}
+          record={c.record}
+          version={`${c.id}-${c.status}`}
+        />
+      </div>
       <p className="hint mt-8">Draft only. Nothing publishes without approval.</p>
       <a
         href={c.awake ? "/watch?case=live" : "/watch?case=backtest"}

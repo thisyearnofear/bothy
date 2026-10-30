@@ -73,9 +73,15 @@ Arweave anchoring, wired end-to-end and verified. `git -C bothy status` shows th
 
 ## How a verifier checks a receipt
 
-1. `POST /api/scenario/gallium-exposure/assess` → response contains `arweave.txId`, `arweave.url`, `arweave.digest`, and `arweave.receipt`.
-2. Fetch `arweave.url` → the anchored JSON `{ scenario, at, digest, assessmentId, source, timestamp }`.
-3. Recompute `sha256(JSON.stringify(assessment))` over the assessment in the same response → equals `digest`. The hash proves that exact brief existed at `timestamp`.
+> Superseded the Day-1 scheme (sha256 of the whole `/assess` response), which could not be re-verified once status/decision fields changed or Postgres reordered keys.
+
+**In the UI:** every assessment (watch room, `/case/<id>`) and defence brief shows a **Permanent public record** card. **Verify** runs entirely in the browser: it fetches the receipt from `arweave.net/<txId>`, recomputes the fingerprint of the record on screen with `crypto.subtle`, and compares the two. Our server is not trusted for the answer.
+
+**By hand:**
+1. `GET /api/anchors/assessment/<id>` (or `/api/anchors/defense-brief/<id>`): public, lists the `generated` / `decided` anchors with `txId`, `url`, `digest`.
+2. Fetch `url` → receipt `{ v: 2, app: "bothy", kind, subjectId, moment, digest, at, … }`.
+3. **Generated:** `sha256(canonicalJSON(assessmentAnchorPayload(record)))` (or `briefAnchorPayload`) from `packages/shared/src/anchor.ts` must equal `digest`. Only immutable fields are hashed, with keys sorted recursively and scores rounded to 4 dp, so the fingerprint survives Postgres round-trips and later status changes.
+4. **Decided:** recompute `decisionAnchorPayload` from the receipt's own fields → must equal `digest`. Its `subjectDigest` must equal the generated fingerprint (the chain link; `generationTx` names the earlier tx). `decision` must match the record's status. For defence briefs, `auditHead` must appear in the brief's hash-chained audit log. The reviewer is stored only as `actorDigest` (sha256): committed, not revealed.
 
 ## Build log — Day 2 (28–29 Oct 2026)
 
@@ -85,8 +91,22 @@ Arweave anchoring, wired end-to-end and verified. `git -C bothy status` shows th
 - **Real assessment anchored end-to-end.** `POST /api/scenario/flood/assess` (scripted engine) → assessment `a-flood-r-A6108-1793303198574` → **`_GL3NfzIDILsqLrid_oYZH7J71oV4D121oBnLcs2MII`** on mainnet, mined at block **2031535**, digest `6495cd8f…` = sha256 of the returned assessment. The smoke tx's data body is now publicly servable (`curl -L https://arweave.net/gDFj0KEiW8S4v0BCABkqmyJEfiPNs-3WRyDAaJVoRSs` returns the receipt JSON). Gotcha found: the dev server loads `.env` at boot — after adding `ARWEAVE_JWK` you must restart (or touch a watched file under `tsx watch`) or receipts degrade to `ARWEAVE_JWK not set`.
 - Note: `gallium-exposure` in the Day-1 plan was aspirational — real seeded scenario ids are `backtest`, `flood`, `live`.
 
+## Build log — Day 3 (30 Oct 2026): anchoring in the product
+
+Judges explore the UI, not the API, and the UI never showed anchoring. The watch room's main button (`/assess/stream`) didn't even anchor, and receipts weren't persisted. Now:
+
+- **Both surfaces, both moments.** Watch-room assessments and defence briefs each get a `generated` receipt (output existed unaltered at time T) and a `decided` receipt (what a named human approved or rejected, and when). The decided receipt chains to the generated one via `subjectDigest` + `generationTx`; defence decisions also pin the audit-chain head.
+- **`packages/shared/src/anchor.ts`:** canonical payloads shared by agent and browser so both compute the same fingerprint.
+- **`apps/agent/src/anchors.ts` (`AnchorStore`):** an `evidence_anchors` table in the loop SQLite DB; `pending → anchored | failed`. Idempotent (an anchored key never re-posts), dedupes concurrent calls, never throws. Streaming assess, decisions and defence draft/revise/review anchor in the background; `/assess` still awaits. Public `GET /api/anchors/:kind/:id`.
+- **`integrations/arweave.ts`:** now a generic `postReceipt(receipt, tags)` poster (15s timeout; tags `Kind`/`Moment`/`Subject`/`Digest`).
+- **`apps/web/components/AnchorCard.tsx`:** placed in the watch-room detail, `/case/[id]` and `DefenseBriefPanel`. States: anchoring → anchored (tx link + **Verify**) / failed. Verify results: ✓ match, ✗ mismatch (names the failed check), or "gateway still propagating" (receipt data lags mining by minutes, sometimes longer).
+- **Live proof (mainnet):** assessment `a-flood-r-A6108-1793360124563`: generated `gAOkipv1bxKHKoQyBqdl_Mc-MsjWsiPB_F9TijJpOZY` → decided `L3zPHFVL3BwtWVz45wTN17eK89Z0sU924Eg6Yf-Wfg0`, both "✓ Matches the record on screen" on `/case/<id>`. Defence brief generated `65625cHPUXTju_TfrUamU78NKsva86R6pqj0CNy-40M`. Watch-room stream run `asc4am2Vwedx5pV_nQVfRS22AyvAZCZmkUixcMZGOEU`. A digest recomputed from the stored Postgres row equals the anchored digest.
+- **Tests:** agent 66/66, web 150/150, typechecks clean.
+- **Not yet exercised over HTTP:** `POST /api/assessments/:id/decision` (needs reviewer OIDC, not configured locally). The same anchoring code was run directly against real Postgres + mainnet.
+
 ## Next — Day 3 (30 Oct)
 
+- **Decide the deployed demo's wallet story.** Without `ARWEAVE_JWK` the Nosana instance's cards read "Not anchored — this deployment has no project wallet configured", which is what judges would see. Options: a Nosana confidential job/secret holding a low-balance key, or steer judges to `/case/<id>` links for already-anchored records.
 - **D3 — Nosana.** Claim credits → `docker build -f apps/agent/Dockerfile -t ghcr.io/thisyearnofear/bothy-agent:latest .` → make the GHCR package **public** → `nosana job post --file nosana.json` (or deploy.nosana.com) → run the same seeded assess through the deployed endpoint → screenshot the deployment + tx.
   - **Never put `ARWEAVE_JWK` in `nosana.json`** — job definitions are published to public IPFS; a JWK there is a leaked private key. Leave it out for the CPU deployment (receipts degrade gracefully), or use a Confidential Job / dashboard secret if the deployed instance must anchor.
   - GPU/local-Llama swap is the next milestone after the CPU replica proves the deploy path.
