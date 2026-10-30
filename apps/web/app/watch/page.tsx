@@ -15,6 +15,8 @@ import ReliabilityPanel, { type ChainHealth } from "../../components/Reliability
 import WatchMyRoad from "../../components/WatchMyRoad";
 import WatchBackdrop from "../../components/WatchBackdrop";
 import WatchLoading from "../../components/WatchLoading";
+import WatchRoutesRail from "../../components/WatchRoutesRail";
+import WatchFooter from "../../components/WatchFooter";
 import { CaseSwitch } from "../../components/CaseList";
 import { caseFromSearch, caseUrl, A66_OUTCOME_SOURCE, type CaseId } from "../../lib/cases";
 import { api, isAbortError } from "../../lib/api";
@@ -848,32 +850,15 @@ export default function Watch() {
           {/* Mobile below xl: map -> decision -> routes, so the call-to-action
               sits one swipe under the instrument instead of after two tall rails.
               Desktop xl keeps priority | map+replay | decision (docs/design.md). */}
-            <aside className="stage-in spot-dim order-3 xl:sticky xl:top-4 xl:order-1 xl:self-start" style={{ ["--stage" as string]: 1 }}>
-              <section className="rounded-lg border p-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>
-                    Routes
-                    <span className="ml-2" style={{ color: "var(--text-body)" }}>
-                      {at(t)}
-                    </span>
-                  </p>
-                  {!compact && (
-                    <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>
-                      {rows.length}
-                    </span>
-                  )}
-                </div>
-                <RiskList
-                  rows={rows}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  onHover={setHoverId}
-                  fresh={at(t)}
-                  compact={compact}
-                  citations={selSnap?.citations}
-                />
-              </section>
-            </aside>
+            <WatchRoutesRail
+              rows={rows}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onHover={setHoverId}
+              fresh={at(t)}
+              compact={compact}
+              citations={selSnap?.citations}
+            />
 
             <section className="stage-in spot-dim order-1 min-w-0 space-y-4 xl:order-2" style={{ ["--stage" as string]: 0 }}>
               <section
@@ -1037,18 +1022,7 @@ export default function Watch() {
             </aside>
           </div>
 
-          <footer className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "var(--text-faint)" }}>
-            {/* the case switch lives in the header (CaseSwitch) and NextDoors —
-                a third swap link here only duplicated them */}
-            <span>
-              {scenario?.id === "live"
-                ? `live context · map © OpenStreetMap`
-                : scenario?.id === "flood"
-                  ? `generalization proof · EA river gauges · map © OpenStreetMap`
-                  : "illustrative replay · modeled signals · map © OpenStreetMap"}
-              {!compact && (llm.length ? ` · ${llm.map((p) => p.id).join(", ")}` : " · scripted")}
-            </span>
-          </footer>
+          <WatchFooter scenarioId={scenario?.id} compact={compact} providers={llm} />
         </>
       )}
     </main>
