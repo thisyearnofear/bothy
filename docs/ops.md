@@ -393,6 +393,33 @@ After the agent is healthy, refresh an operator snapshot before rehearsal:
 curl -X POST https://api.bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
 ```
 
+### Deploy or update the web app
+
+The same compose file carries a `web` service: Traefik terminates TLS for
+`https://bothy.trustfall.xyz` and the Next server reaches the agent over the
+private `bothy-internal` network (`AGENT_URL=http://agent:8787`, baked into the
+rewrites at build time — a URL change means a rebuild).
+
+One-time prerequisites:
+
+1. DNS: an `A` record `bothy.trustfall.xyz` → the VPS IPv4 address (DNS only,
+   not proxied, if the zone is on Cloudflare — Traefik's ACME challenge must
+   reach the box directly).
+2. `deploy/.env.sso` on the VPS (from `.env.sso.example`) with the web-side SSO
+   settings, including `BOTHY_SSO_REDIRECT_URI=https://bothy.trustfall.xyz/api/auth/callback`.
+3. Agent-side `WEB_ORIGIN=https://bothy.trustfall.xyz` in `.env.production`, so
+   CORS and the session bridge accept the real origin.
+
+```bash
+docker compose -f deploy/docker-compose.vps.yml up -d --build web
+curl -I https://bothy.trustfall.xyz          # 200 from Next
+curl https://bothy.trustfall.xyz/api/health  # proxied through to the agent
+```
+
+Without `.env.sso` the public pages still serve; sign-in, saved cases and
+reviewer actions stay disabled by design. The lab routes and the synthetic
+exercise need no session.
+
 
 ### Optional Venice AI provider
 

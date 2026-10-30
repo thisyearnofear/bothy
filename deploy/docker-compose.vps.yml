@@ -35,6 +35,40 @@ services:
       traefik.http.middlewares.bothy-api-https.redirectscheme.scheme: https
       traefik.http.services.bothy-api.loadbalancer.server.port: "8787"
 
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Baked into the Next rewrites at build time — internal DNS, not the
+        # public hostname, so traffic stays on bothy-internal.
+        AGENT_URL: http://agent:8787
+    container_name: bothy-web
+    restart: unless-stopped
+    env_file:
+      - .env.sso
+    environment:
+      AGENT_URL: http://agent:8787
+      PUBLIC_WEB_URL: https://bothy.trustfall.xyz
+      NODE_ENV: production
+    depends_on:
+      - agent
+    networks:
+      - coolify
+      - bothy-internal
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: coolify
+      traefik.http.routers.bothy-web.rule: "Host(`bothy.trustfall.xyz`)"
+      traefik.http.routers.bothy-web.entrypoints: https
+      traefik.http.routers.bothy-web.tls: "true"
+      traefik.http.routers.bothy-web.tls.certresolver: letsencrypt
+      traefik.http.routers.bothy-web-http.rule: "Host(`bothy.trustfall.xyz`)"
+      traefik.http.routers.bothy-web-http.entrypoints: http
+      traefik.http.routers.bothy-web-http.middlewares: bothy-web-https
+      traefik.http.middlewares.bothy-web-https.redirectscheme.scheme: https
+      traefik.http.services.bothy-web.loadbalancer.server.port: "8080"
+
 networks:
   coolify:
     external: true
