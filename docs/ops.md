@@ -365,61 +365,53 @@ curl http://localhost:8787/api/health
 open http://localhost:8477
 ```
 
-## Existing VPS + Coolify/Traefik
+## Production VPS (nuncio-vultr) + Coolify/Traefik
 
-See the "Public demo deployment" section below.
-
-The public watch room formerly ran on an external web host; the agent runs as `bothy-agent` on the
-VPS, where Coolify's existing Traefik proxy terminates TLS for
-`https://api.bothy.trustfall.xyz`. The agent is attached to the proxy's external
-`coolify` Docker network and has no host-published port. Traefik is the only
-public path to it.
-
-The agent container reaches the existing PostGIS container through the private
-`bothy-internal` Docker network using the `bothy-db` hostname. Do not expose
-Postgres publicly or replace the existing Coolify proxy with another listener.
-
-### Deploy or update the agent
-
-```bash
-# On the VPS, from the checked-out repository root:
-cp deploy/.env.production.example deploy/.env.production
-# Set DATABASE_URL to the real password and WEB_ORIGIN to the final web URL.
-docker compose -f deploy/docker-compose.vps.yml up -d --build
-curl https://api.bothy.trustfall.xyz/api/health
-```
-
-`deploy/.env.production` is ignored by Git. For web builds, set the
-server-only `AGENT_URL=https://api.bothy.trustfall.xyz` environment variable;
-the existing Next rewrite then proxies browser `/api/*` requests to the agent.
-After the agent is healthy, refresh an operator snapshot before rehearsal:
-
-```bash
-curl -X POST https://api.bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
-```
-
-### Deploy or update the web app
-
-The same compose file carries a `web` service: Traefik terminates TLS for
-`https://bothy.trustfall.xyz` and the Next server reaches the agent over the
+`deploy/docker-compose.prod.yml` is the production stack: Traefik (Coolify's,
+owns 80/443) terminates TLS for `bothy.trustfall.xyz` and forwards plain HTTP
+to the bundled `bothy-caddy`, which keeps the invite gate and `/idp` routing
+and proxies everything else to `bothy-web:8080`. Web reaches the agent over the
 private `bothy-internal` network (`AGENT_URL=http://agent:8787`, baked into the
-rewrites at build time — a URL change means a rebuild).
+Next rewrites at build time — a URL change means a rebuild).
+
+There is no `api.bothy.trustfall.xyz` in this topology — the agent is only
+reachable through `https://bothy.trustfall.xyz/api/*` via the web rewrites.
+If direct external API access is needed, add an `api.*` Traefik router on
+`bothy-caddy` plus a matching site in `Caddyfile.prod` — that is a deliberate
+exposure decision, not a default.
+
+Always run the compose with the explicit project name `bothy`: on this host
+the default project name `deploy` collides with another app:
+
+```bash
+# On nuncio-vultr, from the checked-out repository root:
+cd deploy
+cp .env.production.example .env.production   # git-ignored; set DATABASE_URL, WEB_ORIGIN
+docker compose -p bothy -f docker-compose.prod.yml --env-file .env.production up -d --build
+curl https://bothy.trustfall.xyz/api/health  # 200 from the agent, proxied through web
+```
 
 One-time prerequisites:
 
-1. DNS: an `A` record `bothy.trustfall.xyz` → the VPS IPv4 address (DNS only,
+1. DNS: an `A` record `bothy.trustfall.xyz` → the nuncio IPv4 address (DNS only,
    not proxied, if the zone is on Cloudflare — Traefik's ACME challenge must
-   reach the box directly).
+   reach the box directly). **Verify before declaring live:**
+   `dig +short bothy.trustfall.xyz` must return the nuncio IP — traffic landing
+   on the retired host serves an old build with dead `/api/*`.
 2. `deploy/.env.sso` on the VPS (from `.env.sso.example`) with the web-side SSO
    settings, including `BOTHY_SSO_REDIRECT_URI=https://bothy.trustfall.xyz/api/auth/callback`.
 3. Agent-side `WEB_ORIGIN=https://bothy.trustfall.xyz` in `.env.production`, so
    CORS and the session bridge accept the real origin.
 
+After the agent is healthy, refresh an operator snapshot before rehearsal:
+
 ```bash
-docker compose -f deploy/docker-compose.vps.yml up -d --build web
-curl -I https://bothy.trustfall.xyz          # 200 from Next
-curl https://bothy.trustfall.xyz/api/health  # proxied through to the agent
+curl -X POST https://bothy.trustfall.xyz/api/scenario/live/live-weather/refresh
 ```
+
+The agent container reaches the existing PostGIS container through the private
+`bothy-internal` Docker network using the `bothy-db` hostname. Do not expose
+Postgres publicly or replace the existing Coolify proxy with another listener.
 
 Without `.env.sso` the public pages still serve; sign-in, saved cases and
 reviewer actions stay disabled by design. The lab routes and the synthetic
@@ -450,10 +442,10 @@ Then recreate the private agent container and inspect only its configuration
 summary (never the secret itself):
 
 ```bash
-cd /home/linuxuser/bothy
-docker compose -f deploy/docker-compose.vps.yml up -d --build
-curl https://api.bothy.trustfall.xyz/api/health
-curl https://api.bothy.trustfall.xyz/api/llm
+cd /home/linuxuser/bothy/deploy
+docker compose -p bothy -f docker-compose.prod.yml --env-file .env.production up -d --build agent
+curl https://bothy.trustfall.xyz/api/health
+curl https://bothy.trustfall.xyz/api/llm
 ```
 
 `/api/llm` should list `venice` after restart. It confirms configuration, not
