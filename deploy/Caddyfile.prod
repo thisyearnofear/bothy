@@ -11,10 +11,12 @@ http://{$BOTHY_DOMAIN:bothy.trustfall.xyz} {
 		import /etc/caddy/invite
 	}
 
+	# Container names, not service names: Caddy also sits on the shared
+	# `coolify` network, where other apps' `web`/`idp` aliases collide.
 	handle /idp/* {
-		reverse_proxy idp:9099
+		reverse_proxy bothy-idp:9099
 	}
 	handle {
-		reverse_proxy web:8080
+		reverse_proxy bothy-web:8080
 	}
 }
