@@ -268,7 +268,7 @@ and evidence boundary in [dashboard.md](dashboard.md#backtest-evidence-boundary)
 | `DATABASE_URL` | `postgres://…@localhost:5433/bothy` — via SSH tunnel (see [ops.md](ops.md)) | agent DB |
 | `PORT` | `8787` | agent API |
 | `AGENT_URL` | `http://localhost:8787` | web → agent proxy target |
-| `WEB_ORIGIN` | `http://localhost:3000` | browser origin allowed to call the agent directly |
+| `WEB_ORIGIN` | `http://localhost:8477` | browser origin allowed to call the agent directly |
 | `OPEN_METEO_BASE_URL` | `https://api.open-meteo.com/v1/forecast` | no-key live-weather context provider; server-side only |
 
 **LLM provider chain**

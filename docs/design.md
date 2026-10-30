@@ -150,13 +150,17 @@ route, terrain, and evidence geometry to create atmosphere instead.
 | panel | `13-15% 0.01 250` | cards and decision records |
 | rule | `22-24% 0.01 250` | structural dividers and selected states |
 | text | 92% neutral · muted 65% · faint 55% | type hierarchy |
-| severity | green → amber → orange → red (`lib.riskColor`) | risk **only** |
+| severity | green → amber → orange → red (`lib.riskColor` graphics, `lib.riskTextColor` text) | risk **only** |
 | cursor | cool sky, ~1px | active time, route cursor, signal pins |
 
 - **Risk colour maps only to risk.** Approval is an official ledger treatment:
   bordered status, actor, and timestamp; it is not a green success state.
 - **Colour + text label always.** Every severity has a word (`HIGH`,
   `ELEVATED`, and so on), never colour alone.
+- **Two severity tokens, two jobs.** `riskColor` is the graphics token — map
+  lines, dots, tints — locked at ≥3:1 (WCAG non-text). `riskTextColor` is the
+  same hues raised in lightness, ≥4.5:1 on `--panel`, for severity *text*:
+  labels, score readouts, pills. Passing one to the other's job is the bug.
 
 ### Type and surfaces
 
@@ -434,9 +438,10 @@ The same loop runs in CI: `.github/workflows/ci.yml` executes it on every push t
 
 The last rule encodes the degradation contract: a 5xx that answers with JSON is the agent saying "system of record unavailable" — designed, reported as `[degraded: …]`, not a failure. A 5xx with anything else means something is actually down. `--strict` counts designed degradations as failures, for CI against a full stack.
 
-One caveat on coverage: a degraded page audits shallow. Until `/api/scenarios` answered, axe only ever saw the watch room's empty state — the first full-content run surfaced violations that had been unreachable, not absent (MapLibre pin attrs, risk-colour contrast on readouts, two unnamed complementary landmarks). A green run on a degraded surface proves the degraded surface only.
+One caveat on coverage: a degraded page audits shallow. Until `/api/scenarios` answered, axe only ever saw the watch room's empty state — the first full-content run surfaced violations that had been unreachable, not absent (MapLibre pin attrs, risk-colour contrast on readouts, two unnamed complementary landmarks). Those findings are fixed and the live surface now audits clean; the caveat stands as a principle — a green run on a degraded surface proves the degraded surface only.
 
-Two traps this loop already caught, kept here so they stay caught:
+Traps this loop already caught, kept here so they stay caught:
 
 - SSR/client drift on raw floats: browsers normalize `transform`, `opacity` and `filter` values on parse (`0.0067606025048007725em` → `0.0067606em`), so the hydration checker sees a different string than the client rendered. `ScatterHeading` sends its per-letter offsets as CSS custom properties — verbatim round-trip — and keeps the hidden state in `.scatter-letter[data-in="false"]`. Any future scattered or seeded styling should do the same.
 - Express 4 never forwards async rejections to error middleware: one `await` on a dead Postgres was an unhandled rejection that killed the agent and every healthy route with it. `server.ts` wraps every handler and answers 503 from a final middleware, so a dead system of record degrades its own routes only.
+- Third-party stylesheets that bundle after `globals.css` win same-specificity ties. MapLibre's own `.maplibregl-popup-content` beat our panel override, so popups rendered on its white card — invisible to screenshots, visible to axe. Our MapLibre overrides carry `!important` (precedent: the attribution focus ring). Any future vendor-CSS override should assume the same.

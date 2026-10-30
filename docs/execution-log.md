@@ -1,5 +1,54 @@
 # Execution log
 
+## 30 October 2026: look-and-fix loop, a11y enforcement, watch decomposition, anchors shipped
+
+Catch-up entry — several sessions of work since 4 October.
+
+**Visual QA loop** (`apps/web/scripts/qa-visual.mjs`, `npm -w @bothy/web run
+qa:visual`): screenshots eight surfaces under `prefers-reduced-motion` and
+scores them against docs/design.md rules — overflow, focus, stuck-invisible,
+errored images, console noise, axe violations, honesty copy. Wired into CI on
+every push/PR after build. Designed-degradation 5xx (JSON error body) reports
+as notes; `--strict` counts them for a full stack.
+
+**What the loop caught and fixed:** ScatterHeading SSR/hydration mismatch
+(float normalization in inline styles → CSS custom properties); the Express 4
+async-rejection crash that killed the whole agent on dead Postgres (handlers
+wrapped, designed 503s); MapLibre's blue focus ring; five axe violation
+classes (label/name mismatches, un-landmarked marking bar, aria-hidden
+focusable, breathing contrast dip); then on the first *full-content* watch
+run — once `/api/scenarios` answered live — MapLibre pin semantics (div →
+button), unnamed landmarks, popup contrast. The popups were rendering on
+MapLibre's white card bg because its stylesheet bundles after globals.css and
+wins ties: all vendor overrides now `!important`, recorded as a trap in
+design.md.
+
+**Severity tokens split:** `riskColor` stays the ≥3:1 graphics token;
+`riskTextColor` is the same hues at text-safe lightness (≥4.5:1 on --panel).
+The first live run flagged 12 contrast findings — all closed.
+
+**Watch monolith:** `app/watch/page.tsx` went 1,062 → 840 lines across six
+extracted render-only components (routes rail, footer, error banner, empty
+state, story strip, map stage). State and shared derivations stay in the
+page; the map stage absorbed `series`/`mapBeats`/`selectedLiveWeather`
+because only it consumes them.
+
+**Ports:** web dev pinned to :8477 everywhere (dev script, QA default, CI,
+docs, venue.sh). Common ports collide on this box — QA had been auditing an
+SSH-tunnelled login page on :3000.
+
+**Parallel session (noted for the record):** the Arweave anchor feature
+(`be9331a` — AnchorStore, canonical payloads, AnchorCard verification UI)
+and the production deploy (`51f1cf3` — Coolify/Traefik on nuncio-vultr,
+api.bothy.trustfall.xyz + bothy.trustfall.xyz) landed concurrently and are
+documented in docs/decentralize-ai-2026.md / docs/ops.md.
+
+**Local DB:** Intel Macs get no Homebrew bottles; `postgres-app` cask
+bundles PG14–18 + PostGIS + pgvector prebuilt — cluster initialised at
+`~/Library/Application Support/Postgres/var-17-bothy` as fallback. The
+`db-tunnel.sh` path to the VPS is the default and currently serves the
+agent live.
+
 ## 4 October 2026: submission artefacts, proof work, and a reliability finding
 
 EDTH submission prepared as team 19 on track 4. `docs/19_Bothy.pdf` rendered from

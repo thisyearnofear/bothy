@@ -144,10 +144,10 @@ docker build -f apps/web/Dockerfile -t bothy-web .
 
 docker run --rm -p 8787:8787 \
   -e DATABASE_URL="postgresql://..." \
-  -e WEB_ORIGIN="http://localhost:3000" \
+  -e WEB_ORIGIN="http://localhost:8477" \
   bothy-agent
 
-docker run --rm -p 3000:8080 \
+docker run --rm -p 8477:8080 \
   -e AGENT_URL="http://localhost:8787" \
   bothy-web
 ```

@@ -260,6 +260,11 @@ assessments do not enter the external notification queue.
 creates the DB locally. Use it only on machines with disk to spare; this repo's
 default is the tunnel above.
 
+Intel Macs get no Homebrew bottles (formulae source-build and stall). The
+`postgres-app` cask is the fallback: it bundles PG14–18 + PostGIS + pgvector
+prebuilt — `initdb` a cluster, `pg_ctl -o "-p 5433" start`, `createdb bothy`
+(matches `.env`). The header comment in `scripts/setup_db.sh` has the steps.
+
 ## Troubleshooting
 
 - `nc: command not found` — install `netcat`/`nc` (macOS ships it in newer

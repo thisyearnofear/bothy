@@ -42,7 +42,7 @@ import { GraphRequestError } from "./graph/turing";
 
 const app = express();
 const auth = createAuth();
-app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
+app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:8477" }));
 app.use(express.json());
 
 // Express 4 never forwards async rejections to error middleware — a dead

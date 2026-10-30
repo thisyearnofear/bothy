@@ -58,3 +58,26 @@ until they can land as the same citation kinds.
 - Husky pre-commit: `lint-staged` (eslint fix) **and** `scripts/check-secrets.sh`
   (blocks known secret files + high-signal patterns in the staged diff).
   Add `gitleaks detect --source .` in CI for a heavier heuristics scan.
+## Two severity tokens: graphics and text are different jobs
+
+`riskColor` is locked at ≥3:1 (WCAG non-text) for map lines, dots, and tints.
+Applied to text it fails AA — the first live watch run surfaced 12
+contrast findings. `riskTextColor` keeps the same hues at raised lightness
+(≥4.5:1 on `--panel`) for severity labels and score readouts. Two tokens so
+neither job silently degrades the other — and so axe can tell us when a
+future site picks the wrong one.
+
+## Vendor CSS is a different cascade, override it accordingly
+
+Third-party stylesheets bundled after `globals.css` win same-specificity
+ties. MapLibre's `.maplibregl-popup-content` beat our panel override —
+popups rendered on its white card and axe saw it before screenshots did.
+Vendor overrides carry `!important` and live next to a comment saying why.
+
+## Exotic dev ports on shared boxes
+
+Web dev runs on :8477 — pinned in the dev script, QA default, CI, docs, and
+`venue.sh`. Common ports collide with other projects and SSH tunnels on a
+shared machine; the QA loop once audited a tunnelled login page on :3000
+thinking it was the app. If a page-load check fails on every route at once,
+check what's actually answering on the port before debugging the app.
