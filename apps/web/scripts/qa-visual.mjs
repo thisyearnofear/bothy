@@ -34,6 +34,9 @@ const PAGES = [
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
 const BASELINE_DIR = "qa/baseline";
 const DIFF_THRESHOLD = 0.01; // fraction of pixels allowed to differ
+// Goldens are platform-sensitive (font rasterisation differs macOS/Linux), so
+// in CI a diff is reported as a note, not a failure — enforcement is local.
+const DIFF_ENFORCED = !process.env.CI;
 
 // Rubric weights — docs/design.md principles, each check maps to a design-doc rule.
 const RUBRIC = {
@@ -48,6 +51,11 @@ const RUBRIC = {
 };
 
 const STRICT = process.argv.includes("--strict");
+// Pages whose animated content warrants a second axe pass under normal motion.
+const MOTION_AXE_PAGES = new Set(["watch", "landing"]);
+// Endpoints that must answer 200 — CI passes these when Postgres is seeded,
+// so a Postgres-backed 5xx fails there while graph/OIDC degrade stays noted.
+const REQUIRE_LIVE = (process.argv.find((a) => a.startsWith("--require-200=")) ?? "").split("=")[1]?.split(",").filter(Boolean) ?? [];
 
 const HONESTY_PATTERNS = [
   /unapproved analysis/i,
@@ -182,10 +190,26 @@ for (const p of PAGES) {
 
     // 6. axe — the doc's accessibility claims, checked mechanically
     const axe = await new AxeBuilder({ page }).analyze();
-    entry.checks["a11y-violations"] = axe.violations.length === 0;
-    if (axe.violations.length) {
-      entry.issues.push(`a11y: ${axe.violations.slice(0, 4).map((v) => `${v.id}×${v.nodes.length}`).join(", ")}`);
-      entry.axe = axe.violations.map((v) => ({
+    // Second pass under normal motion on pages with animated content — a
+    // contrast dip mid-animation (the .resting class of bug) is invisible to
+    // the reduced-motion pass.
+    const violations = [...axe.violations];
+    if (MOTION_AXE_PAGES.has(p.name)) {
+      const ctx2 = await browser.newContext({ viewport: { width, height: 900 } });
+      const page2 = await ctx2.newPage();
+      await page2.goto(BASE + p.path, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
+      await page2.waitForTimeout(3000);
+      const axe2 = await new AxeBuilder({ page: page2 }).analyze().catch(() => null);
+      await ctx2.close();
+      if (axe2) {
+        const seen = new Set(violations.map((v) => `${v.id}:${v.nodes[0]?.target?.[0]}`));
+        violations.push(...axe2.violations.filter((v) => !seen.has(`${v.id}:${v.nodes[0]?.target?.[0]}`)));
+      }
+    }
+    entry.checks["a11y-violations"] = violations.length === 0;
+    if (violations.length) {
+      entry.issues.push(`a11y: ${violations.slice(0, 4).map((v) => `${v.id}×${v.nodes.length}`).join(", ")}`);
+      entry.axe = violations.map((v) => ({
         id: v.id,
         impact: v.impact,
         targets: v.nodes.slice(0, 5).map((n) => String(n.target?.[0] ?? "").slice(0, 80)),
@@ -238,7 +262,8 @@ for (const p of PAGES) {
           const diff = pixelmatch(cur.data, base.data, null, cur.width, cur.height, { threshold: 0.15 });
           const pct = diff / (cur.width * cur.height);
           entry.checks["pixel-diff"] = pct <= DIFF_THRESHOLD;
-          if (!entry.checks["pixel-diff"]) entry.issues.push(`pixel diff ${(pct * 100).toFixed(2)}% vs baseline`);
+          if (!entry.checks["pixel-diff"] && DIFF_ENFORCED) entry.issues.push(`pixel diff ${(pct * 100).toFixed(2)}% vs baseline`);
+          else if (!entry.checks["pixel-diff"]) entry.notes = [...(entry.notes ?? []), `pixel diff ${(pct * 100).toFixed(2)}% vs baseline`];
         }
       } catch {
         entry.checks["pixel-diff"] = false;
@@ -257,6 +282,14 @@ await browser.close();
 await mkdir(OUT, { recursive: true });
 await writeFile(path.join(OUT, "report.json"), JSON.stringify(report, null, 2));
 
+// --require-200 routes: verified after the page loop so a dead backend fails
+// even when every page rendered its designed degradation.
+const liveFailures = [];
+for (const p of REQUIRE_LIVE) {
+  const r = await fetch(BASE + p).catch(() => null);
+  if (r?.status !== 200) liveFailures.push(`${p} → ${r?.status ?? "no response"}`);
+}
+
 // console summary
 let failed = 0;
 for (const r of report) {
@@ -265,5 +298,6 @@ for (const r of report) {
   const note = r.degraded?.length ? ` [degraded: ${r.degraded.join(", ")}]` : "";
   console.log(`${ok ? (r.degraded?.length ? "PASS~" : "PASS ") : "FAIL "}  ${r.page.padEnd(16)} ${r.score.pct}%  ${r.issues.join("; ")}${note}`);
 }
-console.log(failed ? `\n${failed}/${report.length} pages need fixes` : `\nAll ${report.length} pages pass.`);
-process.exit(failed ? 1 : 0);
+if (liveFailures.length) console.log(`FAIL   require-200: ${liveFailures.join(" | ")}`);
+console.log(failed || liveFailures.length ? `\n${failed}/${report.length} pages need fixes${liveFailures.length ? " + dead required endpoints" : ""}` : `\nAll ${report.length} pages pass.`);
+process.exit(failed || liveFailures.length ? 1 : 0);

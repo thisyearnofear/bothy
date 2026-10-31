@@ -9,6 +9,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: bothy
+          POSTGRES_PASSWORD: bothy
+          POSTGRES_DB: bothy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bothy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -30,20 +44,23 @@ jobs:
       - name: Build web app
         run: npm -w @bothy/web run build
 
-      # The look-and-fix loop: screenshots eight surfaces under
+      # The look-and-fix loop: screenshots the surfaces under
       # prefers-reduced-motion and scores them against docs/design.md rules.
-      # CI has no Postgres/TuringDB/OIDC, so designed-degradation 503s are
-      # expected and reported as notes, not failures (no --strict here).
+      # CI seeds real Postgres+PostGIS, so Postgres-backed routes must answer
+      # 200 (--require-200); TuringDB/OIDC degrade stays noted, not failed.
       - name: Visual QA loop
+        env:
+          DATABASE_URL: postgres://bothy:bothy@localhost:5432/bothy
         run: |
           npx playwright install --with-deps chromium
-          npm -w @bothy/agent run start &
+          DATABASE_URL=$DATABASE_URL npm -w @bothy/agent run seed
+          DATABASE_URL=$DATABASE_URL npm -w @bothy/agent run start &
           (cd apps/web && npx next start -p 8477) &
           for i in $(seq 1 90); do
             if curl -sf http://localhost:8787/api/health >/dev/null && curl -sf http://localhost:8477 >/dev/null; then break; fi
             sleep 1
           done
-          cd apps/web && node scripts/qa-visual.mjs
+          cd apps/web && node scripts/qa-visual.mjs --require-200=/api/scenarios,/api/subscriptions
 
       - name: Upload QA screenshots on failure
         if: failure()
