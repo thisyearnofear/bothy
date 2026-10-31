@@ -1,5 +1,28 @@
 # Execution log
 
+## 30 October 2026 (late): production verified, pixel-diff goldens, strict CI
+
+**Production live at bothy.trustfall.xyz.** DNS flipped to nuncio
+(144.202.117.160); the apex had been serving the retired snapflip host — old
+build, dead /api. ACME retried cleanly once LE's resolver caught up (a
+`docker restart bothy-caddy` nudged the attempt). Mirror updated by `git
+archive` overlay + `docker compose -p bothy ... up -d --build`; prod QA now
+reads 8/8 at 100% — the same surface the local loop verifies.
+
+**QA loop v2:** committed golden baselines (`qa/baseline/`) with pixelmatch
+diffing — MapLibre canvas regions masked (external raster, nondeterministic),
+canvas settle wait, enforced locally and note-only in CI (font AA is
+platform-sensitive). Mobile coverage added at 390px — first run caught a real
+135px overflow on /watch (timeline tag track missing an overflow clip).
+
+**Strict CI:** `postgis/postgis` service in ci.yml, seeded, loop run with
+`--require-200` on Postgres-backed routes — the live path is verified, not
+just the degraded one. Motion-enabled axe pass added for watch + landing
+(reduced-motion is blind to mid-animation contrast dips).
+
+**Monolith done:** WatchDecisionAside was the last render seam — the page is
+state + wiring at 832 lines (from 1,062).
+
 ## 30 October 2026: look-and-fix loop, a11y enforcement, watch decomposition, anchors shipped
 
 Catch-up entry — several sessions of work since 4 October.
