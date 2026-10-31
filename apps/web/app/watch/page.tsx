@@ -4,7 +4,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import type { Beat } from "../../components/Timeline";
 import type { RiskRow } from "../../components/RiskList";
-import Detail from "../../components/Detail";
+import WatchDecisionAside from "../../components/WatchDecisionAside";
 import DeskCoach, { DESK_KEY } from "../../components/DeskCoach";
 import IntakeLegend from "../../components/IntakeLegend";
 import NextDoors from "../../components/NextDoors";
@@ -797,33 +797,25 @@ export default function Watch() {
               onTogglePlay={togglePlay}
             />
 
-            <aside
-              aria-label="Decision case"
-              className="stage-in order-2 xl:order-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:self-start"
-              style={{ ["--stage" as string]: 3 }}
-            >
-              <section id="decision-case" className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }}>
-                <Detail
-                  route={selected}
-                  horizon={selHorizon}
-                  horizonTime={at(range.horizon)}
-                  color={selColor}
-                  cursorCitations={selSnap?.citations ?? []}
-                  cursorTime={at(t)}
-                  assessment={selectedAssessment}
-                  audit={audit}
-                  running={running}
-                  traceLines={traceLines}
-                  llmAvailable={llm.length > 0}
-                  compact={compact}
-                  awake={awake}
-                  lead={leadText}
-                  onRun={run}
-                  onApprove={(officer) => void decide("approved", officer)}
-                  onReject={(officer) => void decide("rejected", officer)}
-                />
-              </section>
-            </aside>
+            <WatchDecisionAside
+              route={selected}
+              horizon={selHorizon}
+              horizonTime={at(range.horizon)}
+              color={selColor}
+              cursorCitations={selSnap?.citations ?? []}
+              cursorTime={at(t)}
+              assessment={selectedAssessment}
+              audit={audit}
+              running={running}
+              traceLines={traceLines}
+              llmAvailable={llm.length > 0}
+              compact={compact}
+              awake={awake}
+              lead={leadText}
+              onRun={run}
+              onApprove={(officer) => void decide("approved", officer)}
+              onReject={(officer) => void decide("rejected", officer)}
+            />
           </div>
 
           <WatchFooter scenarioId={scenario?.id} compact={compact} providers={llm} />
