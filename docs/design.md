@@ -432,7 +432,7 @@ Each page is scored against this document's own rules:
 - nothing stuck invisible under reduced motion — disabled controls are exempt, since dimming is the signal;
 - every `<img>` reaches pixels — a lazy image still in flight is pending, not broken; only an errored one fails;
 - no console errors, and no 5xx without a JSON `{"error": …}` body;
-- zero axe violations (`@axe-core/playwright`) — the accessibility rules on this page are now enforced, not asserted.
+- zero axe violations (`@axe-core/playwright`) — the accessibility rules on this page are now enforced, not asserted. Watch and landing get a second pass under *normal* motion: a contrast dip that only exists mid-animation (the `.resting` class of bug) is invisible to the reduced-motion pass.
 
 The same loop runs in CI: `.github/workflows/ci.yml` executes it on every push to main and every pull request, after `build`, and uploads the screenshots as an artifact on failure. CI seeds a real Postgres+PostGIS service, so Postgres-backed routes must answer 200 (`--require-200`) — the live path is verified there, not just the degraded one; TuringDB/OIDC degradations stay noted, not failed, because those systems genuinely are not in the runner. Pixel-diff is reported but not enforced in CI, since font rasterisation is platform-sensitive. Deploys themselves stay manual (SSH + `docker compose` per ops.md), so the loop gates code, not releases.
 

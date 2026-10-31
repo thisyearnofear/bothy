@@ -23,6 +23,10 @@ just the degraded one. Motion-enabled axe pass added for watch + landing
 **Monolith done:** WatchDecisionAside was the last render seam — the page is
 state + wiring at 832 lines (from 1,062).
 
+**CI verified green:** first strict run failed on platform font-AA (page
+heights differ Linux↔macOS goldens — the note-only-in-CI gate missed the
+size-mismatch path); fixed, `verify` now passes 3m24s with seeded Postgres.
+
 ## 30 October 2026: look-and-fix loop, a11y enforcement, watch decomposition, anchors shipped
 
 Catch-up entry — several sessions of work since 4 October.
