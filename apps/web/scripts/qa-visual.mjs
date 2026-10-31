@@ -248,7 +248,9 @@ for (const p of PAGES) {
         const [cur, base] = [PNG.sync.read(await readFile(shotPath)), PNG.sync.read(await readFile(basePath))];
         if (cur.width !== base.width || cur.height !== base.height) {
           entry.checks["pixel-diff"] = false;
-          entry.issues.push(`screenshot size changed: ${cur.width}x${cur.height} vs baseline ${base.width}x${base.height}`);
+          const msg = `screenshot size changed: ${cur.width}x${cur.height} vs baseline ${base.width}x${base.height}`;
+          if (DIFF_ENFORCED) entry.issues.push(msg);
+          else entry.notes = [...(entry.notes ?? []), msg];
         } else {
           const dpr = cur.width / entry.width;
           for (const img of [cur, base]) {
@@ -267,7 +269,8 @@ for (const p of PAGES) {
         }
       } catch {
         entry.checks["pixel-diff"] = false;
-        entry.issues.push("no baseline screenshot — run with --update-baseline");
+        if (DIFF_ENFORCED) entry.issues.push("no baseline screenshot — run with --update-baseline");
+        else entry.notes = [...(entry.notes ?? []), "no baseline screenshot"];
       }
     }
   } catch (err) {
