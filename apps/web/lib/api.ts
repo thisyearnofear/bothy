@@ -250,6 +250,8 @@ export const api = {
   defenseMemory: (signal?: AbortSignal) =>
     get<{ engine: string; memories: number; ledger: Record<string, number>; recent: { id: string; content: string; layer: string; tags: string[]; at: string }[] }>("/api/defense/memory", signal),
   draftDefenseBrief: (runId: string) => post<DefenseBrief>("/api/defense/briefs", { runId }),
+  // Anonymous deterministic preview — builds but never persists the brief.
+  previewDefenseBrief: (runId: string) => post<DefenseBrief>("/api/defense/briefs/preview", { runId }),
   defenseBrief: (id: string, signal?: AbortSignal) => get<DefenseBrief>(`/api/defense/briefs/${encodeURIComponent(id)}`, signal),
   defenseEvidence: (id: string) => get<GraphRun>(`/api/defense/briefs/${encodeURIComponent(id)}/evidence`),
   defenseFederated: (id: string, signal?: AbortSignal) => get<FederatedRun[]>(`/api/defense/briefs/${encodeURIComponent(id)}/federated`, signal),

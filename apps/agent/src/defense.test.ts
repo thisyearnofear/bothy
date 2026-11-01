@@ -344,6 +344,103 @@ test("unconfigured adapter never enables decisions", async () => {
   await assert.rejects(auth.authenticate("Bearer not-a-real-token"), /approval is disabled/);
 });
 
+test("anonymous preview returns the deterministic cited brief without auth", async () => {
+  const { db, run } = fixture();
+  const { auth } = await authFixture();
+  const app = express().use(express.json()).use("/api/defense", defenseRouter(db, auth));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/defense`;
+  try {
+    const bad = await fetch(`${base}/briefs/preview`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runId: run.runId, rows: [] }) });
+    assert.equal(bad.status, 400);
+    const response = await fetch(`${base}/briefs/preview`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runId: run.runId }) });
+    assert.equal(response.status, 200);
+    const brief = await response.json();
+    assert.equal(brief.preview, true);
+    assert.equal(brief.status, "preview");
+    assert.equal(brief.id, `preview-${run.runId}`);
+    assert.equal(brief.createdBySubject, undefined);
+    assert.equal(brief.action, undefined);
+    assert.equal(brief.reassessment, undefined);
+    assert.ok(brief.claims.length >= 1);
+    assert.ok(brief.claims[0].citations.length >= 1);
+    assert.equal(brief.claims[0].citations[0].runId, run.runId);
+    assert.ok(brief.gaps.join(" ").includes("not established"));
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+    db.close();
+  }
+});
+
+test("preview writes nothing: no brief, audit, federated rows or anchor call", async () => {
+  const { db, run, store } = fixture();
+  const { auth } = await authFixture();
+  const anchored: unknown[][] = [];
+  const anchors = { anchorInBackground: (...args: unknown[]) => { anchored.push(args); }, get: () => undefined } as never;
+  const app = express().use(express.json()).use("/api/defense", defenseRouter(db, auth, anchors));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/defense`;
+  const counts = () => ({
+    briefs: (db.prepare("SELECT COUNT(*) AS n FROM defense_briefs").get() as { n: number }).n,
+    audit: (db.prepare("SELECT COUNT(*) AS n FROM defense_audit").get() as { n: number }).n,
+    federated: (db.prepare("SELECT COUNT(*) AS n FROM federated_runs").get() as { n: number }).n,
+  });
+  try {
+    const before = counts();
+    const response = await fetch(`${base}/briefs/preview`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runId: run.runId }) });
+    assert.equal(response.status, 200);
+    assert.deepEqual(counts(), before);
+    assert.equal(anchored.length, 0);
+    assert.throws(() => store.get(`preview-${run.runId}`), /not found/);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+    db.close();
+  }
+});
+
+test("preview of an unknown or unpinned run fails like a draft", () => {
+  const { db, store, run } = fixture();
+  try {
+    assert.throws(() => store.preview("no-such-run"), /captured run not found/);
+    assert.throws(() => store.draft("no-such-run"), /captured run not found/);
+    db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify({ ...run, graphCommit: null }), run.runId);
+    assert.throws(() => store.preview(run.runId), /pinned evidence/);
+    db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify(run), run.runId);
+  } finally { db.close(); }
+});
+
+test("authenticated draft still persists exactly one brief and no audit entry", async () => {
+  const { db, run } = fixture();
+  const { auth, token } = await authFixture();
+  const app = express().use(express.json()).use("/api/defense", defenseRouter(db, auth));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/defense`;
+  try {
+    const bearer = await token("analyst");
+    const response = await fetch(`${base}/briefs`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${bearer}` },
+      body: JSON.stringify({ runId: run.runId }),
+    });
+    assert.equal(response.status, 201);
+    const brief = await response.json();
+    assert.equal(brief.status, "pending");
+    assert.equal(brief.createdBySubject, "analyst");
+    assert.equal(brief.preview, undefined);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM defense_briefs").get() as { n: number }).n, 1);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM defense_audit").get() as { n: number }).n, 0);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+    db.close();
+  }
+});
+
 test("reviewed brief, owned action, and audit survive closing and reopening the SQLite ledger", () => {
   const { db: source, run } = fixture();
   source.close();

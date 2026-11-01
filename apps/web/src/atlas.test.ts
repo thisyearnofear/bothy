@@ -195,7 +195,7 @@ test("rail stations reflect real capture/brief/session state, never staged progr
   stations = railStations({ run: chainRun([CHAIN_ROW]), busy: false, brief: brief({ status: "rejected" }), session });
   assert.equal(stations.find((s) => s.id === "review")?.state, "Brief rejected");
   const anon = railStations({ run: null, busy: false, brief: null, session: { configured: true, authenticated: false, roles: [] } });
-  assert.match(anon.find((s) => s.id === "review")?.state ?? "", /Locked — sign in/);
+  assert.match(anon.find((s) => s.id === "review")?.state ?? "", /Needs a named reviewer/);
   const unconfigured = railStations({ run: null, busy: false, brief: null, session: { configured: false, authenticated: false, roles: [] } });
   assert.match(unconfigured.find((s) => s.id === "review")?.state ?? "", /SSO not configured/);
   const html = renderToStaticMarkup(createElement(InvestigationRail, {
@@ -203,6 +203,22 @@ test("rail stations reflect real capture/brief/session state, never staged progr
   }));
   assert.match(html, /Deterministic evidence workflow/);
   assert.match(html, /No cloud inference on this page/);
+});
+
+test("unauthenticated rail offers a brief preview while human stations need a reviewer", () => {
+  const anonymous = { configured: true, authenticated: false, roles: [] };
+  const run = chainRun([CHAIN_ROW]);
+  let stations = railStations({ run, busy: false, brief: null, session: anonymous });
+  assert.equal(stations.find((s) => s.id === "brief")?.state, "Preview available");
+  assert.equal(stations.find((s) => s.id === "review")?.state, "Needs a named reviewer");
+  assert.equal(stations.find((s) => s.id === "followup")?.state, "Needs a named reviewer");
+  stations = railStations({ run, busy: false, brief: brief({ status: "preview", preview: true, id: `preview-${run.runId}` }), session: anonymous });
+  assert.equal(stations.find((s) => s.id === "brief")?.state, "Previewed — not saved");
+  assert.equal(stations.find((s) => s.id === "review")?.state, "Needs a named reviewer");
+  assert.equal(stations.find((s) => s.id === "followup")?.state, "Needs a named reviewer");
+  const unconfigured = railStations({ run, busy: false, brief: null, session: { configured: false, authenticated: false, roles: [] } });
+  assert.equal(unconfigured.find((s) => s.id === "brief")?.state, "Preview available");
+  assert.equal(unconfigured.find((s) => s.id === "review")?.state, "Locked — SSO not configured");
 });
 
 test("public events mode shows sourced beats without mixing graph capture dates", () => {

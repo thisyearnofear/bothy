@@ -128,6 +128,21 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
     finally { if (alive.current) setBusy(false); }
   };
 
+  // Anonymous deterministic preview: nothing is persisted server-side, so the
+  // returned brief never gets a case id or a ?brief= bookmark.
+  const preview = async () => {
+    if (!run) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.previewDefenseBrief(run.runId);
+      if (!alive.current) return;
+      setBrief(result);
+    } catch (e) {
+      if (alive.current) setError(recoveryMessage(e));
+    } finally { if (alive.current) setBusy(false); }
+  };
+
   return (
     <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Programme verification brief">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -135,19 +150,24 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
           <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? "Saving…" : savedCase && !brief ? "Reopening saved case" : briefStage(brief, Boolean(run))}</p>
           <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-strong)" }}>{brief?.title ?? (savedCase ? "Saved verification brief" : "Prepare a cited verification brief")}</h2>
         </div>
-        <button className={control} style={card} disabled={busy || !authenticated || !run || Boolean(brief)}
-          onClick={() => { if (run) void update(() => api.draftDefenseBrief(run.runId)); }}>{busy ? "Saving…" : "Draft cited brief"}</button>
+        {authenticated ? (
+          <button className={control} style={card} disabled={busy || !run || Boolean(brief)}
+            onClick={() => { if (run) void update(() => api.draftDefenseBrief(run.runId)); }}>{busy ? "Saving…" : "Draft cited brief"}</button>
+        ) : (
+          <button className={control} style={card} disabled={busy || !run || Boolean(brief)}
+            onClick={() => void preview()}>{busy ? "Working…" : "Preview cited brief"}</button>
+        )}
       </div>
       <div className="mt-3 space-y-2 text-sm">
         {session.error ?? (authenticated
           ? <p>Verified subject: <span className="mono break-all">{session.subject}</span>. Assigned roles: {session.roles.join(", ")}.</p>
           : session.configured
-            ? <p>Sign in to draft or reopen browser cases. Review and ownership actions additionally require the assigned roles.</p>
-            : <p>OIDC is not configured. Browser drafting, review, simulation, and action updates are unavailable; the agent's synthetic draft endpoint is separate.</p>)}
+            ? <p>Preview works without sign-in. Saving, review and ownership actions need a verified session with the assigned roles.</p>
+            : <p>OIDC is not configured. Browser drafting, review, simulation, and action updates are unavailable; the deterministic preview still works.</p>)}
         {!authenticated && session.configured && (
-          <a className={control} style={{ ...card, display: "inline-block", textDecoration: "none" }}
+          <a className="underline underline-offset-4"
             href={`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`}>
-            Sign in to review
+            Sign in to save, review and assign
           </a>
         )}
         {authenticated && (
@@ -158,8 +178,9 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
         {signInNotice && <p role="alert">{signInNotice}</p>}
       </div>
       {!brief && !savedCase && <div className="record-status mt-3"><span>{run ? "Capture ready → draft for review" : "Analyze first → enable drafting"}</span><span>Deterministic brief · no production-loss prediction</span></div>}
+      {brief?.preview && <p className="record-status mt-3" role="status"><span>Preview · not saved · not approved. Review and assignment need a named reviewer.</span></p>}
       {brief?.status === "rejected" && <p className="mt-3 text-sm">This brief was rejected. Check the review note, then rerun the exposure question to prepare a new brief. The rejected record is retained.</p>}
-      {brief && !busy && <p className="hint mt-2" role="status">Saved · bookmark or reopen from your cases.</p>}
+      {brief && !busy && !brief.preview && <p className="hint mt-2" role="status">Saved · bookmark or reopen from your cases.</p>}
       {error && <div className="mt-3 space-y-2 text-sm">
         <p role="alert">{error}</p>
         {authenticated && <button className={control} style={card} disabled={busy} onClick={() => setReopen((value) => value + 1)}>Reload saved case</button>}
@@ -172,7 +193,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
           {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
-          <AnchorCard kind="defense-brief" subjectId={brief.id} record={brief} auditHashes={auditHashes} version={`${brief.id}-${brief.status}`} />
+          {!brief.preview && <AnchorCard kind="defense-brief" subjectId={brief.id} record={brief} auditHashes={auditHashes} version={`${brief.id}-${brief.status}`} />}
           {brief.action?.status === "completed" && <div className="record-status"><span>Owner finding recorded</span><span>Reviewer: accept / further work</span><span>Not operational closure or eliminated risk</span></div>}
           <Inspector label="Inspect evidence receipt" title="Evidence receipt and version">
           <p className="mono mt-3 break-all text-xs" style={{ color: "var(--text-faint)" }}>

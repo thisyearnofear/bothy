@@ -148,7 +148,9 @@ export function railStations(input: {
 }): RailStation[] {
   const { run, busy, brief, session } = input;
   const locked = !session.authenticated;
-  const lockNote = session.configured ? "Locked — sign in" : "Locked — SSO not configured";
+  // Drafting needs no sign-in (the agent previews, never signs); only the
+  // human stations stay gated on a named reviewer.
+  const lockNote = session.configured ? "Needs a named reviewer" : "Locked — SSO not configured";
   return [
     { id: "question", label: "Question", target: "investigation-question", state: "Catalogue question", done: true },
     {
@@ -158,7 +160,9 @@ export function railStations(input: {
     },
     {
       id: "brief", label: "Cited brief", target: "investigation-brief",
-      state: locked ? lockNote : brief?.claims.length ? "Drafted — deterministic" : "Not drafted",
+      state: locked
+        ? (brief?.preview ? "Previewed — not saved" : "Preview available")
+        : brief?.claims.length ? "Drafted — deterministic" : "Not drafted",
       done: Boolean(brief?.claims.length),
     },
     {

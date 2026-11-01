@@ -126,7 +126,10 @@ export interface DefenseBrief {
   // self-check — so a reviewer sees how the output was reached.
   reasoning?: { step: string; detail: string }[];
   recommendedAction: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "preview";
+  // Anonymous previews are never persisted: built from a stored capture but
+  // holding a `preview-<runId>` id, no creator and no case actions.
+  preview?: boolean;
   reassessment?: { subject: string; decision: "accepted" | "further-verification"; note: string; at: string };
   review?: { subject: string; decision: "approved" | "rejected"; note: string; at: string };
   action?: { owner: string; dueAt: string; status: "assigned" | "acknowledged" | "completed"; acknowledgedAt?: string; outcome?: string; completedAt?: string };

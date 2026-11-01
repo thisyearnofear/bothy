@@ -36,7 +36,7 @@ const upstream = (status: number, body: unknown) => {
 describe("allowPath", () => {
   it("permits the documented defence routes", () => {
     for (const [method, path] of [
-      ["GET", "/session"], ["POST", "/briefs"], ["GET", "/briefs/abc"],
+      ["GET", "/session"], ["POST", "/briefs"], ["POST", "/briefs/preview"], ["GET", "/briefs/abc"],
       ["GET", "/owners"], ["GET", "/briefs/page/0"], ["GET", "/briefs/page/20"],
       ["GET", "/briefs/page/review/0"], ["GET", "/briefs/page/work/20"], ["GET", "/briefs/page/assignment/0"],
       ["POST", "/briefs/abc/revisions"],
@@ -207,6 +207,16 @@ describe("lab routes", () => {
     assert.equal(up.calls[0].url, "http://agent.test/api/defense/lab/sandbox");
     assert.deepEqual(JSON.parse(String(up.calls[0].init.body)), { runId: "r1" });
     assert.equal((up.calls[0].init.headers as Record<string, string> | undefined)?.authorization, undefined);
+  });
+  it("forwards the brief preview without a session and only passes runId", async () => {
+    const up = upstream(200, { id: "preview-r1", preview: true });
+    const result = await proxyDefense(post("/briefs/preview", { runId: "r1", subject: "x", status: "approved" }), "/briefs/preview", SECRET, up.impl);
+    assert.equal(result.status, 200);
+    assert.equal(up.calls[0].url, "http://agent.test/api/defense/briefs/preview");
+    assert.deepEqual(JSON.parse(String(up.calls[0].init.body)), { runId: "r1" });
+    assert.equal((up.calls[0].init.headers as Record<string, string> | undefined)?.authorization, undefined);
+    const cross = await proxyDefense(post("/briefs/preview", { runId: "r1" }, { origin: "https://evil.example" }), "/briefs/preview", SECRET, upstream(200, {}).impl);
+    assert.equal(cross.status, 403);
   });
   it("accepts sandbox actions and refuses malformed session ids and cross-origin posts", async () => {
     assert.equal(allowPath("POST", `/lab/sandbox/${sid}/approve`).ok, true);

@@ -164,14 +164,18 @@ export class DefenseStore {
       return child;
     } catch (e) { this.db.exec("ROLLBACK"); throw e; }
   }
-  draft(runId: string, creator?: Principal, federation?: FederationCapture): DefenseBrief {
+  // Brief construction, separated from persistence: compose() validates the
+  // captured run and produces the deterministic DefenseBrief without touching
+  // any store. draft() adds the ledger writes; preview() performs none.
+  private compose(runId: string, creator?: Principal, federation?: FederationCapture, recall = true): { run: GraphRun; brief: DefenseBrief } {
     const run = this.run(runId);
     if (!run.graphCommit || !run.queryHash) throw new AccessError(409, "rerun the question to capture pinned evidence");
     const scenario = getScenarioDef(run.scenarioId);
     if (!scenario || scenario.cypher !== run.cypher || scenario.graph !== run.graph) throw new AccessError(409, "evidence does not match the reviewed catalogue");
     // Case memory recall runs before the draft so a repeat or related question
-    // surfaces prior investigations instead of starting cold.
-    const memory = recallInvestigations(`${scenario.title}. ${scenario.stakes}`);
+    // surfaces prior investigations instead of starting cold. Previews skip it:
+    // even a read is logged to the memory ledger, and a preview must not write.
+    const memory = recall ? recallInvestigations(`${scenario.title}. ${scenario.stakes}`) : null;
     const cell = (value: unknown) => {
       const text = String(value ?? "not recorded");
       return text.length > 120 ? `${text.slice(0, 117)}…` : text;
@@ -251,11 +255,27 @@ export class DefenseStore {
       status: "pending",
       ...(memory && memory.recalled.length ? { memory } : {}),
     };
+    return { run, brief };
+  }
+  draft(runId: string, creator?: Principal, federation?: FederationCapture): DefenseBrief {
+    const { run, brief } = this.compose(runId, creator, federation);
     for (const fed of federation?.runs ?? []) {
       this.db.prepare("INSERT INTO federated_runs (id, run) VALUES (?, ?)").run(fed.runId, JSON.stringify(fed));
     }
     this.db.prepare("INSERT INTO defense_briefs (id, status, brief) VALUES (?, ?, ?)").run(brief.id, brief.status, JSON.stringify(brief));
     recordInvestigation(brief, run, runId);
+    return brief;
+  }
+  // Anonymous preview: the same deterministic build from the stored run, but
+  // nothing is persisted — no brief row, no federated captures, no audit
+  // entry, no case-memory write and no model assist. It can never become a
+  // case: the id is namespaced and the status is "preview".
+  preview(runId: string): DefenseBrief {
+    const { brief } = this.compose(runId, undefined, undefined, false);
+    brief.id = `preview-${runId}`;
+    brief.status = "preview";
+    brief.preview = true;
+    delete brief.createdBySubject;
     return brief;
   }
   private transition(id: string, principal: Principal, action: string, change: (brief: DefenseBrief) => void) {
@@ -442,6 +462,15 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
       const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
       res.status(error.status).json({ error: error.message });
     }
+  });
+  // Anonymous preview of the deterministic brief — the same cited output a
+  // draft produces, but nothing is persisted or anchored, so it stays public
+  // like the graph captures it cites. Review/assignment remain behind auth.
+  router.post("/briefs/preview", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const runId = witnessRunId(req.body);
+    if (!runId) return res.status(400).json({ error: "only runId is accepted" });
+    handle(() => store.preview(runId), res);
   });
   router.use(auth.require("analyst", "reviewer", "action-owner"));
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });

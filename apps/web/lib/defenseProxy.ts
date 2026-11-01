@@ -13,6 +13,9 @@ import {
 const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
   { method: "GET", pattern: /^\/session$/, key: "GET /session" },
   { method: "POST", pattern: /^\/briefs$/, key: "POST /briefs" },
+  // Anonymous deterministic preview: no persistence on the agent, so it can
+  // cross the bridge without a session like the lab endpoints.
+  { method: "POST", pattern: /^\/briefs\/preview$/, key: "POST /briefs/preview" },
   { method: "GET", pattern: /^\/briefs\/page\/(0|[1-9]\d{0,5})$/, key: "GET /briefs/page/:offset" },
   { method: "GET", pattern: /^\/owners$/, key: "GET /owners" },
   { method: "GET", pattern: /^\/memory$/, key: "GET /memory" },
@@ -40,6 +43,7 @@ const ALLOWED: readonly { method: string; pattern: RegExp; key: string }[] = [
 // cannot even attempt to smuggle in a subject, commit, or evidence hash.
 const BODY_FIELDS: Record<string, readonly string[]> = {
   "POST /briefs": ["runId"],
+  "POST /briefs/preview": ["runId"],
   "POST /briefs/:id/revisions": ["runId"],
   "POST /lab/:id/run": [],
   "POST /lab/sandbox": ["runId"],
@@ -116,9 +120,9 @@ export async function proxyDefense(
   // the CSRF boundary explicit for an endpoint that approves interventions.
   if (method !== "GET" && !isSameOrigin(request, env)) return json(403, "cross-origin request refused");
 
-  // The lab runs against a throwaway database and carries no credential, so it
-  // is forwarded even without a session. Nothing else on this list is.
-  if (route.key.includes("/lab")) {
+  // The lab runs against a throwaway database and the brief preview persists
+  // nothing; both are forwarded even without a session. Nothing else is.
+  if (route.key.includes("/lab") || route.key === "POST /briefs/preview") {
     try {
       const response = await fetchImpl(`${env.AGENT_URL ?? "http://localhost:8787"}/api/defense${rawPath}`, {
         method,

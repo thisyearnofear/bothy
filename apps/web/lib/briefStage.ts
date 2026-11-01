@@ -2,6 +2,7 @@ import type { DefenseBrief } from "./api";
 
 export function briefStage(brief: DefenseBrief | null, analyzed: boolean) {
   if (!brief) return analyzed ? "Analyzed · ready to draft" : "Awaiting analysis";
+  if (brief.preview || brief.status === "preview") return "Preview · not saved · not approved";
   if (brief.status === "rejected") return "Rejected · new analysis required";
   if (brief.status === "pending") return "Awaiting reviewer decision";
   if (!brief.action) return "Approved · awaiting assignment";
