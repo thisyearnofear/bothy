@@ -1141,7 +1141,7 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
   padding-top: 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--rule);
-  overflow: hidden;
+  overflow: clip;
 }
 .field-head-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.5rem; }
 .field-steps { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0; padding: 0; list-style: none; font-size: 0.68rem; letter-spacing: 0.12em; color: var(--text-faint); }
@@ -1152,18 +1152,42 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
 .contours-tag { position: absolute; right: 0.25rem; bottom: 0.1rem; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); }
 
 .atlas {
-  display: grid;
+  --rail-top: 6.75rem;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
-  grid-template-columns: 1fr;
 }
-@media (min-width: 900px) {
-  .atlas { grid-template-columns: 210px minmax(0, 1fr) 280px; align-items: start; }
-  .atlas-main { grid-column: 2; }
-  .atlas-side { grid-column: 3; }
+.atlas-main,
+.atlas-side { display: contents; }
+.atlas-main > *,
+.atlas-side > * { min-width: 0; }
+/* Stacked order below 1280px mirrors the previous document order:
+   rail → main sections → drawer/inspect → coverage → evidence → snapshot → brief → workbench */
+.atlas > .rail { order: 0; }
+.atlas-main > .dep-canvas { order: 1; }
+.atlas-main > .atlas-summary { order: 2; }
+.atlas-main > .atlas-gaps { order: 3; }
+.atlas-main > .atl-timeline { order: 4; }
+.atlas-main > .geo { order: 5; }
+.atlas-side > .evidence-drawer { order: 6; }
+.atlas-side > .inspect-trigger { order: 7; }
+.atlas-main > .atlas-coverage { order: 8; }
+.atlas-main > .atlas-evidence { order: 9; }
+.atlas-side > .atlas-snapshot { order: 10; }
+.atlas-main > .atlas-brief { order: 11; }
+.atlas-main > .atlas-workbench { order: 12; }
+@media (min-width: 1024px) {
+  .atlas > .rail { position: sticky; top: var(--rail-top); z-index: 5; }
 }
-.atlas-coverage { grid-column: 1 / -1; min-width: 0; }
-.atlas-main { display: grid; gap: 1.25rem; min-width: 0; }
-.atlas-side { display: grid; gap: 1.25rem; min-width: 0; }
+@media (min-width: 1280px) {
+  .atlas { display: grid; grid-template-columns: 210px minmax(0, 1fr) 300px; align-items: stretch; }
+  .atlas > .rail { grid-column: 1; align-self: start; }
+  .atlas-main { grid-column: 2; display: grid; gap: 1.25rem; min-width: 0; align-content: start; }
+  .atlas-side { grid-column: 3; display: grid; gap: 1.25rem; min-width: 0; align-content: start; }
+  .atlas-side > .atlas-snapshot { position: sticky; top: var(--rail-top); }
+}
+.atlas-coverage { min-width: 0; }
+.atlas-evidence { min-width: 0; }
 
 .rail {
   border: 1px solid var(--rule);
@@ -1327,7 +1351,20 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
   background: var(--panel);
   padding: 1rem;
 }
-.cov-scroll { overflow-x: auto; margin-top: 0.75rem; }
+.cov-scroll {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+  /* Scroll-fade affordance: edge shadows appear only while the matrix is scrollable. */
+  background:
+    linear-gradient(to right, var(--panel) 30%, transparent),
+    linear-gradient(to left, var(--panel) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.22), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 0.22), transparent);
+  background-repeat: no-repeat;
+  background-size: 2.25rem 100%, 2.25rem 100%, 0.8rem 100%, 0.8rem 100%;
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-attachment: local, local, scroll, scroll;
+}
 .cov-table { border-collapse: collapse; width: 100%; font-size: 0.75rem; }
 .cov-table th, .cov-table td {
   border-bottom: 1px solid var(--rule);
@@ -1426,6 +1463,19 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, te
   overflow: hidden;
   border: 1px solid var(--rule);
   background: var(--page);
+}
+.geo-ctx-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.geo-ctx-list .btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 .geo-ctx-pin {
   font-family: var(--font-mono);

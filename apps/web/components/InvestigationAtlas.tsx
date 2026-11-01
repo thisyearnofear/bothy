@@ -14,7 +14,7 @@ import GeographicAtlas from "./GeographicAtlas";
 import RunTrace from "./RunTrace";
 import Inspector from "./Inspector";
 
-export default function InvestigationAtlas({ run, busy, scenario, session, brief, onPrepareVerification, onRequestChain, versionsPanel }: {
+export default function InvestigationAtlas({ run, busy, scenario, session, brief, onPrepareVerification, onRequestChain, versionsPanel, evidencePanel, snapshotCard, briefPanel, workbenchPanel }: {
   run: GraphRun | null;
   busy: boolean;
   scenario: GraphScenario | undefined;
@@ -23,6 +23,10 @@ export default function InvestigationAtlas({ run, busy, scenario, session, brief
   onPrepareVerification: () => void;
   onRequestChain?: () => void;
   versionsPanel?: ReactNode;
+  evidencePanel?: ReactNode;
+  snapshotCard?: ReactNode;
+  briefPanel?: ReactNode;
+  workbenchPanel?: ReactNode;
 }) {
   const [selected, setSelected] = useState<InspectSelection | null>(null);
   const [sample, setSample] = useState(0);
@@ -99,7 +103,7 @@ export default function InvestigationAtlas({ run, busy, scenario, session, brief
           </section>
         )}
 
-        <section className="rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-label="Exposure summary" aria-live="polite">
+        <section className="atlas-summary rounded-lg border px-4 py-3" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-label="Exposure summary" aria-live="polite">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Exposure, not confirmed stoppage</p>
             <h2 className="text-lg font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>{summary?.heading ?? "Start with one dependency question."}</h2>
@@ -115,7 +119,7 @@ export default function InvestigationAtlas({ run, busy, scenario, session, brief
         </section>
 
         {summary && (
-          <section className="rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-label="Verification gaps">
+          <section className="atlas-gaps rounded-lg border p-4" style={{ borderColor: "var(--rule)", background: "var(--panel)" }} aria-label="Verification gaps">
             <p className="context-note">{summary.explanation}</p>
             <h3 className="mt-3 text-sm font-semibold">What still needs verification</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{summary.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
@@ -136,6 +140,23 @@ export default function InvestigationAtlas({ run, busy, scenario, session, brief
           selectedContext={context}
           onSelectContext={setContext}
         />
+
+        {run && (
+          <div className="atlas-coverage">
+            <EvidenceCoverage
+              key={run.runId}
+              run={run}
+              brief={brief}
+              selected={selected}
+              onSelect={inspect}
+              onPrepareVerification={onPrepareVerification}
+            />
+          </div>
+        )}
+
+        {evidencePanel}
+        {briefPanel}
+        {workbenchPanel}
       </div>
 
       <aside className="atlas-side">
@@ -146,20 +167,9 @@ export default function InvestigationAtlas({ run, busy, scenario, session, brief
         <Inspector label="Inspect captured run" title="Captured run — replay of stored results">
           <RunTrace run={run} busy={busy} />
         </Inspector>
-      </aside>
 
-      {run && (
-        <div className="atlas-coverage">
-          <EvidenceCoverage
-            key={run.runId}
-            run={run}
-            brief={brief}
-            selected={selected}
-            onSelect={inspect}
-            onPrepareVerification={onPrepareVerification}
-          />
-        </div>
-      )}
+        {snapshotCard}
+      </aside>
     </div>
   );
 }

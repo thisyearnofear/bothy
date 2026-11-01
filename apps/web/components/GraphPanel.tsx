@@ -263,10 +263,8 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
             {!commits.length && <p className="hint mt-3">Load graph versions to replay the reviewed query against a pinned revision.</p>}
           </div>
         }
-      />
-
-      <div id="investigation-evidence" tabIndex={-1} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
-        <section className="min-w-0 card p-4 sm:p-5" aria-label="Captured evidence">
+        evidencePanel={
+          <section id="investigation-evidence" tabIndex={-1} className="atlas-evidence card p-4 sm:p-5" aria-label="Captured evidence">
           <div className="receipt-strip"><div><p className="eyebrow">Captured evidence</p><p className="readout mt-3">{rows ? rows.rows.length : "—"} <span className="readout-label">rows</span></p></div>
           <Inspector label="Inspect captured rows" title="Captured query evidence" disabled={!rows}>
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Exposure, not confirmed stoppage</p>
@@ -296,9 +294,10 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
           )}
           </Inspector></div>
           <p className="hint mt-4">Stored rows, not a fresh query. A bounded capture is not total programme exposure.</p>
-        </section>
-
-        <aside className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
+          </section>
+        }
+        snapshotCard={
+        <aside className="atlas-snapshot rounded-lg border p-4 sm:p-5" style={card} aria-label="Evidence snapshot">
           <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--cursor)" }}>Evidence snapshot</p>
           <h2 className="mt-2 text-lg font-semibold" style={{ color: "var(--text-strong)" }}>Unapproved analysis</h2>
           <div className="record-status mt-3"><span>Graph capture</span><span>Not an intervention approval</span></div>
@@ -331,13 +330,14 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
             </div>
           )}
         </aside>
-      </div>
-
-      <div id="investigation-brief" tabIndex={-1}>
+        }
+        briefPanel={
+      <div id="investigation-brief" className="atlas-brief" tabIndex={-1}>
         <DefenseBriefPanel key={rows?.runId ?? activeId} run={rows} session={session} onBriefChange={onBriefChange} />
       </div>
-
-      <div className="receipt-strip"><p className="hint">Stay with the captured evidence, or inspect its mechanics.</p><Inspector label="Open query & version workbench" title="Query, replay and simulation">
+        }
+        workbenchPanel={
+      <div className="receipt-strip atlas-workbench"><p className="hint">Stay with the captured evidence, or inspect its mechanics.</p><Inspector label="Open query & version workbench" title="Query, replay and simulation">
         {active && <pre className="mono mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>{active.cypher}</pre>}
         <div className="mt-4 flex flex-wrap gap-2">
           <button className={control} style={card} disabled={busy || active?.graph !== "supply_chain_deep" || health !== true || !session.authenticated || !session.roles.some((role) => role === "analyst" || role === "reviewer")} onClick={() => void execute(async (gen) => {
@@ -352,6 +352,8 @@ export default function GraphPanel({ initialSession, initialScenarioId, presenta
         {simNote && <p className="mt-3 text-sm">{simNote}</p>}
         <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>Catalogue-only, pinned reads use isolated graph clients. Simulation requires SSO and cannot submit changes. Daemon-side abandoned-change reclamation and independent operational validation remain outstanding.</p>
       </Inspector></div>
+        }
+      />
     </section>
   );
 }
