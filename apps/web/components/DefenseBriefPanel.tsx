@@ -147,7 +147,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, ini
     <section className="rounded-lg border p-4 sm:p-5" style={card} aria-label="Programme verification brief">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? "Saving…" : savedCase && !brief ? "Reopening saved case" : briefStage(brief, Boolean(run))}</p>
+          <p role="status" className="text-sm font-medium" style={{ color: "var(--cursor)" }}>{busy ? (authenticated ? "Saving…" : "Querying Zetaris live…") : savedCase && !brief ? "Reopening saved case" : briefStage(brief, Boolean(run))}</p>
           <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-strong)" }}>{brief?.title ?? (savedCase ? "Saved verification brief" : "Prepare a cited verification brief")}</h2>
         </div>
         {authenticated ? (
@@ -272,7 +272,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, ini
             <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>Meterless H-MEM recall · {brief.memory.strategy} · {brief.memory.retrievalReason}</p>
           </div>}
           <p className="text-sm leading-relaxed"><strong>Next verification:</strong> {brief.recommendedAction}</p>
-          {!authenticated && <p className="text-sm">Sign in with case access to inspect citations and full evidence.</p>}
+          {!authenticated && !brief.preview && <p className="text-sm">Sign in with case access to inspect citations and full evidence.</p>}
           {evidence && selected && <div ref={target} tabIndex={-1} className="rounded-lg border p-4" style={{ borderColor: "var(--cursor)" }} aria-label={`Captured evidence row ${selected.row + 1}, ${selected.column}`}>
             <p role="status" className="text-sm font-semibold">Selected captured row {selected.row + 1}: {selected.column}</p>
             <dl className="mt-3 space-y-2">{evidence.columns.map((column) => <div key={column} className="break-words text-sm">
