@@ -30,6 +30,22 @@ retain the default `0.0.0.0` API binding behind the proxy.
 - `bash scripts/witness-qr.sh` follows run → captured `runId` → witness export.
   It creates local artifacts; it does not submit or publish anything.
 
+### Anonymous cited-brief preview and the Zetaris demo stack
+
+`POST /api/defense/briefs/preview` (body `{ runId }` only) returns the deterministic
+brief with live Zetaris captures inline and persists nothing; it needs no session and
+is cached per run for 10 minutes with a process-wide cap of 12 uncached captures a
+minute (429 + Retry-After). Saving, review and assignment stay behind sign-in.
+Production has no `ZETARIS_*` settings, so a prod preview states the federation gap.
+
+To show live Zetaris (for example to record a demo): run the stack locally with a
+production web build (`next build` + `next start`, never `next dev`), open
+`ssh -f -N -o ExitOnForwardFailure=yes -L 3000:127.0.0.1:3000 snapflip-vultr` (until
+Zetaris is migrated, then point the tunnel at the new host), and keep the repo `.env`
+`ZETARIS_*` values (never print them). `session.configured` is decided by the agent's
+`BOTHY_OIDC_*` settings, not the web's. Stop the tunnel and every service by PID when
+finished; do not use broad `pkill`.
+
 Witnesses are **unapproved analysis**, not signed decisions. Hash linkage is
 not authentication or immutable storage. Public demo links must not contain
 buyer-sensitive data. Both agent and sidecar enforce the exact reviewed

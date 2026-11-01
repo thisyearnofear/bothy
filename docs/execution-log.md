@@ -1,5 +1,85 @@
 # Execution log
 
+## 1 November 2026: demo-readiness — sticky layout, anonymous cited-brief preview, live-Zetaris recording
+
+**Why.** The Zetaris Demo Challenge needs a screen-recorded demo of the product with
+Zetaris working live. A first cut was rejected (annotations on empty space,
+crop-zooms hiding the UI, dull layout, and a sign-in wall in front of the brief).
+Measured on prod after Analyze: no sticky progress rail (5-step rail scrolled away),
+page 3.6 screens tall at 1080p, inconsistent column widths, coverage table 639 px in a
+390 px viewport, map pins outside the viewport, and the brief gated behind the demo
+IdP's invite passphrase (Caddy basic auth on `/idp/interaction/*`).
+
+**Layout (`52f283a`).** One rail | main | aside grid at >=1280 px; the workflow rail is
+sticky at >=1024 px; the Evidence snapshot is a sticky right-column card at >=1280 px;
+the coverage table scrolls inside its own wrapper; decorative contours are clipped;
+map country buttons are an inline chip row. Measured with a browser script at
+1920x1080, 1280x720, 768x1024 and 390x844 after Analyze, at scrollY 0/1000/2000/3000:
+`scrollWidth === innerWidth` and zero elements past the viewport outside intentional
+scroll/clip containers; rail and snapshot stay inside the frame.
+
+**Anonymous cited-brief preview (`18a27f3`, `859b551`, `42ffd4d`, `f62f9a0`).**
+`POST /api/defense/briefs/preview` accepts only `{ runId }`, needs no session, and
+persists **nothing**: no `defense_briefs` or `federated_runs` row, no audit entry, no
+evidence anchoring, no case-memory write or read, no model assist. The response is the
+same deterministic brief a draft produces, with `status: "preview"`, `preview: true`,
+id `preview-<runId>`, no creator, and the live Zetaris captures inline as
+`previewFederated` (a draft freezes them into `federated_runs`; a preview cannot, so the
+browser resolves citations from the inline copy and never calls an authenticated
+endpoint). Review, assignment and acknowledgment still require a named reviewer and are
+unchanged — the rail now says "Needs a named reviewer" instead of "Locked — sign in".
+Abuse protection (no per-IP limiter exists on the anonymous run endpoint either): a
+per-runId result cache (10 min; an unavailable federation is not cached) and a
+process-wide bucket of 12 uncached captures per minute, answering 429 + Retry-After.
+`gallium-exposure` federates two Zetaris questions per uncached preview, so worst case is
+about 24 SQL calls a minute. `draft()` is unchanged for authenticated callers (brief
+construction was split into a private `compose()`; persistence stays in `draft()`).
+UI wording fixed in `f62f9a0`: the busy label says "Querying Zetaris live…" for an
+anonymous preview (it said "Saving…"), and the "sign in to inspect citations" hint no
+longer shows on previews.
+
+**Validation.** Agent suite 73 pass / 0 fail, web suite 153 pass / 0 fail, typecheck and
+lint clean (three pre-existing warnings). New tests: preview returns cited claims with no
+auth header; preview leaves `defense_briefs`/`defense_audit`/`federated_runs` unchanged
+and never calls the anchor seam; injected-exec federation is cited inline; unavailable
+Zetaris degrades to a stated gap; cache hit does not re-run SQL; the 13th uncached
+preview in a minute returns 429 and recovers when the clock advances; authenticated draft
+still writes exactly one brief; web preview renders Zetaris attribution without invoking
+any authenticated fetch seam.
+
+**Deployed.** Backup `~/backups/bothy-pre-preview-20261101-1551.tgz` (mode 600, excludes
+`graphs/`), `git archive` overlay onto `~/bothy`, `docker compose -p bothy ... up -d
+--build` (all services, then web only for `f62f9a0`). Live config (`deploy/.env.production`,
+`.env.sso`, `invite.caddy`, `.invite-passphrase`) verified intact after each overlay.
+Production check: `/api/health` ok; Analyze then Preview returns 200 in about 330 ms with
+5 cited claims, banner "Preview · not saved · not approved", no authenticated requests.
+
+**Finding: production has no Zetaris.** The prod agent has no `ZETARIS_*` settings (by
+design: nuncio has 7.7 GB RAM and Zetaris stayed on `snapflip-vultr`), so a prod preview
+reports both federated questions "unavailable" and states the gap — it does not fake data.
+
+**Live-Zetaris recording.** A local production build (no dev badge) with an SSH tunnel to
+Zetaris on `snapflip-vultr` (`ssh -N -L 3000:127.0.0.1:3000`, repo `.env` already points
+at `localhost:3000`). Verified live: Ops inventory 4 of 4 rows, Cross-source reconciliation
+6 of 6 rows (one Lightning SQL statement federating BOTHY_OPS, SEC_DATA and
+COMPANY_DNS_EU), 11 cited claims (6 federated), citation self-check 35/35, 34 graph
+rows, pinned commit `fa702a03`. Note `session.configured` is computed by the **agent**
+(`createAuth`, `BOTHY_OIDC_*`), not the web: to make a local run read like prod
+("Needs a named reviewer" rather than "SSO not configured") the agent was started with
+loopback placeholder OIDC settings; no IdP ran and nobody signed in.
+Capture: `agent-browser record` is 10 fps; Playwright `recordVideo` at viewport
+1280x720 / DSF 1.5 only upscales; the working method is a 1920x1080 viewport with
+`documentElement.style.zoom = 1.5` (1280 CSS px layout, native 1920x1080 raster, 25 fps).
+
+**Not done / not claimed.** Production still shows no live Zetaris. `snapflip-vultr` is
+being decommissioned: its Zetaris stack (about 10 GB of images from the private hackathon
+registry, about 3.2 GB RAM, data under 100 MB) must be moved to a new Vultr host
+(recommended 4 vCPU / 16 GB / 160 GB+, Los Angeles to share a private network with
+nuncio); its Zetaris UI is currently bound to 0.0.0.0:3000 and should be loopback-only on
+the new host. No global per-IP rate limit on anonymous endpoints. Nothing here is customer
+data; demo data is synthetic/public.
+
+
 ## 30 October 2026 (late): production verified, pixel-diff goldens, strict CI
 
 **Production live at bothy.trustfall.xyz.** DNS flipped to nuncio
