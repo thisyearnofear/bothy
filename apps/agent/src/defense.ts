@@ -10,7 +10,7 @@ import { LAB_SCENARIOS, runLab } from "./lab";
 import { actSandbox, createSandbox, type SandboxAction } from "./labSession";
 import { caseMemoryStatus, recallInvestigations, recordDecision, recordInvestigation } from "./memory/caseMemory";
 import { zetarisStatus } from "./integrations/zetaris";
-import { captureFederation, federatedHash, type FederationCapture } from "./integrations/federated";
+import { captureFederation, federatedHash, type Exec, type FederationCapture } from "./integrations/federated";
 import { draftFederatedNarrative, critiqueNarrative } from "./integrations/briefAssist";
 import { briefAnchorPayload, decisionAnchorPayload, canonicalJSON } from "../../../packages/shared/src/anchor";
 import type { AnchorStore } from "./anchors";
@@ -87,8 +87,8 @@ export class DefenseStore {
     }
   }
   /** Capture reviewed federated questions for the run's scenario (Zetaris). */
-  captureFederation(runId: string): Promise<FederationCapture> {
-    return captureFederation(this.run(runId).scenarioId);
+  captureFederation(runId: string, exec?: Exec): Promise<FederationCapture> {
+    return captureFederation(this.run(runId).scenarioId, exec);
   }
   get(id: string): DefenseBrief {
     const row = this.db.prepare("SELECT brief FROM defense_briefs WHERE id = ?").get(id) as { brief: string } | undefined;
@@ -266,16 +266,20 @@ export class DefenseStore {
     recordInvestigation(brief, run, runId);
     return brief;
   }
-  // Anonymous preview: the same deterministic build from the stored run, but
-  // nothing is persisted — no brief row, no federated captures, no audit
-  // entry, no case-memory write and no model assist. It can never become a
-  // case: the id is namespaced and the status is "preview".
-  preview(runId: string): DefenseBrief {
-    const { brief } = this.compose(runId, undefined, undefined, false);
+  // Anonymous preview: the same deterministic build from the stored run plus a
+  // live Zetaris federation, but nothing is persisted — no brief row, no
+  // federated_runs rows, no audit entry, no case-memory write and no model
+  // assist. It can never become a case: the id is namespaced and the status is
+  // "preview". Because the federated captures are not stored, they travel
+  // inline on previewFederated for the browser's citation inspection.
+  async preview(runId: string, exec?: Exec): Promise<DefenseBrief> {
+    const federation = await this.captureFederation(runId, exec);
+    const { brief } = this.compose(runId, undefined, federation, false);
     brief.id = `preview-${runId}`;
     brief.status = "preview";
     brief.preview = true;
     delete brief.createdBySubject;
+    brief.previewFederated = federation.runs;
     return brief;
   }
   private transition(id: string, principal: Principal, action: string, change: (brief: DefenseBrief) => void) {
@@ -343,12 +347,48 @@ export class DefenseStore {
   }
 }
 
+// Abuse protection for the anonymous preview: previews are cached per runId
+// for ten minutes (cached hits never reach Zetaris), and uncached federation
+// captures draw from a process-wide token bucket so a loop of distinct runIds
+// cannot fan out to a metered source unbounded.
+export class PreviewGate {
+  private cache = new Map<string, { brief: DefenseBrief; expiresAt: number }>();
+  private window: number[] = [];
+  constructor(
+    private now: () => number = () => Date.now(),
+    private ttlMs = 10 * 60 * 1000,
+    private perMinute = 12,
+  ) {}
+  cached(runId: string): DefenseBrief | undefined {
+    const entry = this.cache.get(runId);
+    if (!entry) return undefined;
+    if (entry.expiresAt <= this.now()) {
+      this.cache.delete(runId);
+      return undefined;
+    }
+    return entry.brief;
+  }
+  remember(runId: string, brief: DefenseBrief) {
+    this.cache.set(runId, { brief, expiresAt: this.now() + this.ttlMs });
+  }
+  /** Returns null when a token was granted, else Retry-After seconds. */
+  acquire(): number | null {
+    const now = this.now();
+    this.window = this.window.filter((at) => now - at < 60_000);
+    if (this.window.length >= this.perMinute) {
+      return Math.max(1, Math.ceil((60_000 - (now - this.window[0])) / 1000));
+    }
+    this.window.push(now);
+    return null;
+  }
+}
+
 const reviewBody = z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(2000).default("") }).strict();
 const assignmentBody = z.object({ owner: z.string().trim().min(1).max(200), dueAt: z.iso.datetime() }).strict();
 const reassessmentBody = z.object({ decision: z.enum(["accepted", "further-verification"]), note: z.string().trim().min(1).max(2000) }).strict();
 const outcomeBody = z.object({ outcome: z.string().trim().min(1).max(2000) }).strict();
 
-export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAuth>, anchors?: AnchorStore) {
+export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAuth>, anchors?: AnchorStore, preview?: { gate?: PreviewGate; exec?: Exec }) {
   const router = Router();
   const store = new DefenseStore(db);
   const handle = (operation: () => unknown, res: import("express").Response, created = false) => {
@@ -466,11 +506,27 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
   // Anonymous preview of the deterministic brief — the same cited output a
   // draft produces, but nothing is persisted or anchored, so it stays public
   // like the graph captures it cites. Review/assignment remain behind auth.
-  router.post("/briefs/preview", (req, res) => {
+  // The federation fan-out is guarded by a per-runId cache and a token bucket.
+  const gate = preview?.gate ?? new PreviewGate();
+  router.post("/briefs/preview", async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     const runId = witnessRunId(req.body);
     if (!runId) return res.status(400).json({ error: "only runId is accepted" });
-    handle(() => store.preview(runId), res);
+    const cached = gate.cached(runId);
+    if (cached) return res.json(cached);
+    const retryAfter = gate.acquire();
+    if (retryAfter !== null) {
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({ error: "preview busy, try again shortly" });
+    }
+    try {
+      const brief = await store.preview(runId, preview?.exec);
+      gate.remember(runId, brief);
+      res.json(brief);
+    } catch (e) {
+      const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
+      res.status(error.status).json({ error: error.message });
+    }
   });
   router.use(auth.require("analyst", "reviewer", "action-owner"));
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });

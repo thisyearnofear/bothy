@@ -19,8 +19,8 @@ const SIGN_IN_ERRORS: Record<string, string> = {
   token_endpoint_unreachable: "The SSO token endpoint is unreachable.",
 };
 
-export default function DefenseBriefPanel({ run, session, savedCase = false, onBriefChange }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean; onBriefChange?: (brief: DefenseBrief | null) => void }) {
-  const [brief, setBrief] = useState<DefenseBrief | null>(null);
+export default function DefenseBriefPanel({ run, session, savedCase = false, initialBrief, onBriefChange }: { run: GraphRun | null; session: DefenseSession; savedCase?: boolean; initialBrief?: DefenseBrief | null; onBriefChange?: (brief: DefenseBrief | null) => void }) {
+  const [brief, setBrief] = useState<DefenseBrief | null>(initialBrief ?? null);
   const [evidence, setEvidence] = useState<GraphRun | FederatedRun | null>(null);
   const [busy, setBusy] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -187,11 +187,17 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
       </div>}
       {brief && (
         <div className="mt-5 space-y-5 border-t pt-5" style={{ borderColor: "var(--rule)" }}>
+          {brief.preview ? (
+            <p className="mono rounded-lg border p-3 text-xs" style={card}>
+              Preview of {brief.title.replace(/: verification brief$/, "")} · graph commit {brief.graphCommit.slice(0, 8)} · Zetaris captures: {brief.previewFederated?.length ?? 0}
+            </p>
+          ) : (
           <dl className="grid gap-3 rounded-lg border p-4 sm:grid-cols-3" style={card} aria-label="Case responsibility">
             <div><dt className="text-xs uppercase tracking-wide">Case</dt><dd className="mt-2 break-all text-sm">{brief.id}</dd></div>
             <div><dt className="text-xs uppercase tracking-wide">Verification owner</dt><dd className="mt-2 break-words text-sm">{brief.action?.owner ?? "Not assigned yet"}</dd></div>
             <div><dt className="text-xs uppercase tracking-wide">Due</dt><dd className="mt-2 text-sm">{brief.action ? new Date(brief.action.dueAt).toLocaleString() : "Set during assignment"}</dd></div>
           </dl>
+          )}
           {authenticated && <AuditBadge briefId={brief.id} version={`${brief.status}-${brief.action?.status ?? ""}-${brief.reassessment?.decision ?? ""}`} />}
           {!brief.preview && <AnchorCard kind="defense-brief" subjectId={brief.id} record={brief} auditHashes={auditHashes} version={`${brief.id}-${brief.status}`} />}
           {brief.action?.status === "completed" && <div className="record-status"><span>Owner finding recorded</span><span>Reviewer: accept / further work</span><span>Not operational closure or eliminated risk</span></div>}
@@ -213,20 +219,26 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
           </section>}
           <section aria-label="Cited findings"><h3 className="eyebrow">{brief.claims.length} cited findings / select a row to inspect</h3>
           <ol className="mt-4 space-y-3">
-            {brief.claims.map((claim, index) => <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
+            {brief.claims.map((claim, index) => {
+              const fedRun = (brief.previewFederated ?? []).find((fed) => claim.citations.some((cit) => cit.runId === fed.runId));
+              const isFederated = Boolean(fedRun) || claim.citations.some((cit) => (brief.federated?.runIds ?? []).includes(cit.runId));
+              return <li key={index} className="border-l pl-3" style={{ borderColor: "var(--cursor)" }}>
               <p className="break-words text-sm">{claim.text}</p>
+              {isFederated && <p className="mono mt-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Zetaris federation{fedRun ? ` · ${fedRun.title}` : ""}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
                 {claim.citations.map((citation, citationIndex) => <button key={citationIndex} className={control} style={card}
-                  disabled={busy || !authenticated} onClick={async () => {
+                  disabled={busy || (!authenticated && !brief.preview)} onClick={async () => {
                     setBusy(true); setError("");
                     try {
                       if (citation.runId === brief.runId) {
-                        const captured = await api.defenseEvidence(brief.id);
+                        // Previews inspect the in-memory run; nothing is fetched.
+                        const captured = brief.preview && run ? run : await api.defenseEvidence(brief.id);
                         const match = validateCitation(brief, captured, citation);
                         if (alive.current) { setEvidence(captured); setSelected({ row: match.row, column: match.column }); }
-                      } else if ((brief.federated?.runIds ?? []).includes(citation.runId)) {
-                        const runs = await api.defenseFederated(brief.id);
-                        const captured = runs.find((fed) => fed.runId === citation.runId);
+                      } else if ((brief.federated?.runIds ?? []).includes(citation.runId) || (brief.previewFederated ?? []).some((fed) => fed.runId === citation.runId)) {
+                        const captured = brief.preview
+                          ? (brief.previewFederated ?? []).find((fed) => fed.runId === citation.runId)
+                          : (await api.defenseFederated(brief.id)).find((fed) => fed.runId === citation.runId);
                         if (!captured) throw new Error("The cited federated capture is not bound to this brief.");
                         const match = validateFederatedCitation(brief, captured, citation);
                         if (alive.current) { setEvidence(captured); setSelected({ row: match.row, column: match.column }); }
@@ -242,7 +254,7 @@ export default function DefenseBriefPanel({ run, session, savedCase = false, onB
                     } finally { if (alive.current) setBusy(false); }
                   }}>Inspect row {citation.row + 1}, {citation.column}</button>)}
               </div>
-            </li>)}
+            </li>;})}
           </ol></section>
           {!brief.claims.length && <p className="text-sm">No claims are recorded in this brief. Inspect its retained evidence; an empty claim list does not establish no exposure.</p>}
           <div>

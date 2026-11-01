@@ -72,7 +72,7 @@ export interface FederationCapture {
 export const federatedHash = (runs: FederatedRun[]) =>
   createHash("sha256").update(JSON.stringify(runs)).digest("hex");
 
-type Exec = (sql: string, limit: number) => Promise<ZetarisRows>;
+export type Exec = (sql: string, limit: number) => Promise<ZetarisRows>;
 
 const sqlHash = (sql: string) => createHash("sha256").update(sql).digest("hex");
 

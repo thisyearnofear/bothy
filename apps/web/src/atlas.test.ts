@@ -25,7 +25,8 @@ import EvidenceCoverage from "../components/EvidenceCoverage";
 import InvestigationRail from "../components/InvestigationRail";
 import InvestigationTimeline from "../components/InvestigationTimeline";
 import GeographicAtlas from "../components/GeographicAtlas";
-import type { DefenseBrief, DefenseSession, GraphRun } from "../lib/api";
+import DefenseBriefPanel from "../components/DefenseBriefPanel";
+import { api, type DefenseBrief, type DefenseSession, type FederatedRun, type GraphRun } from "../lib/api";
 
 const session: DefenseSession = { configured: true, authenticated: true, roles: ["analyst"], subject: "analyst-1" };
 
@@ -219,6 +220,44 @@ test("unauthenticated rail offers a brief preview while human stations need a re
   const unconfigured = railStations({ run, busy: false, brief: null, session: { configured: false, authenticated: false, roles: [] } });
   assert.equal(unconfigured.find((s) => s.id === "brief")?.state, "Preview available");
   assert.equal(unconfigured.find((s) => s.id === "review")?.state, "Locked — SSO not configured");
+});
+
+test("preview brief renders Zetaris attribution without any authenticated fetch seams", () => {
+  const calls: string[] = [];
+  const [origEvidence, origFederated, origAudit] = [api.defenseEvidence, api.defenseFederated, api.defenseAudit];
+  api.defenseEvidence = ((..._args: unknown[]) => { calls.push("evidence"); return Promise.reject(new Error("must not fetch")); }) as never;
+  api.defenseFederated = ((..._args: unknown[]) => { calls.push("federated"); return Promise.reject(new Error("must not fetch")); }) as never;
+  api.defenseAudit = ((..._args: unknown[]) => { calls.push("audit"); return Promise.reject(new Error("must not fetch")); }) as never;
+  try {
+    const fed = {
+      runId: "fed-1", questionId: "ops-inventory-contracts", title: "Ops inventory and contract extract",
+      kind: "rows", source: "zetaris", sql: "SELECT 1", sqlHash: "h", capturedAt: "2026-10-26T00:00:00Z",
+      columns: ["supplier"], rows: [{ supplier: "Meridian Compound Semis" }], count: 1, total: 1,
+      sourceBoundary: "Synthetic ops extract boundary.",
+    } as FederatedRun;
+    const previewBrief = brief({
+      status: "preview", preview: true, id: "preview-chainrun", graphCommit: "abc123def456",
+      claims: [{ text: "Ops extract cites a supplier.", citations: [{ runId: "fed-1", row: 0, column: "supplier" }] }],
+      federated: { engine: "zetaris", runIds: ["fed-1"], hash: "h", unavailable: [] },
+      previewFederated: [fed],
+    });
+    const html = renderToStaticMarkup(createElement(DefenseBriefPanel, {
+      run: chainRun([CHAIN_ROW]),
+      session: { configured: true, authenticated: false, roles: [] },
+      initialBrief: previewBrief,
+    }));
+    assert.match(html, /Preview · not saved · not approved/);
+    assert.match(html, /Zetaris federation · Ops inventory and contract extract/);
+    assert.match(html, /graph commit abc123de · Zetaris captures: 1/);
+    assert.doesNotMatch(html, /Not assigned yet/);
+    // Citation inspection stays enabled for previews — it resolves in-memory.
+    assert.match(html, /Inspect row 1, supplier/);
+    assert.deepEqual(calls, []);
+  } finally {
+    api.defenseEvidence = origEvidence;
+    api.defenseFederated = origFederated;
+    api.defenseAudit = origAudit;
+  }
 });
 
 test("public events mode shows sourced beats without mixing graph capture dates", () => {

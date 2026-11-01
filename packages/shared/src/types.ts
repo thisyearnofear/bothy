@@ -130,6 +130,10 @@ export interface DefenseBrief {
   // Anonymous previews are never persisted: built from a stored capture but
   // holding a `preview-<runId>` id, no creator and no case actions.
   preview?: boolean;
+  // On preview briefs only: the live Zetaris captures that would have been
+  // frozen into federated_runs by a draft. They travel inline because a
+  // preview persists nothing — `federated.runIds` has no rows to look up.
+  previewFederated?: FederatedRun[];
   reassessment?: { subject: string; decision: "accepted" | "further-verification"; note: string; at: string };
   review?: { subject: string; decision: "approved" | "rejected"; note: string; at: string };
   action?: { owner: string; dueAt: string; status: "assigned" | "acknowledged" | "completed"; acknowledgedAt?: string; outcome?: string; completedAt?: string };

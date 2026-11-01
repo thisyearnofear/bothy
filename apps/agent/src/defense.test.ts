@@ -8,7 +8,7 @@ import type { AddressInfo } from "node:net";
 import express from "express";
 import { createAuth } from "./auth";
 import { authFixture } from "./test/authFixture";
-import { DefenseStore, defenseRouter } from "./defense";
+import { DefenseStore, defenseRouter, PreviewGate } from "./defense";
 import { captureGraphRun } from "./graph/witness";
 import { SCENARIOS } from "./graph/scenarios";
 import { federatedHash } from "./integrations/federated";
@@ -402,15 +402,103 @@ test("preview writes nothing: no brief, audit, federated rows or anchor call", a
   }
 });
 
-test("preview of an unknown or unpinned run fails like a draft", () => {
+test("preview of an unknown or unpinned run fails like a draft", async () => {
   const { db, store, run } = fixture();
   try {
-    assert.throws(() => store.preview("no-such-run"), /captured run not found/);
+    await assert.rejects(store.preview("no-such-run"), /captured run not found/);
     assert.throws(() => store.draft("no-such-run"), /captured run not found/);
     db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify({ ...run, graphCommit: null }), run.runId);
-    assert.throws(() => store.preview(run.runId), /pinned evidence/);
+    await assert.rejects(store.preview(run.runId), /pinned evidence/);
     db.prepare("UPDATE graph_runs SET run = ? WHERE id = ?").run(JSON.stringify(run), run.runId);
   } finally { db.close(); }
+});
+
+const previewExec = (calls: string[] = []) => ({
+  calls,
+  exec: async (sql: string): Promise<{ headers: string[]; data: unknown[][]; total: number }> => {
+    calls.push(sql);
+    return {
+      headers: ["entry_name", "evidence_source", "detail"],
+      data: [["Meridian Compound Semis", "ops-inventory", "contract-77"], ["Ford Motor Co", "sec-edgar-filings", "revenue fact"]],
+      total: 2,
+    };
+  },
+});
+
+test("preview federates through an injected exec, cites it inline, and persists nothing", async () => {
+  const { db, store, run } = fixture();
+  const { exec, calls } = previewExec();
+  try {
+    const brief = await store.preview(run.runId, exec);
+    assert.ok(calls.length >= 1);
+    assert.equal(brief.preview, true);
+    assert.equal(brief.id, `preview-${run.runId}`);
+    assert.equal(brief.status, "preview");
+    assert.equal(brief.previewFederated?.length, 2);
+    const fedCited = brief.claims.filter((claim) => claim.citations.some((cit) => cit.runId !== run.runId));
+    assert.ok(fedCited.length >= 1);
+    assert.ok(brief.previewFederated!.some((fed) => fedCited.some((claim) => claim.citations.some((cit) => cit.runId === fed.runId))));
+    assert.ok(brief.federated?.runIds.length);
+    assert.equal(brief.federated?.engine, "zetaris");
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM defense_briefs").get() as { n: number }).n, 0);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM defense_audit").get() as { n: number }).n, 0);
+    assert.equal((db.prepare("SELECT COUNT(*) AS n FROM federated_runs").get() as { n: number }).n, 0);
+  } finally { db.close(); }
+});
+
+test("unavailable Zetaris degrades to a stated gap with empty previewFederated", async () => {
+  const { db, store, run } = fixture();
+  try {
+    const brief = await store.preview(run.runId, async () => { throw new Error("zetaris unreachable"); });
+    assert.equal(brief.preview, true);
+    assert.deepEqual(brief.previewFederated, []);
+    assert.ok(brief.gaps.some((gap) => gap.includes("could not be captured at draft time")));
+    assert.ok((brief.federated?.unavailable.length ?? 0) >= 1);
+    // The deterministic claims still cite the stored graph run.
+    assert.ok(brief.claims.every((claim) => claim.citations.every((cit) => cit.runId === run.runId)));
+  } finally { db.close(); }
+});
+
+test("preview route caches per runId and rate-limits uncached federation captures", async () => {
+  const { db, run } = fixture();
+  // Seed extra captures so uncached previews can draw tokens on distinct runs.
+  for (let i = 0; i < 14; i++) {
+    const extra = { ...run, runId: `run-${i}` };
+    db.prepare("INSERT INTO graph_runs (id, run) VALUES (?, ?)").run(extra.runId, JSON.stringify(extra));
+  }
+  const { auth } = await authFixture();
+  let now = 1_000_000;
+  const gate = new PreviewGate(() => now);
+  const { exec, calls } = previewExec();
+  const app = express().use(express.json()).use("/api/defense", defenseRouter(db, auth, undefined, { gate, exec }));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/defense`;
+  const preview = (runId: string) => fetch(`${base}/briefs/preview`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runId }),
+  });
+  try {
+    // A repeated preview of the same run is a cache hit: no second exec.
+    assert.equal((await preview(run.runId)).status, 200);
+    const afterFirst = calls.length;
+    assert.equal((await preview(run.runId)).status, 200);
+    assert.equal(calls.length, afterFirst);
+    // Twelve distinct uncached previews fit the bucket; the thirteenth is 429.
+    for (let i = 0; i < 11; i++) assert.equal((await preview(`run-${i}`)).status, 200, `run-${i}`);
+    const limited = await preview("run-11");
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get("retry-after") !== null, true);
+    assert.match((await limited.json()).error, /preview busy/);
+    // A cached hit still works while the bucket is empty.
+    assert.equal((await preview(run.runId)).status, 200);
+    // Advancing the injected clock past the window releases tokens again.
+    now += 61_000;
+    assert.equal((await preview("run-12")).status, 200);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+    db.close();
+  }
 });
 
 test("authenticated draft still persists exactly one brief and no audit entry", async () => {
