@@ -521,7 +521,7 @@ export function defenseRouter(db: DatabaseSync, auth: ReturnType<typeof createAu
     }
     try {
       const brief = await store.preview(runId, preview?.exec);
-      gate.remember(runId, brief);
+      if (!brief.federated?.unavailable?.length) gate.remember(runId, brief);
       res.json(brief);
     } catch (e) {
       const error = e instanceof AccessError ? e : new AccessError(503, "defence record unavailable");
